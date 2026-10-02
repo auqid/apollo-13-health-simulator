@@ -31,7 +31,11 @@ const WINDOW_BOTTOM := 1.34
 const WINDOW_INNER_X := 0.16
 const WINDOW_OUTER_X := 0.9
 const GLASS_INSET := 0.06
-const GASKET := 0.025
+const GASKET := 0.018
+## The trim sits on the cabin side of the wall. It does not share a face with the wall,
+## the glass or the instrument panels, so the frame does not flicker as the camera drifts.
+const FRAME_DEPTH := 0.008
+const FRAME_GAP := 0.014
 ## The main console leans back from the bulkhead; its bottom edge comes toward the crew.
 const CONSOLE_TILT_DEG := 20.0
 const SIDE_CONSOLE_TOP := 1.05
@@ -262,13 +266,24 @@ func _build_window(corners: Array[Vector2]) -> void:
 	glass.material_override = _glass_material()
 	glass.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(glass)
+	var centroid := Vector2.ZERO
+	for corner in corners:
+		centroid += corner
+	centroid /= corners.size()
 	for i in corners.size():
 		var a: Vector2 = corners[i]
 		var b: Vector2 = corners[(i + 1) % corners.size()]
 		var edge: Vector2 = b - a
-		var gasket := _box(Vector3(edge.length() + GASKET, GASKET, BULKHEAD),
-			Vector3((a.x + b.x) * 0.5, (a.y + b.y) * 0.5, FRONT_Z - BULKHEAD * 0.5), _dark_material)
+		var mid: Vector2 = (a + b) * 0.5
+		var outward: Vector2 = Vector2(edge.y, -edge.x).normalized()
+		if outward.dot(mid - centroid) < 0.0:
+			outward = -outward
+		var place: Vector2 = mid + outward * (GASKET * 0.5)
+		var length: float = maxf(edge.length() - 0.004, 0.01)
+		var gasket := _box(Vector3(length, GASKET, FRAME_DEPTH),
+			Vector3(place.x, place.y, FRONT_Z + FRAME_GAP + FRAME_DEPTH * 0.5), _dark_material)
 		gasket.rotation.z = edge.angle()
+		gasket.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
 func _build_consoles() -> void:
@@ -385,6 +400,9 @@ func _build_lights() -> void:
 		light.light_color = LIGHT_COLOR
 		light.omni_range = spec["range"]
 		light.shadow_enabled = spec["shadow"]
+		if spec["shadow"]:
+			light.shadow_bias = 0.06
+			light.shadow_normal_bias = 2.0
 		light.light_cull_mask = CABIN_LAYER
 		add_child(light)
 		_lights.append(light)
