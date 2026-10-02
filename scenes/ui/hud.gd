@@ -35,6 +35,7 @@ var _cautions: Dictionary = {}
 
 
 func _ready() -> void:
+	add_to_group("hud")
 	layer = UiStyle.LAYER_HUD
 	_row_style = _make_row_style(false)
 	_focus_style = _make_row_style(true)

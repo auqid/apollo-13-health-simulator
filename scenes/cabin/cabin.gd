@@ -164,9 +164,14 @@ func set_outside_view(body: String) -> void:
 
 
 func set_lamp(lamp: String, lit: bool) -> void:
+	set_lamp_level(lamp, 1.0 if lit else 0.0)
+
+
+## 0 is dark, 1 is fully lit; values in between let the effects fade a lamp.
+func set_lamp_level(lamp: String, level: float) -> void:
 	var material: StandardMaterial3D = _lamps.get(lamp)
 	if material != null:
-		material.emission_energy_multiplier = LAMP_ON_ENERGY if lit else 0.0
+		material.emission_energy_multiplier = LAMP_ON_ENERGY * clampf(level, 0.0, 1.0)
 
 
 func lamp_names() -> PackedStringArray:

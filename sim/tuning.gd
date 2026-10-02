@@ -161,6 +161,74 @@ const HUD_CO2_BAR_MAX_MMHG: float = 20.0
 const LIGHT_LEVEL_FLOOR: float = 0.35
 const LIGHT_LEVEL_SPAN: float = 0.65
 
+# --- Effects (SPEC.md section 4). Nothing may flash faster than 3 times a second. ---
+## CO2 vignette opacity = clamp((co2 - start) / span, 0, max)
+const FX_VIGNETTE_CO2_START: float = 5.0
+const FX_VIGNETTE_CO2_SPAN: float = 10.0
+const FX_VIGNETTE_MAX: float = 0.7
+## The vignette darkens from this far out (0 centre, 1 corner), so the middle of the view stays clear.
+const FX_VIGNETTE_INNER: float = 0.42
+const FX_VIGNETTE_OUTER: float = 1.05
+## CO2 blur on the 3D view, in 1080p pixels = clamp((co2 - start) x per mmHg, 0, max)
+const FX_BLUR_CO2_START: float = 8.0
+const FX_BLUR_PX_PER_MMHG: float = 0.4
+const FX_BLUR_MAX_PX: float = 3.0
+## Above 10 mmHg the HUD drifts slowly, reaching 2 px at 15 mmHg.
+const FX_WOBBLE_CO2_START: float = 10.0
+const FX_WOBBLE_CO2_SPAN: float = 5.0
+const FX_WOBBLE_MAX_PX: float = 2.0
+const FX_WOBBLE_PERIODS_S: Vector2 = Vector2(3.7, 5.3)
+## Shivering: camera shake amplitude = clamp((below - T) / span, 0, 1) x max
+const FX_SHAKE_BELOW_C: float = 10.0
+const FX_SHAKE_SPAN_C: float = 7.0
+const FX_SHAKE_MAX_RAD: float = 0.015
+## The shake wanders at about this rate. Kept at 3 Hz so the picture never strobes.
+const FX_SHAKE_HZ: float = 3.0
+const FX_SHAKE_SEED: int = 1971
+## Breath fog: none at 12 °C, full at 3 °C. Alpha of a puff at full density.
+const FX_FOG_BELOW_C: float = 12.0
+const FX_FOG_FULL_C: float = 3.0
+const FX_FOG_MAX_ALPHA: float = 0.2
+const FX_FOG_PARTICLES: int = 14
+const FX_FOG_LIFETIME_S: float = 1.8
+const FX_FOG_SPEED_MIN: float = 0.02
+const FX_FOG_SPEED_MAX: float = 0.05
+const FX_FOG_PUFF_M: float = 0.022
+## Cold tint: grows from 18 °C down to 3 °C, up to this strength.
+const FX_TINT_BELOW_C: float = 18.0
+const FX_TINT_FULL_C: float = 3.0
+const FX_TINT_MAX: float = 0.5
+## Condensation: on below 8 °C after GET 120, or once E5 is reached with Odyssey powered up late.
+## Powering up early (E5-B) leaves this much.
+const FX_CONDENSATION_BELOW_C: float = 8.0
+const FX_CONDENSATION_AFTER_GET: float = 120.0
+const FX_CONDENSATION_EARLY_POWER_UP: float = 0.35
+## Droplet grid cells across the screen height, and how much of the full density reaches the centre.
+const FX_DROPLET_CELLS: float = 12.0
+## Droplets stay off the middle of the view. 0 is none at the centre.
+const FX_DROPLET_CENTRE_SHARE: float = 0.0
+## Micro-blinks above 0.6 fatigue: a 250 ms fade, at most once every 8 to 12 s.
+const FX_BLINK_FATIGUE_ABOVE: float = 0.6
+const FX_BLINK_S: float = 0.25
+const FX_BLINK_INTERVAL_S_MIN: float = 8.0
+const FX_BLINK_INTERVAL_S_MAX: float = 12.0
+const FX_BLINK_DEPTH_MIN: float = 0.55
+const FX_BLINK_DEPTH_MAX: float = 0.9
+const FX_BLINK_SEED: int = 1104
+## The big dim at the explosion, in real seconds: drop, hold, then recover. Depth is the share of light lost.
+const FX_EXPLOSION_DIM_DEPTH: float = 0.85
+const FX_EXPLOSION_DIM_DROP_S: float = 0.08
+const FX_EXPLOSION_DIM_HOLD_S: float = 0.6
+const FX_EXPLOSION_DIM_RECOVER_S: float = 2.5
+## Effects ease toward their targets over about this long, so jumps and seeks never pop.
+const FX_SMOOTH_S: float = 0.5
+## Caution and master alarm lamps fade on and off over about this long.
+const FX_LAMP_FADE_S: float = 0.25
+## In the debug panel's single-effect modes, the first blink comes this soon.
+const FX_FORCED_FIRST_BLINK_S: float = 1.5
+## Debug panel jump for the cold coast: shivering, breath fog, tint, condensation, blinks and the fever all at once.
+const DEBUG_COLD_COAST_GET: float = 125.0
+
 # --- Cabin camera, real seconds ---
 const CAMERA_MOVE_S: float = 2.0
 ## Zero-g idle drift: position and rotation wander on slow sine waves, one period per channel.

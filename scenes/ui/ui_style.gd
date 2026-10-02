@@ -34,6 +34,8 @@ const SIZE_VITAL := 32
 const SIZE_CAPTION := 32
 const SIZE_CLOCK := 46
 
+## Screen effects draw under the HUD so the HUD never blurs.
+const LAYER_SCREEN_FX := 1
 const LAYER_HUD := 10
 const LAYER_NOTICE := 15
 const LAYER_DEBUG := 20

@@ -1,6 +1,6 @@
 extends CanvasLayer
-## Debug panel, toggled with `: clock controls, scrubbing, jumping to any event, the poll choice
-## for each event, holding any state value, and a readout of internal values.
+## Debug panel, toggled with `: clock controls, scrubbing, jumping to any event, forcing one
+## effect at a time, the poll choice for each event, holding any state value, and a readout.
 
 const SimState := preload("res://sim/sim_state.gd")
 const SimModel := preload("res://sim/sim_model.gd")
@@ -8,6 +8,7 @@ const Timeline := preload("res://sim/timeline.gd")
 const Tuning := preload("res://sim/tuning.gd")
 const UiStyle := preload("res://scenes/ui/ui_style.gd")
 const Cabin := preload("res://scenes/cabin/cabin.gd")
+const Effects := preload("res://fx/effects.gd")
 
 ## Values the panel can hold, with the range each number box offers.
 const ENV_FIELDS: Array[Dictionary] = [
@@ -40,6 +41,9 @@ var _choice_status: Dictionary = {}
 var _hold_rows: Array[Dictionary] = []
 var _crew_heading: Label
 var _readout: Label
+var _effect_buttons: Dictionary = {}
+var _effect_strength: HSlider
+var _effect_summary: Label
 
 
 func _ready() -> void:
@@ -95,6 +99,7 @@ func _build() -> void:
 	column.add_child(_heading("Debug panel. Press ` to close."))
 	_build_clock(column)
 	_build_view(column)
+	_build_effects(column)
 	_build_jumps(column)
 	_build_choices(column)
 	_build_holds(column)
@@ -140,6 +145,66 @@ func _build_view(column: VBoxContainer) -> void:
 	for body: String in Cabin.OUTSIDE_VIEWS:
 		line.add_child(_button("%s outside" % body.capitalize(), cabin.set_outside_view.bind(body)))
 	column.add_child(line)
+
+
+func _build_effects(column: VBoxContainer) -> void:
+	column.add_child(_heading("Effects, one at a time"))
+	var modes := HFlowContainer.new()
+	for mode_name: String in Effects.MODES:
+		var button := _button(Effects.MODE_TITLES[mode_name], _on_effect_mode.bind(mode_name))
+		modes.add_child(button)
+		_effect_buttons[mode_name] = button
+	column.add_child(modes)
+	var strength_line := HBoxContainer.new()
+	strength_line.add_child(_text("Strength"))
+	_effect_strength = HSlider.new()
+	_effect_strength.min_value = 0.0
+	_effect_strength.max_value = 1.0
+	_effect_strength.step = 0.05
+	_effect_strength.value = 1.0
+	_effect_strength.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_effect_strength.focus_mode = Control.FOCUS_NONE
+	_effect_strength.value_changed.connect(_on_effect_strength)
+	strength_line.add_child(_effect_strength)
+	column.add_child(strength_line)
+	_effect_summary = _text("")
+	_effect_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(_effect_summary)
+	_mark_effect_mode(Effects.MODE_LIVE)
+
+
+func _process(_delta: float) -> void:
+	if not visible or _effect_summary == null:
+		return
+	var effects: Effects = _effects()
+	if effects != null:
+		_effect_summary.text = effects.summary()
+
+
+func _effects() -> Effects:
+	return get_tree().get_first_node_in_group(Effects.GROUP)
+
+
+func _on_effect_mode(mode_name: String) -> void:
+	var effects: Effects = _effects()
+	if effects == null:
+		return
+	effects.set_strength(_effect_strength.value)
+	effects.set_mode(mode_name)
+	_mark_effect_mode(mode_name)
+
+
+func _on_effect_strength(value: float) -> void:
+	var effects: Effects = _effects()
+	if effects != null:
+		effects.set_strength(value)
+
+
+func _mark_effect_mode(mode_name: String) -> void:
+	for mode: String in _effect_buttons:
+		var button: Button = _effect_buttons[mode]
+		var title: String = Effects.MODE_TITLES[mode]
+		button.text = ("• " + title) if mode == mode_name else title
 
 
 func _build_jumps(column: VBoxContainer) -> void:
@@ -216,6 +281,10 @@ func _rebuild_jumps() -> void:
 		child.queue_free()
 	var planned: SimState = _planned_state()
 	var start_mark: Dictionary = {"get": Tuning.EXPLOSION_GET}
+	var co2_peak: float = Tuning.CO2_CURVE_BY_ADAPTER["wait"]["peak_get"]
+	_jump_box.add_child(_button("CO2 peak %s" % UiStyle.format_get_short(co2_peak), Game.jump_to.bind({"get": co2_peak})))
+	_jump_box.add_child(_button("Cold coast %s" % UiStyle.format_get_short(Tuning.DEBUG_COLD_COAST_GET),
+		Game.jump_to.bind({"get": Tuning.DEBUG_COLD_COAST_GET})))
 	_jump_box.add_child(_button("Start %s" % UiStyle.format_get_short(Tuning.EXPLOSION_GET), Game.jump_to.bind(start_mark)))
 	for event: Dictionary in Timeline.event_list(Game.events):
 		var event_get: float = Timeline.event_get(event, planned)
@@ -287,6 +356,10 @@ func _on_visibility_changed(shown: bool) -> void:
 	if shown:
 		_rebuild_jumps()
 		_on_state_changed(Game.state)
+		var effects: Effects = _effects()
+		if effects != null and _effect_strength != null:
+			_mark_effect_mode(effects.mode)
+			_effect_strength.set_value_no_signal(effects.strength)
 
 
 func _on_state_changed(state: SimState) -> void:

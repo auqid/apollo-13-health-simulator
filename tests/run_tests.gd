@@ -10,6 +10,7 @@ const Metrics := preload("res://sim/metrics.gd")
 const Timeline := preload("res://sim/timeline.gd")
 const GameScript := preload("res://game/game.gd")
 const FxMapping := preload("res://fx/fx_mapping.gd")
+const Effects := preload("res://fx/effects.gd")
 const CabinScene := preload("res://scenes/cabin/cabin.tscn")
 
 const EFFECT_KEYS: Array[String] = ["flags", "power_margin", "fatigue"]
@@ -757,3 +758,105 @@ func test_cabin_builds_with_presets_dimming_views_and_lamps() -> void:
 	cabin.set_lamp("co2", false)
 	_check(is_zero_approx(cabin._lamps["co2"].emission_energy_multiplier), "an unlit lamp doesn't")
 	cabin.free()
+
+
+func test_co2_effects_follow_the_spec() -> void:
+	_near(FxMapping.vignette(5.0), 0.0, 1e-9, "no vignette at 5 mmHg")
+	_near(FxMapping.vignette(10.0), 0.5, 1e-9, "vignette 0.5 at 10 mmHg")
+	_near(FxMapping.vignette(15.0), 0.7, 1e-9, "vignette capped at 0.7 at the 15 mmHg peak")
+	_near(FxMapping.blur_px(8.0), 0.0, 1e-9, "no blur at 8 mmHg")
+	_near(FxMapping.blur_px(15.0), 2.8, 1e-9, "2.8 px blur at the peak")
+	_near(FxMapping.blur_px(30.0), 3.0, 1e-9, "blur capped at 3 px")
+	_near(FxMapping.wobble_px(10.0), 0.0, 1e-9, "no HUD wobble at 10 mmHg")
+	_near(FxMapping.wobble_px(15.0), 2.0, 1e-9, "2 px HUD wobble at the peak")
+
+
+func test_cold_effects_follow_the_spec() -> void:
+	_near(FxMapping.shake_rad(10.0), 0.0, 1e-9, "no shivering at 10 °C")
+	_near(FxMapping.shake_rad(6.5), 0.0075, 1e-9, "half shake at 6.5 °C")
+	_near(FxMapping.shake_rad(3.0), 0.015, 1e-9, "full 0.015 rad shake at 3 °C")
+	_near(FxMapping.fog(12.0), 0.0, 1e-9, "no breath fog at 12 °C")
+	_near(FxMapping.fog(7.5), 0.5, 1e-9, "half fog at 7.5 °C")
+	_near(FxMapping.fog(3.0), 1.0, 1e-9, "full fog at 3 °C")
+	_near(FxMapping.tint(18.0), 0.0, 1e-9, "no tint at 18 °C")
+	_near(FxMapping.tint(3.0), Tuning.FX_TINT_MAX, 1e-9, "strongest tint at 3 °C")
+	_check(FxMapping.tint(6.0) > FxMapping.tint(9.0), "tint grows as the cabin cools")
+
+
+func test_condensation_follows_the_spec() -> void:
+	_near(FxMapping.condensation(7.0, 119.0, "late", false), 0.0, 1e-9, "not before GET 120")
+	_near(FxMapping.condensation(7.0, 121.0, "late", false), 1.0, 1e-9, "on below 8 °C after GET 120")
+	_near(FxMapping.condensation(9.0, 121.0, "late", false), 0.0, 1e-9, "off above 8 °C")
+	_near(FxMapping.condensation(10.2, 138.0, "late", true), 1.0, 1e-9, "on after E5-A even with the heater")
+	_near(FxMapping.condensation(8.4, 139.0, "early", true), Tuning.FX_CONDENSATION_EARLY_POWER_UP, 1e-9,
+		"less after E5-B")
+	var history: Run = _full_run(_plan())
+	_check(history.state.env.cabin_temp_c < 8.0, "the historical path ends cold enough for condensation")
+
+
+func test_effects_never_flash_faster_than_three_times_a_second() -> void:
+	_near(FxMapping.blink_depth(0.6), 0.0, 1e-9, "no blinks at 0.6 fatigue")
+	_check(FxMapping.blink_depth(0.8) > 0.0 and FxMapping.blink_depth(1.0) <= 1.0, "blinks above 0.6, never fully black")
+	var peaks: int = 0
+	var previous: float = 0.0
+	var rising: bool = true
+	var t_s: float = 0.0
+	while t_s <= Tuning.FX_BLINK_S + 0.05:
+		var value: float = FxMapping.blink_profile(t_s)
+		if rising and value < previous:
+			peaks += 1
+			rising = false
+		previous = value
+		t_s += 0.001
+	_check(peaks == 1, "a blink is a single fade down and up, got %d peaks" % peaks)
+	_near(Tuning.FX_BLINK_S, 0.25, 1e-9, "blinks last 250 ms")
+	_check(Tuning.FX_BLINK_INTERVAL_S_MIN >= 8.0, "blinks are at least 8 s apart")
+	_check(Tuning.FX_SHAKE_HZ <= 3.0, "the shake wanders at 3 Hz or slower")
+	_check(Tuning.FX_WOBBLE_PERIODS_S.x >= 1.0 / 3.0 and Tuning.FX_WOBBLE_PERIODS_S.y >= 1.0 / 3.0, "the HUD wobble is slow")
+	var dim_peak: float = FxMapping.explosion_dim(Tuning.FX_EXPLOSION_DIM_DROP_S)
+	_near(dim_peak, Tuning.FX_EXPLOSION_DIM_DEPTH, 1e-9, "the explosion dim reaches its depth")
+	var recovering: bool = true
+	var last: float = dim_peak
+	t_s = Tuning.FX_EXPLOSION_DIM_DROP_S
+	while t_s < 5.0:
+		var dim: float = FxMapping.explosion_dim(t_s)
+		recovering = recovering and dim <= last + 1e-9
+		last = dim
+		t_s += 0.01
+	_check(recovering and is_zero_approx(last), "after its one drop the dim only recovers, back to full light")
+
+
+func test_forced_modes_show_one_driver() -> void:
+	var fx: Effects = Effects.new()
+	var state: SimState = SimModel.initial_state()
+	fx.mode = Effects.MODE_CO2
+	fx.strength = 1.0
+	var co2: Dictionary = fx._targets(state)
+	_near(co2["vignette"], Tuning.FX_VIGNETTE_MAX, 1e-9, "CO2 mode is the 15 mmHg vignette")
+	_near(co2["blur_px"], 2.8, 1e-9, "and the peak blur, still under 3 px")
+	_near(co2["wobble_px"], Tuning.FX_WOBBLE_MAX_PX, 1e-9, "and a 2 px HUD drift")
+	_near(co2["shake"], 0.0, 1e-9, "without shivering")
+	_near(co2["fog"], 0.0, 1e-9, "without breath fog")
+	_near(co2["light"], 1.0, 1e-9, "with the lights left on")
+	_near(co2["co2_lamp"], 1.0, 1e-9, "and the CO2 lamp on")
+	fx.mode = Effects.MODE_COLD
+	var cold: Dictionary = fx._targets(state)
+	_near(cold["shake"], Tuning.FX_SHAKE_MAX_RAD, 1e-9, "cold mode shivers at full strength")
+	_near(cold["fog"], 1.0, 1e-9, "full breath fog")
+	_near(cold["tint"], Tuning.FX_TINT_MAX, 1e-9, "full cold tint")
+	_near(cold["condensation"], 1.0, 1e-9, "condensation on")
+	_near(cold["vignette"], 0.0, 1e-9, "no CO2 vignette in cold mode")
+	fx.mode = Effects.MODE_FATIGUE
+	var tired: Dictionary = fx._targets(state)
+	_near(tired["fatigue"], 1.0, 1e-9, "fatigue mode")
+	_near(tired["vignette"], 0.0, 1e-9, "fatigue mode leaves the view clear")
+	fx.mode = Effects.MODE_POWER
+	_near(fx._targets(state)["light"], FxMapping.light_level(Tuning.POWER_MARGIN_MIN), 1e-9, "power mode uses the minimum margin")
+	fx.mode = Effects.MODE_EXPLOSION
+	fx._dim_t = Tuning.FX_EXPLOSION_DIM_DROP_S
+	var boom: Dictionary = fx._targets(state)
+	_near(boom["light"], 1.0, 1e-9, "the explosion leaves the power margin alone")
+	_near(boom["dim"], Tuning.FX_EXPLOSION_DIM_DEPTH, 1e-9, "and drops that share of the cabin light")
+	_near(boom["master_lamp"], 1.0, 1e-9, "and lights the master alarm")
+	_near(boom["blur_px"], 0.0, 1e-9, "without blurring the cabin")
+	fx.free()
