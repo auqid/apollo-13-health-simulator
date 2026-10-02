@@ -18,8 +18,11 @@ const VITAL_COLUMNS: Array[Dictionary] = [
 ]
 const CO2_LIMIT_TEXT := "Safe limit %.1f mmHg"
 
+var _clock_box: PanelContainer
 var _clock: Label
 var _since: Label
+var _panel: PanelContainer
+var _clock_layer: CanvasLayer
 ## crew id -> {"row": PanelContainer, "name": Label, <vital field>: Label}
 var _rows: Dictionary = {}
 var _cabin_temp: Label
@@ -48,8 +51,32 @@ func _ready() -> void:
 	_on_state_changed(Game.state)
 
 
+## Keeps the mission clock above a reentry photo. The sensor panel stays on the HUD layer.
+func set_clock_above_photos(above: bool) -> void:
+	if _clock_box == null:
+		return
+	if above:
+		if _clock_layer == null:
+			_clock_layer = CanvasLayer.new()
+			_clock_layer.layer = UiStyle.LAYER_NOTICE - 1
+			add_child(_clock_layer)
+		if _clock_box.get_parent() != _clock_layer:
+			_clock_box.reparent(_clock_layer)
+	elif _clock_box.get_parent() != self:
+		_clock_box.reparent(self)
+
+
+## Hides the sensor panel. The mission clock stays up.
+func set_panel_visible(shown: bool) -> void:
+	if _panel != null:
+		_panel.visible = shown
+	if _since != null:
+		_since.visible = shown
+
+
 func _build_clock() -> void:
 	var box := PanelContainer.new()
+	_clock_box = box
 	box.add_theme_stylebox_override("panel", UiStyle.panel_box())
 	box.position = Vector2(UiStyle.MARGIN, UiStyle.MARGIN)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -70,6 +97,7 @@ func _build_clock() -> void:
 
 func _build_panel() -> void:
 	var panel := PanelContainer.new()
+	_panel = panel
 	panel.add_theme_stylebox_override("panel", UiStyle.panel_box())
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.anchor_left = 1.0

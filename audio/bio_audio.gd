@@ -12,6 +12,8 @@ const Tuning := preload("res://sim/tuning.gd")
 const GROUP := "bio_audio"
 
 var muted: bool = false
+## During radio blackout only the heartbeat stays audible.
+var radio_blackout: bool = false
 var _silenced: bool = false
 var _alarm_playing: bool = false
 var _volumes: Dictionary = {}
@@ -101,6 +103,10 @@ func play_voice_file(path: String) -> bool:
 	return true
 
 
+func set_radio_blackout(on: bool) -> void:
+	radio_blackout = on
+
+
 func stop_voice() -> void:
 	_voice.stop()
 
@@ -187,6 +193,8 @@ func _heartbeat_sample(dt_s: float) -> float:
 
 
 func _breath_sample(dt_s: float) -> float:
+	if radio_blackout:
+		return 0.0
 	if _breath_pos_s >= _breath_len_s:
 		_breath_pos_s = 0.0
 		_breath_len_s = 60.0 / maxf(_rr, 1.0)
@@ -198,7 +206,7 @@ func _breath_sample(dt_s: float) -> float:
 
 
 func _alarm_sample(dt_s: float) -> float:
-	if not _alarm_playing:
+	if radio_blackout or not _alarm_playing:
 		_alarm_t_s = 0.0
 		return 0.0
 	var sample: float = AudioMix.alarm_wave(_alarm_t_s)

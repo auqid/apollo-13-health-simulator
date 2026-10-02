@@ -11,6 +11,7 @@ const StageCard := preload("res://scenes/ui/stage_card.gd")
 const CutsceneView := preload("res://scenes/ui/cutscene_view.gd")
 const BioAudio := preload("res://audio/bio_audio.gd")
 const Effects := preload("res://fx/effects.gd")
+const Hud := preload("res://scenes/ui/hud.gd")
 
 signal hud_visibility_changed(visible: bool)
 signal debug_visibility_changed(visible: bool)
@@ -53,6 +54,11 @@ var _silence_left_s: float = 0.0
 var _resume_after_silence: bool = false
 ## Asset paths a cutscene asked for and did not find.
 var missing_assets: PackedStringArray = []
+var _reentry_fired: Dictionary = {}
+var _reentry_hold_s: float = 0.0
+var _reentry_holding: bool = false
+var _recovery_hold: bool = false
+var _radio_blackout: bool = false
 
 
 func _ready() -> void:
@@ -73,7 +79,10 @@ func _process(delta: float) -> void:
 		if _hold_left_s <= 0.0:
 			finish_choice_hold()
 	elif phase == PHASE_TIMESKIP or phase == PHASE_REENTRY:
-		_run_timeskip_captions(delta)
+		if phase == PHASE_REENTRY:
+			_run_reentry(delta)
+		else:
+			_run_timeskip_captions(delta)
 		var rate: float = _clock_rate()
 		if Game.running and not is_equal_approx(rate, Game.rate_h_per_s):
 			Game.set_rate(rate)
@@ -138,6 +147,7 @@ func flow_states() -> Array:
 
 
 func start_session() -> void:
+	_clear_reentry_presentation()
 	Game.clear_plan()
 	Game.pause()
 	Game.begin_at(float(Game.events["intro"]["start_get"]))
@@ -200,6 +210,13 @@ func finish_choice_hold() -> void:
 func complete_clock() -> void:
 	if phase != PHASE_TIMESKIP and phase != PHASE_REENTRY:
 		return
+	if phase == PHASE_REENTRY:
+		_clear_reentry_presentation()
+		Game.pause()
+		if Game.state.time.current_get < Game.state.time.splashdown_get - Timeline.EPSILON_H:
+			Game.seek(Game.state.time.splashdown_get)
+		_begin_scorecard()
+		return
 	var dest: float = _clock_target
 	Game.pause()
 	if Game.state.time.current_get < dest - Timeline.EPSILON_H:
@@ -208,6 +225,7 @@ func complete_clock() -> void:
 
 
 func jump_to_state(state_id: String) -> void:
+	_clear_reentry_presentation()
 	Game.pause()
 	_hold_left_s = 0.0
 	_card_left_s = 0.0
@@ -222,7 +240,7 @@ func jump_to_state(state_id: String) -> void:
 		_begin_scorecard()
 		return
 	if state_id == PHASE_REENTRY:
-		_use_historical_plan(events.size())
+		_fill_unset_choices()
 		event_index = events.size() - 1
 		Game.replay_to(_event_get(events[event_index]))
 		_begin_reentry()
@@ -303,19 +321,23 @@ func _begin_timeskip() -> void:
 
 func _begin_reentry() -> void:
 	_hide_cutscene()
+	_clear_reentry_presentation()
+	_reentry_fired.clear()
 	_clock_target = Game.state.time.splashdown_get
 	phase = PHASE_REENTRY
-	var steps: PackedStringArray = []
-	for step: Dictionary in Game.events.get("reentry", {}).get("steps", []):
-		steps.append(step.get("title", step["id"]))
 	var card := _stage()
 	if card != null:
-		card.show_reentry(steps)
+		card.hide_card()
+	notice_requested.emit("", 0.0)
+	var hud := _hud()
+	if hud != null:
+		hud.set_clock_above_photos(true)
 	Game.set_rate(_clock_rate())
 	Game.play(_clock_target)
 
 
 func _begin_scorecard() -> void:
+	_clear_reentry_presentation()
 	_hide_cutscene()
 	phase = PHASE_SCORECARD
 	Game.pause()
@@ -331,7 +353,7 @@ func _arrive() -> void:
 		event_index += 1
 		_begin_cutscene()
 	elif phase == PHASE_REENTRY:
-		_begin_scorecard()
+		_begin_recovery()
 
 
 func _toggle_timeskip() -> void:
@@ -344,7 +366,194 @@ func _toggle_timeskip() -> void:
 		Game.play(_clock_target)
 
 
+func _run_reentry(delta: float) -> void:
+	if _recovery_hold:
+		_reentry_hold_s -= delta
+		if _reentry_hold_s <= 0.0:
+			_begin_scorecard()
+		return
+	if _reentry_holding:
+		_reentry_hold_s -= delta
+		if _reentry_hold_s <= 0.0:
+			_reentry_holding = false
+			Game.set_rate(_clock_rate())
+			Game.play(_clock_target)
+		return
+	_fire_reentry_steps()
+
+
+func _fire_reentry_steps() -> void:
+	var now: float = Game.state.time.current_get
+	for step: Dictionary in Game.events.get("reentry", {}).get("steps", []):
+		var id: String = str(step.get("id", ""))
+		if _reentry_fired.has(id):
+			continue
+		var at_get: float = Game.state.time.splashdown_get + float(step.get("get_from_splashdown", 0.0))
+		if now + Timeline.EPSILON_H < at_get:
+			return
+		if id == "splashdown":
+			return
+		_reentry_fired[id] = true
+		_present_reentry_step(step)
+		if _reentry_holding or id == "blackout":
+			return
+
+
+func _present_reentry_step(step: Dictionary) -> void:
+	var id: String = str(step.get("id", ""))
+	if id == "lm_jettison":
+		_hide_reentry_photo()
+		_show_reentry_caption(_step_caption(step))
+		var clip_s: float = _play_clip(str(step.get("audio", "")))
+		_reentry_holding = true
+		_reentry_hold_s = maxf(clip_s, Tuning.REENTRY_FAREWELL_HOLD_S)
+		Game.pause()
+	elif id == "blackout":
+		_start_radio_blackout(step)
+	elif id == "contact":
+		_end_radio_blackout()
+		_show_reentry_photo(_first_image(step))
+		_show_reentry_caption(_step_caption(step))
+		_play_clip(str(step.get("audio", "")))
+
+
+func _begin_recovery() -> void:
+	if _recovery_hold or phase != PHASE_REENTRY:
+		return
+	_end_radio_blackout()
+	_reentry_holding = false
+	_recovery_hold = true
+	var step: Dictionary = _reentry_step("splashdown")
+	_show_reentry_photo(_first_image(step))
+	_show_reentry_caption(_step_caption(step))
+	_reentry_hold_s = Tuning.REENTRY_RECOVERY_HOLD_S
+	Game.pause()
+
+
+func _start_radio_blackout(step: Dictionary) -> void:
+	_radio_blackout = true
+	_hide_reentry_photo()
+	var line: String = _step_caption(step)
+	if Game.state.flags.heat_shield_risk:
+		var extra: String = str(step.get("heat_shield_text", ""))
+		if not extra.is_empty():
+			line = extra if line.is_empty() else "%s\n%s" % [line, extra]
+	_show_reentry_caption(line)
+	var bio := _bio()
+	if bio != null:
+		bio.stop_voice()
+		bio.set_radio_blackout(true)
+	var effects := _effects()
+	if effects != null:
+		effects.set_radio_blackout(Tuning.FX_RADIO_BLACKOUT)
+	var hud := _hud()
+	if hud != null:
+		hud.set_panel_visible(false)
+	Game.set_rate(_blackout_rate())
+
+
+func _end_radio_blackout() -> void:
+	if not _radio_blackout:
+		return
+	_radio_blackout = false
+	var bio := _bio()
+	if bio != null:
+		bio.set_radio_blackout(false)
+	var effects := _effects()
+	if effects != null:
+		effects.set_radio_blackout(0.0)
+	var hud := _hud()
+	if hud != null:
+		hud.set_panel_visible(true)
+
+
+func _blackout_rate() -> float:
+	var start: float = _reentry_get("blackout")
+	var end: float = _reentry_get("contact")
+	var screen_s: float = float(_reentry_step("blackout").get("screen_s", 20.0))
+	var remaining_h: float = maxf(end - Game.state.time.current_get, 0.0)
+	if remaining_h <= Timeline.EPSILON_H:
+		remaining_h = maxf(end - start, 0.001)
+	return remaining_h / maxf(screen_s, 1.0)
+
+
+func _clear_reentry_presentation() -> void:
+	_radio_blackout = false
+	_reentry_holding = false
+	_recovery_hold = false
+	_reentry_hold_s = 0.0
+	var bio := _bio()
+	if bio != null:
+		bio.set_radio_blackout(false)
+		bio.stop_voice()
+	var effects := _effects()
+	if effects != null:
+		effects.set_radio_blackout(0.0)
+	var hud := _hud()
+	if hud != null:
+		hud.set_panel_visible(true)
+		hud.set_clock_above_photos(false)
+	_hide_cutscene()
+
+
+func _reentry_step(step_id: String) -> Dictionary:
+	for step: Dictionary in Game.events.get("reentry", {}).get("steps", []):
+		if step.get("id", "") == step_id:
+			return step
+	return {}
+
+
+func _reentry_get(step_id: String) -> float:
+	return Game.state.time.splashdown_get + float(_reentry_step(step_id).get("get_from_splashdown", 0.0))
+
+
+func _step_caption(step: Dictionary) -> String:
+	var lines: PackedStringArray = []
+	for line: Variant in step.get("captions", []):
+		lines.append(str(line))
+	return "\n".join(lines)
+
+
+func _first_image(step: Dictionary) -> String:
+	var images: Array = step.get("images", [])
+	if images.is_empty():
+		return ""
+	return str(images[0])
+
+
+func _show_reentry_caption(text: String) -> void:
+	var view := _cutscene()
+	if view != null:
+		view.show_caption(text)
+
+
+func _show_reentry_photo(path: String) -> void:
+	var view := _cutscene()
+	if view == null:
+		return
+	var texture: Texture2D = _load_texture(path)
+	if texture == null:
+		view.hide_photo()
+	else:
+		view.show_photo(texture, false)
+
+
+func _hide_reentry_photo() -> void:
+	var view := _cutscene()
+	if view != null:
+		view.hide_photo()
+
+
+func _hud() -> Hud:
+	var nodes: Array[Node] = get_tree().get_nodes_in_group("hud")
+	if nodes.is_empty():
+		return null
+	return nodes[0] as Hud
+
+
 func _clock_rate() -> float:
+	if _radio_blackout:
+		return _blackout_rate()
 	var at_get: float = Game.state.time.current_get
 	var splashdown: float = Game.state.time.splashdown_get
 	if at_get >= splashdown - Tuning.REENTRY_BEFORE_SPLASHDOWN_H:
@@ -361,6 +570,13 @@ func _clock_rate() -> float:
 func _on_target_reached(_at_get: float) -> void:
 	if phase == PHASE_TIMESKIP or phase == PHASE_REENTRY:
 		_arrive()
+
+
+func _fill_unset_choices() -> void:
+	var historical: Dictionary = Timeline.historical_plan(Game.events)
+	for event_id: String in historical:
+		if not Game.plan.has(event_id):
+			Game.plan[event_id] = historical[event_id]
 
 
 func _use_historical_plan(count: int) -> void:

@@ -34,6 +34,8 @@ var cabin: Cabin
 var mode: String = MODE_LIVE
 ## 0 to 1. In a forced mode, 1 is the strongest that driver gets on the historical path.
 var strength: float = 1.0
+## Covers the 3D view during radio blackout. 0 leaves the blink in charge.
+var radio_blackout: float = 0.0
 
 var _material: ShaderMaterial
 var _hud: CanvasLayer
@@ -97,6 +99,10 @@ func set_strength(value: float) -> void:
 
 func play_explosion_dim() -> void:
 	_dim_t = 0.0
+
+
+func set_radio_blackout(amount: float) -> void:
+	radio_blackout = clampf(amount, 0.0, 1.0)
 
 
 ## One line for the debug panel.
@@ -239,7 +245,10 @@ func _apply_shader() -> void:
 	_material.set_shader_parameter("blur_px", _blur_px)
 	_material.set_shader_parameter("tint", _tint)
 	_material.set_shader_parameter("condensation", _condensation)
-	_material.set_shader_parameter("blackout", _blink_blackout())
+	var cover: float = radio_blackout
+	if cover <= 0.0:
+		cover = _blink_blackout()
+	_material.set_shader_parameter("blackout", cover)
 
 
 func _apply_shake() -> void:

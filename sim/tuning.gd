@@ -159,6 +159,10 @@ const DEBUG_RATES_H_PER_S: Array = [0.1, 0.5, 1.0, 2.0, 4.0, 8.0]
 const CUTSCENE_PHOTO_ZOOM: float = 1.08
 ## How long the chosen poll option stays highlighted before the session continues.
 const POLL_CHOICE_HOLD_S: float = 1.5
+## Farewell line stays at least this long, so it can be read when the clip is missing.
+const REENTRY_FAREWELL_HOLD_S: float = 6.0
+## Recovery photo before the scorecard.
+const REENTRY_RECOVERY_HOLD_S: float = 6.0
 ## Near real time, so the PC+2 burn and the reentry stress are visible. About 36 GET seconds per real second.
 const TIMESKIP_SLOW_H_PER_S: float = 0.012
 
@@ -174,6 +178,8 @@ const LIGHT_LEVEL_SPAN: float = 0.65
 const FX_VIGNETTE_CO2_START: float = 5.0
 const FX_VIGNETTE_CO2_SPAN: float = 10.0
 const FX_VIGNETTE_MAX: float = 0.7
+## Radio blackout covers the 3D view. 1 would be fully black.
+const FX_RADIO_BLACKOUT: float = 0.94
 ## The vignette darkens from this far out (0 centre, 1 corner), so the middle of the view stays clear.
 const FX_VIGNETTE_INNER: float = 0.42
 const FX_VIGNETTE_OUTER: float = 1.05

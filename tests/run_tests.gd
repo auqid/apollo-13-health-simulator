@@ -16,7 +16,7 @@ const Cabin := preload("res://scenes/cabin/cabin.gd")
 const AudioMix := preload("res://audio/audio_mix.gd")
 
 const EFFECT_KEYS: Array[String] = ["flags", "power_margin", "fatigue"]
-const TEXT_KEYS: Array[String] = ["text", "question", "label", "hint", "note", "title", "closing", "history", "caption"]
+const TEXT_KEYS: Array[String] = ["text", "question", "label", "hint", "note", "title", "closing", "history", "caption", "heat_shield_text"]
 const EVENT_IDS: Array[String] = ["e1", "e2", "e3", "e4", "e5"]
 ## This one drives the autoloads, which are not in the tree yet during _init.
 const SESSION_TEST := "test_every_option_combination_reaches_the_scorecard"
@@ -299,6 +299,26 @@ func test_cutscenes_have_editable_shots() -> void:
 		if "Artemis II in 2026" in caption["text"]:
 			far_side = true
 	_check(far_side, "the far-side caption names the distance record")
+
+
+func test_reentry_sequence_is_timed_from_splashdown() -> void:
+	var steps: Dictionary = {}
+	for step: Dictionary in _load_events().get("reentry", {}).get("steps", []):
+		steps[step["id"]] = step
+	_check(is_equal_approx(steps["lm_jettison"]["get_from_splashdown"], -1.41), "farewell is 1.41 h before splashdown on every path")
+	_check("Farewell, Aquarius" in steps["lm_jettison"]["captions"][0], "Kerwin's farewell line")
+	_check(steps["lm_jettison"]["audio"].ends_with("e5_farewell.mp3"), "farewell audio")
+	_near(float(steps["blackout"]["screen_s"]), 20.0, 0.1, "blackout compresses to about 20 s")
+	_check("about six minutes" in steps["blackout"]["captions"][0], "blackout caption")
+	_check("heat shield" in steps["blackout"]["heat_shield_text"], "heat-shield line for the fast return")
+	_check(steps["contact"]["images"][0].ends_with("parachutes.jpg"), "parachutes photo")
+	_check(steps["contact"]["audio"].ends_with("e5_splash.mp3"), "splashdown audio")
+	_check(steps["splashdown"]["images"][0].ends_with("recovery.jpg"), "recovery photo")
+	for splashdown: float in Tuning.SPLASHDOWN_GET_BY_RETURN.values():
+		var jettison: float = splashdown + float(steps["lm_jettison"]["get_from_splashdown"])
+		var blackout: float = splashdown + float(steps["blackout"]["get_from_splashdown"])
+		var contact: float = splashdown + float(steps["contact"]["get_from_splashdown"])
+		_check(jettison < blackout and blackout < contact and contact < splashdown, "reentry order before splashdown %.1f" % splashdown)
 
 
 func test_reentry_steps_are_in_order_before_splashdown() -> void:

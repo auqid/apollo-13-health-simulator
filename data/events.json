@@ -296,7 +296,8 @@
         "title": "Blackout",
         "get_from_splashdown": -0.261389,
         "screen_s": 20,
-        "captions": ["Radio blackout lasted about six minutes, roughly a minute and a half longer than expected."]
+        "captions": ["Radio blackout lasted about six minutes, roughly a minute and a half longer than expected."],
+        "heat_shield_text": "The heat shield had been exposed to space for the whole trip home."
       },
       {
         "id": "entry",
