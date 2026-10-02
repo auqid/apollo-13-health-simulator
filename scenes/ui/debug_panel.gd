@@ -47,6 +47,7 @@ var _effect_buttons: Dictionary = {}
 var _effect_strength: HSlider
 var _effect_summary: Label
 var _sound_summary: Label
+var _fps_label: Label
 
 
 func _ready() -> void:
@@ -99,7 +100,13 @@ func _build() -> void:
 	panel.add_child(scroll)
 	add_child(panel)
 
-	column.add_child(_heading("Debug panel. Press ` to close."))
+	var title_line := HBoxContainer.new()
+	var title := _heading("Debug panel. Press ` to close.")
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_line.add_child(title)
+	_fps_label = _text("0 fps")
+	title_line.add_child(_fps_label)
+	column.add_child(title_line)
 	_build_clock(column)
 	_build_view(column)
 	_build_effects(column)
@@ -203,6 +210,8 @@ func _build_sound(column: VBoxContainer) -> void:
 
 
 func _process(_delta: float) -> void:
+	if _fps_label != null:
+		_fps_label.text = "%d fps" % roundi(Engine.get_frames_per_second())
 	if not visible or _effect_summary == null:
 		return
 	var effects: Effects = _effects()
