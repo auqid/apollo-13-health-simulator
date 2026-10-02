@@ -60,6 +60,8 @@ var missing_assets: PackedStringArray = []
 var _reentry_fired: Dictionary = {}
 var _reentry_hold_s: float = 0.0
 var _reentry_holding: bool = false
+var _reentry_beat: String = ""
+var _parachute_playing: bool = false
 var _recovery_hold: bool = false
 var _radio_blackout: bool = false
 var _map_left_s: float = 0.0
@@ -430,11 +432,12 @@ func _run_reentry(delta: float) -> void:
 		return
 	if _reentry_holding:
 		_reentry_hold_s -= delta
+		_tick_reentry_beat()
 		if _reentry_hold_s <= 0.0:
-			_reentry_holding = false
-			Game.set_rate(_clock_rate())
-			Game.play(_clock_target)
+			_end_reentry_beat()
 		return
+	if _parachute_playing:
+		_tick_parachute()
 	_fire_reentry_steps()
 
 
@@ -461,6 +464,7 @@ func _present_reentry_step(step: Dictionary) -> void:
 		_hide_reentry_photo()
 		_show_reentry_caption(_step_caption(step))
 		var clip_s: float = _play_clip(str(step.get("audio", "")))
+		_reentry_beat = "farewell"
 		_reentry_holding = true
 		_reentry_hold_s = maxf(clip_s, Tuning.REENTRY_FAREWELL_HOLD_S)
 		Game.pause()
@@ -468,22 +472,115 @@ func _present_reentry_step(step: Dictionary) -> void:
 		_start_radio_blackout(step)
 	elif id == "contact":
 		_end_radio_blackout()
-		_show_reentry_photo(_first_image(step))
+		_hide_reentry_photo()
 		_show_reentry_caption(_step_caption(step))
 		_play_clip(str(step.get("audio", "")))
+		_parachute_playing = true
+		_present_exterior("pan", "earth", "parachute")
+		var hud := _hud()
+		if hud != null:
+			hud.set_panel_visible(false)
 
 
 func _begin_recovery() -> void:
-	if _recovery_hold or phase != PHASE_REENTRY:
+	if _recovery_hold or _reentry_beat == "splash" or phase != PHASE_REENTRY:
 		return
 	_end_radio_blackout()
+	_parachute_playing = false
+	_reentry_holding = false
+	_start_splash()
+
+
+func _start_plasma() -> void:
+	var bio := _bio()
+	if bio != null:
+		bio.stop_voice()
+	_reentry_beat = "plasma"
+	_reentry_holding = true
+	_reentry_hold_s = Tuning.REENTRY_PLASMA_S
+	_show_reentry_caption(_step_caption(_reentry_step("entry")))
+	_present_exterior("bay", "earth", "plasma")
+	var hud := _hud()
+	if hud != null:
+		hud.set_panel_visible(false)
+	Game.pause()
+
+
+func _finish_plasma() -> void:
+	var blackout_get: float = _reentry_get("blackout")
+	if Game.state.time.current_get < blackout_get - Timeline.EPSILON_H:
+		Game.seek(blackout_get)
+	_reentry_fired["blackout"] = true
+	_hide_space()
+	_start_radio_blackout(_reentry_step("blackout"))
+	Game.set_rate(_clock_rate())
+	Game.play(_clock_target)
+
+
+func _start_splash() -> void:
+	_reentry_beat = "splash"
+	_reentry_holding = true
+	_reentry_hold_s = Tuning.REENTRY_SPLASH_S
+	var step: Dictionary = _reentry_step("splashdown")
+	_show_reentry_caption(_step_caption(step))
+	_present_exterior("pan", "earth", "splash")
+	var hud := _hud()
+	if hud != null:
+		hud.set_panel_visible(false)
+	Game.pause()
+
+
+func _show_recovery_still() -> void:
+	_reentry_beat = ""
 	_reentry_holding = false
 	_recovery_hold = true
+	_hide_space()
 	var step: Dictionary = _reentry_step("splashdown")
 	_show_reentry_photo(_first_image(step))
 	_show_reentry_caption(_step_caption(step))
 	_reentry_hold_s = Tuning.REENTRY_RECOVERY_HOLD_S
 	Game.pause()
+
+
+func _tick_reentry_beat() -> void:
+	if _reentry_beat != "plasma" and _reentry_beat != "splash":
+		return
+	var span: float = Tuning.REENTRY_PLASMA_S if _reentry_beat == "plasma" else Tuning.REENTRY_SPLASH_S
+	var t: float = clampf(1.0 - _reentry_hold_s / span, 0.0, 1.0)
+	var space := _exterior()
+	if space != null:
+		space.set_progress(t)
+	if _reentry_beat != "plasma":
+		return
+	var cover: float = smoothstep(0.72, 1.0, t) * Tuning.FX_RADIO_BLACKOUT
+	var effects := _effects()
+	if effects != null:
+		effects.set_radio_blackout(cover)
+
+
+func _tick_parachute() -> void:
+	var start: float = _reentry_get("contact")
+	var end: float = Game.state.time.splashdown_get
+	var span: float = maxf(end - start, 0.001)
+	var t: float = clampf((Game.state.time.current_get - start) / span, 0.0, 1.0)
+	var space := _exterior()
+	if space != null:
+		space.set_progress(t)
+
+
+func _end_reentry_beat() -> void:
+	var beat: String = _reentry_beat
+	_reentry_holding = false
+	_reentry_beat = ""
+	if beat == "farewell":
+		_start_plasma()
+	elif beat == "plasma":
+		_finish_plasma()
+	elif beat == "splash":
+		_show_recovery_still()
+	else:
+		Game.set_rate(_clock_rate())
+		Game.play(_clock_target)
 
 
 func _start_radio_blackout(step: Dictionary) -> void:
@@ -536,6 +633,8 @@ func _blackout_rate() -> float:
 func _clear_reentry_presentation() -> void:
 	_radio_blackout = false
 	_reentry_holding = false
+	_reentry_beat = ""
+	_parachute_playing = false
 	_recovery_hold = false
 	_reentry_hold_s = 0.0
 	var bio := _bio()
@@ -801,6 +900,21 @@ func preview_lifeboat() -> void:
 	_begin_space_preview("lifeboat", str(shot.get("move", "push_in")), str(shot.get("body", "earth")), "lifeboat")
 
 
+## Debug: Odyssey heat-shield first, plasma building, then a fade toward black.
+func preview_plasma() -> void:
+	_begin_space_preview("plasma", "bay", "earth", "plasma")
+
+
+## Debug: drogues, then the three main parachutes, descending.
+func preview_parachute() -> void:
+	_begin_space_preview("parachute", "pan", "earth", "parachute")
+
+
+## Debug: the splash, then the capsule floating.
+func preview_splash() -> void:
+	_begin_space_preview("splash", "pan", "earth", "splash")
+
+
 ## Debug: the free-return map with the ship at the current GET.
 func preview_map() -> void:
 	_space_preview = "map"
@@ -853,6 +967,12 @@ func _preview_span() -> float:
 	if _space_preview == "explosion" or _space_preview == "lifeboat":
 		var shot: Dictionary = _shot_with_action(_space_preview)
 		return maxf(float(shot.get("duration_s", Tuning.EXTERIOR_PREVIEW_S)), 0.5)
+	if _space_preview == "plasma":
+		return Tuning.REENTRY_PLASMA_S
+	if _space_preview == "parachute":
+		return Tuning.REENTRY_PARACHUTE_S
+	if _space_preview == "splash":
+		return Tuning.REENTRY_SPLASH_S
 	return Tuning.EXTERIOR_PREVIEW_S
 
 

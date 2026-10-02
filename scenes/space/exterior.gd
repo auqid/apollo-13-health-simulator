@@ -38,6 +38,16 @@ var _puff_dir: Array[Vector3] = []
 var _cloud_mat: StandardMaterial3D
 var _cm_windows: Array[StandardMaterial3D] = []
 var _lm_windows: Array[StandardMaterial3D] = []
+var _entry: Node3D
+var _capsule: MeshInstance3D
+var _ocean: MeshInstance3D
+var _sheath: Array[MeshInstance3D] = []
+var _trail: Array[MeshInstance3D] = []
+var _drogues: Array[Node3D] = []
+var _mains: Array[Node3D] = []
+var _splash: Array[MeshInstance3D] = []
+var _plasma_mat: StandardMaterial3D
+var _splash_mat: StandardMaterial3D
 
 
 func _ready() -> void:
@@ -52,6 +62,7 @@ func build() -> void:
 	_build_environment()
 	_build_scenery()
 	_build_stack()
+	_build_entry()
 	_build_map()
 	_camera = Camera3D.new()
 	_camera.fov = 48.0
@@ -64,10 +75,13 @@ func show_exterior(move: String, body: String, action: String = "") -> void:
 	build()
 	_showing = true
 	visible = true
-	_stack.visible = true
+	var descent: bool = action == "plasma" or action == "parachute" or action == "splash"
+	_stack.visible = not descent
+	if _entry != null:
+		_entry.visible = descent
 	_map.visible = false
-	_scenic_earth.visible = true
-	_scenic_moon.visible = true
+	_scenic_earth.visible = not descent or action == "plasma"
+	_scenic_moon.visible = not descent
 	_place_scenery(body)
 	_move = move if move in MOVES else "orbit"
 	_action = action
@@ -81,6 +95,10 @@ func show_map(get_h: float, splashdown_h: float) -> void:
 	_showing = true
 	visible = true
 	_stack.visible = false
+	if _entry != null:
+		_entry.visible = false
+	if _ocean != null:
+		_ocean.visible = false
 	_scenic_earth.visible = false
 	_scenic_moon.visible = false
 	_map.visible = true
@@ -119,7 +137,17 @@ static func camera_transform(move: String, t: float, action: String = "") -> Tra
 	var eased: float = smoothstep(0.0, 1.0, amount)
 	var from: Vector3
 	var aim: Vector3 = FOCUS
-	if action == "explosion" or move == "bay":
+	if action == "plasma":
+		from = Vector3(0.8, 1.4, 9.2).lerp(Vector3(0.35, 0.55, 6.0), eased)
+		aim = Vector3(0.0, 0.0, 1.1)
+	elif action == "parachute":
+		var drop: float = lerpf(6.2, 1.15, amount)
+		from = Vector3(8.0, drop + 2.0, 6.5)
+		aim = Vector3(0.0, drop, 0.0)
+	elif action == "splash":
+		from = Vector3(7.2, 2.0, 6.0).lerp(Vector3(5.4, 1.15, 4.4), eased)
+		aim = Vector3(0.0, 0.35, 0.0)
+	elif action == "explosion" or move == "bay":
 		from = Vector3(8.2, 2.0, 3.2).lerp(Vector3(10.4, 2.6, 0.2), eased)
 		aim = Vector3(1.4, 0.2, 0.3)
 	elif action == "lifeboat":
@@ -164,6 +192,24 @@ static func window_glow(action: String, t: float) -> Vector2:
 		var swap: float = smoothstep(0.12, 0.88, clampf(t, 0.0, 1.0))
 		return Vector2(1.0 - swap, swap)
 	return Vector2.ZERO
+
+
+## 0 before the sheath forms, 1 when the heat shield is wrapped in plasma.
+static func plasma_strength(t: float) -> float:
+	return smoothstep(0.08, 0.82, clampf(t, 0.0, 1.0))
+
+
+## x is the drogue scale, y the main-canopy scale.
+static func parachute_open(t: float) -> Vector2:
+	var amount: float = clampf(t, 0.0, 1.0)
+	var drogue: float = smoothstep(0.04, 0.28, amount) * (1.0 - smoothstep(0.42, 0.68, amount))
+	var mains: float = smoothstep(0.4, 0.78, amount)
+	return Vector2(drogue, mains)
+
+
+## 0 as the capsule reaches the water, 1 once it is floating.
+static func splash_float(t: float) -> float:
+	return smoothstep(0.18, 0.62, clampf(t, 0.0, 1.0))
 
 
 func _place_scenery(body: String) -> void:
@@ -298,6 +344,166 @@ func _ribbon(points: PackedVector3Array, width: float) -> ArrayMesh:
 	return tool.commit()
 
 
+func _build_entry() -> void:
+	_entry = Node3D.new()
+	_entry.visible = false
+	add_child(_entry)
+	var hull := _paint(CSM_WHITE, 0.5)
+	var shield := _paint(Color(0.18, 0.16, 0.14), 0.85)
+	_capsule = MeshInstance3D.new()
+	var cone := CylinderMesh.new()
+	cone.bottom_radius = 1.9
+	cone.top_radius = 0.42
+	cone.height = 3.2
+	cone.radial_segments = 16
+	_capsule.mesh = cone
+	_capsule.material_override = hull
+	_capsule.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_entry.add_child(_capsule)
+	var cap := MeshInstance3D.new()
+	var disc := CylinderMesh.new()
+	disc.bottom_radius = 1.92
+	disc.top_radius = 1.92
+	disc.height = 0.16
+	disc.radial_segments = 16
+	cap.mesh = disc
+	cap.material_override = shield
+	cap.position = Vector3(0, -1.62, 0)
+	cap.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_capsule.add_child(cap)
+	_plasma_mat = _glow_material(Color(1.0, 0.42, 0.08))
+	for i in 8:
+		var puff := Bodies.sphere(0.35, _plasma_mat, 8)
+		puff.visible = false
+		_entry.add_child(puff)
+		_sheath.append(puff)
+	for i in 6:
+		var puff := Bodies.sphere(0.4, _plasma_mat, 8)
+		puff.visible = false
+		_entry.add_child(puff)
+		_trail.append(puff)
+	_ocean = MeshInstance3D.new()
+	var sea := PlaneMesh.new()
+	sea.size = Vector2(80, 80)
+	_ocean.mesh = sea
+	_ocean.material_override = _paint(Color(0.04, 0.2, 0.28), 0.9)
+	_ocean.visible = false
+	_ocean.position = Vector3(0, 0, 0)
+	add_child(_ocean)
+	var cloth := _paint(Color(0.93, 0.55, 0.18), 0.8)
+	var drogue_cloth := _paint(Color(0.9, 0.9, 0.88), 0.75)
+	for side: float in [-0.7, 0.7]:
+		_drogues.append(_canopy(0.55, 0.45, drogue_cloth, Vector3(side, 3.4, 0)))
+	for slot: int in 3:
+		var x: float = (float(slot) - 1.0) * 1.7
+		_mains.append(_canopy(1.7, 0.9, cloth, Vector3(x, 6.2, 0)))
+	_splash_mat = _glow_material(Color(0.9, 0.95, 1.0))
+	_splash_mat.emission = Color(0.85, 0.92, 1.0)
+	for i in 6:
+		var puff := Bodies.sphere(0.35, _splash_mat, 8)
+		puff.visible = false
+		_entry.add_child(puff)
+		_splash.append(puff)
+
+
+func _canopy(radius: float, height: float, material: Material, where: Vector3) -> Node3D:
+	var rig := Node3D.new()
+	rig.position = where
+	rig.visible = false
+	var mesh := CylinderMesh.new()
+	mesh.bottom_radius = radius
+	mesh.top_radius = radius * 0.12
+	mesh.height = height
+	mesh.radial_segments = 12
+	var cloth := MeshInstance3D.new()
+	cloth.mesh = mesh
+	cloth.material_override = material
+	cloth.position = Vector3(0, height * 0.5, 0)
+	cloth.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	rig.add_child(cloth)
+	var line := MeshInstance3D.new()
+	var rope := BoxMesh.new()
+	rope.size = Vector3(0.04, where.y, 0.04)
+	line.mesh = rope
+	line.material_override = _paint(Color(0.75, 0.75, 0.72), 0.9)
+	line.position = Vector3(0, -where.y * 0.5 + 1.4, 0)
+	line.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	rig.add_child(line)
+	_entry.add_child(rig)
+	return rig
+
+
+func _apply_entry(t: float) -> void:
+	_scenic_moon.visible = false
+	_ocean.visible = _action != "plasma"
+	var strength: float = plasma_strength(t)
+	var chutes: Vector2 = parachute_open(t)
+	var floating: float = splash_float(t)
+	_capsule.rotation = Vector3.ZERO
+	_capsule.position = Vector3.ZERO
+	# Heat shield (the wide end) faces the camera for plasma, and down for the descent.
+	for puff: MeshInstance3D in _sheath:
+		puff.visible = _action == "plasma" and strength > 0.02
+	for puff: MeshInstance3D in _trail:
+		puff.visible = _action == "plasma" and strength > 0.02
+	for rig: Node3D in _drogues:
+		rig.visible = _action == "parachute" and chutes.x > 0.04
+		rig.scale = Vector3.ONE * maxf(chutes.x, 0.001)
+	for rig: Node3D in _mains:
+		rig.visible = _action == "parachute" and chutes.y > 0.04
+		rig.scale = Vector3.ONE * maxf(chutes.y, 0.001)
+	for puff: MeshInstance3D in _splash:
+		puff.visible = false
+	if _action == "plasma":
+		_scenic_earth.visible = true
+		_scenic_earth.position = Vector3(0, -3.0, -46.0)
+		_scenic_earth.scale = Vector3.ONE * 8.0
+		_entry.position = Vector3.ZERO
+		_capsule.rotation.x = -PI / 2.0
+		_plasma_mat.albedo_color = Color(1.0, 0.45, 0.08, 0.25 + strength * 0.45)
+		_plasma_mat.emission_energy_multiplier = 0.4 + strength * 2.2
+		for i in _sheath.size():
+			var angle: float = float(i) / float(_sheath.size()) * TAU
+			var puff: MeshInstance3D = _sheath[i]
+			puff.position = Vector3(cos(angle) * 1.7, sin(angle) * 1.7, 1.55)
+			puff.scale = Vector3.ONE * (0.4 + strength * 1.1)
+		for i in _trail.size():
+			var puff: MeshInstance3D = _trail[i]
+			var back: float = 2.2 + float(i) * 1.15
+			puff.position = Vector3(0.0, 0.15 * float(i % 2), -back)
+			puff.scale = Vector3(0.5 + float(i) * 0.18, 0.5, 1.2 + float(i) * 0.35) * strength
+	elif _action == "parachute":
+		_scenic_earth.visible = false
+		var height: float = lerpf(6.2, 1.15, t)
+		_entry.position = Vector3(0, height, 0)
+	else:
+		_scenic_earth.visible = false
+		var height: float = lerpf(1.5, 0.35, floating)
+		_entry.position = Vector3(0, height, 0)
+		var hit: float = smoothstep(0.0, 0.32, t) * (1.0 - smoothstep(0.5, 0.92, t))
+		_splash_mat.albedo_color = Color(0.92, 0.96, 1.0, hit)
+		_splash_mat.emission_energy_multiplier = hit * 1.2
+		for i in _splash.size():
+			var puff: MeshInstance3D = _splash[i]
+			puff.visible = hit > 0.03
+			var angle: float = float(i) / float(_splash.size()) * TAU
+			var reach: float = 0.6 + hit * (1.2 + float(i) * 0.15)
+			puff.position = Vector3(cos(angle) * reach, 0.2 + hit * 0.8, sin(angle) * reach)
+			puff.scale = Vector3.ONE * (0.3 + hit * 1.1)
+
+
+func _glow_material(color: Color) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.albedo_color = Color(color.r, color.g, color.b, 0.0)
+	material.emission_enabled = true
+	material.emission = color
+	material.emission_energy_multiplier = 0.0
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return material
+
+
 func _build_damage(dark: Material) -> void:
 	_box(Vector3(0.4, 1.65, 1.25), BAY, dark, _stack)
 	_panel = MeshInstance3D.new()
@@ -339,6 +545,16 @@ func _build_damage(dark: Material) -> void:
 
 
 func _apply_action(t: float) -> void:
+	var descent: bool = _action == "plasma" or _action == "parachute" or _action == "splash"
+	if _entry != null:
+		_entry.visible = descent
+	if _stack != null:
+		_stack.visible = not descent
+	if descent:
+		_apply_entry(t)
+		return
+	if _ocean != null:
+		_ocean.visible = false
 	var travel: float = panel_travel(_action, t)
 	var drift: float = smoothstep(0.25, 1.0, t) if _action == "explosion" else travel
 	_panel.position = PANEL_HOME + PANEL_DRIFT * travel

@@ -339,7 +339,7 @@
         "title": "Contact",
         "get_from_splashdown": -0.161389,
         "audio": "res://assets/audio/e5_splash.mp3",
-        "images": ["res://assets/images/parachutes.jpg"],
+        "action": "parachute",
         "captions": ["Contact restored.", "Three main parachutes open."]
       },
       {

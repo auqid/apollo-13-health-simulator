@@ -167,6 +167,12 @@ const POLL_CHOICE_HOLD_S: float = 1.5
 const REENTRY_FAREWELL_HOLD_S: float = 6.0
 ## Recovery photo before the scorecard.
 const REENTRY_RECOVERY_HOLD_S: float = 6.0
+## Silent exterior of Odyssey, heat shield first, before the radio blackout.
+const REENTRY_PLASMA_S: float = 8.0
+## Debug loop of the parachute descent. In the session it follows the clock from contact to splashdown.
+const REENTRY_PARACHUTE_S: float = 10.0
+## Splash, then the capsule floating, before the recovery photo.
+const REENTRY_SPLASH_S: float = 6.0
 ## Near real time, so the PC+2 burn and the reentry stress are visible. About 36 GET seconds per real second.
 const TIMESKIP_SLOW_H_PER_S: float = 0.012
 
