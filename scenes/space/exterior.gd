@@ -23,6 +23,10 @@ var _camera: Camera3D
 var _world: WorldEnvironment
 var _environment: Environment
 var _stack: Node3D
+var _sm: Node3D
+var _odyssey: Node3D
+var _aquarius: Node3D
+var _wound: Node3D
 var _scenic_earth: Node3D
 var _scenic_moon: Node3D
 var _map: Node3D
@@ -48,6 +52,8 @@ var _mains: Array[Node3D] = []
 var _splash: Array[MeshInstance3D] = []
 var _plasma_mat: StandardMaterial3D
 var _splash_mat: StandardMaterial3D
+var _lm_puffs: Array[MeshInstance3D] = []
+var _lm_puff_mat: StandardMaterial3D
 
 
 func _ready() -> void:
@@ -147,6 +153,13 @@ static func camera_transform(move: String, t: float, action: String = "") -> Tra
 	elif action == "splash":
 		from = Vector3(7.2, 2.0, 6.0).lerp(Vector3(5.4, 1.15, 4.4), eased)
 		aim = Vector3(0.0, 0.35, 0.0)
+	elif action == "sm_jettison":
+		var yaw: float = lerpf(-0.5, 1.15, eased)
+		from = Vector3(sin(yaw) * 14.0, 3.2, cos(yaw) * 12.0 + 1.0)
+		aim = Vector3(0.2, 0.2, 0.6)
+	elif action == "lm_jettison":
+		from = Vector3(7.5, 2.0, 11.0).lerp(Vector3(11.0, 2.8, 15.0), eased)
+		aim = Vector3(0.0, 0.25, 8.2)
 	elif action == "explosion" or move == "bay":
 		from = Vector3(8.2, 2.0, 3.2).lerp(Vector3(10.4, 2.6, 0.2), eased)
 		aim = Vector3(1.4, 0.2, 0.3)
@@ -212,6 +225,21 @@ static func splash_float(t: float) -> float:
 	return smoothstep(0.18, 0.62, clampf(t, 0.0, 1.0))
 
 
+## How far Odyssey and Aquarius have moved off the Service Module.
+static func sm_separation(t: float) -> float:
+	return smoothstep(0.08, 0.9, clampf(t, 0.0, 1.0))
+
+
+## How far Aquarius has drifted off Odyssey. The puff of tunnel air is strongest at the start.
+static func lm_separation(t: float) -> float:
+	return smoothstep(0.06, 0.88, clampf(t, 0.0, 1.0))
+
+
+static func lm_puff(t: float) -> float:
+	var amount: float = clampf(t, 0.0, 1.0)
+	return smoothstep(0.0, 0.12, amount) * (1.0 - smoothstep(0.22, 0.55, amount))
+
+
 func _place_scenery(body: String) -> void:
 	if body == "moon":
 		_scenic_moon.position = Vector3(-16.0, 5.0, -28.0)
@@ -265,30 +293,38 @@ func _build_scenery() -> void:
 func _build_stack() -> void:
 	_stack = Node3D.new()
 	add_child(_stack)
+	_sm = Node3D.new()
+	_odyssey = Node3D.new()
+	_aquarius = Node3D.new()
+	_stack.add_child(_sm)
+	_stack.add_child(_odyssey)
+	_stack.add_child(_aquarius)
 	var white := _paint(CSM_WHITE, 0.55)
 	var foil := _paint(FOIL, 0.72)
 	var dark := _paint(NOZZLE, 0.4)
-	# Service Module and its engine.
-	_cylinder(1.95, 1.95, 7.4, 16, Vector3(0, 0, 0), white, _stack)
-	_cylinder(1.15, 0.32, 1.7, 16, Vector3(0, 0, -4.55), dark, _stack)
-	_cylinder(1.96, 1.96, 0.55, 16, Vector3(0, 0, 2.6), foil, _stack)
+	# Service Module and its engine. -Z is the engine, +Z joins Odyssey.
+	_cylinder(1.95, 1.95, 7.4, 16, Vector3(0, 0, 0), white, _sm)
+	_cylinder(1.15, 0.32, 1.7, 16, Vector3(0, 0, -4.55), dark, _sm)
+	_cylinder(1.96, 1.96, 0.55, 16, Vector3(0, 0, 2.6), foil, _sm)
 	# Command Module: heat shield aft, nose toward the Lunar Module.
-	_cylinder(1.95, 0.42, 3.4, 16, Vector3(0, 0, 5.55), white, _stack)
-	_cylinder(0.34, 0.34, 0.55, 12, Vector3(0, 0, 7.45), white, _stack)
-	_window(Vector3(0.28, 0.22, 0.02), Vector3(0.7, 0.35, 4.7), false)
-	_window(Vector3(0.28, 0.22, 0.02), Vector3(-0.55, 0.55, 5.3), false)
+	_cylinder(1.95, 0.42, 3.4, 16, Vector3(0, 0, 5.55), white, _odyssey)
+	_cylinder(0.34, 0.34, 0.55, 12, Vector3(0, 0, 7.45), white, _odyssey)
+	_window(Vector3(0.28, 0.22, 0.02), Vector3(0.7, 0.35, 4.7), false, _odyssey)
+	_window(Vector3(0.28, 0.22, 0.02), Vector3(-0.55, 0.55, 5.3), false, _odyssey)
 	# Lunar Module: ascent cabin, then the descent stage and four legs.
-	_box(Vector3(2.3, 2.5, 2.2), Vector3(0, 0.15, 9.0), foil, _stack)
-	_box(Vector3(4.1, 1.7, 4.1), Vector3(0, -0.85, 11.15), foil, _stack)
-	_cylinder(0.55, 0.55, 0.35, 12, Vector3(0, 1.5, 9.0), dark, _stack, false)
-	_window(Vector3(0.46, 0.5, 0.04), Vector3(0, 0.4, 7.86), true)
-	_window(Vector3(0.04, 0.42, 0.55), Vector3(1.16, 0.35, 9.0), true)
+	_box(Vector3(2.3, 2.5, 2.2), Vector3(0, 0.15, 9.0), foil, _aquarius)
+	_box(Vector3(4.1, 1.7, 4.1), Vector3(0, -0.85, 11.15), foil, _aquarius)
+	_cylinder(0.55, 0.55, 0.35, 12, Vector3(0, 1.5, 9.0), dark, _aquarius, false)
+	_window(Vector3(0.46, 0.5, 0.04), Vector3(0, 0.4, 7.86), true, _aquarius)
+	_window(Vector3(0.04, 0.42, 0.55), Vector3(1.16, 0.35, 9.0), true, _aquarius)
 	_build_damage(dark)
+	_build_wound(dark)
+	_build_lm_puff()
 	for side: int in [-1, 1]:
 		for fore: int in [-1, 1]:
 			var root := Vector3(side * 1.7, -1.5, 11.15 + fore * 1.5)
 			var foot := root + Vector3(side * 1.3, -1.7, fore * 0.8)
-			_strut(root, foot, dark, _stack)
+			_strut(root, foot, dark, _aquarius)
 
 
 func _build_map() -> void:
@@ -505,7 +541,7 @@ func _glow_material(color: Color) -> StandardMaterial3D:
 
 
 func _build_damage(dark: Material) -> void:
-	_box(Vector3(0.4, 1.65, 1.25), BAY, dark, _stack)
+	_box(Vector3(0.4, 1.65, 1.25), BAY, dark, _sm)
 	_panel = MeshInstance3D.new()
 	var plate := BoxMesh.new()
 	plate.size = Vector3(0.12, 2.15, 1.55)
@@ -513,7 +549,7 @@ func _build_damage(dark: Material) -> void:
 	_panel.material_override = _paint(CSM_WHITE, 0.5)
 	_panel.position = PANEL_HOME
 	_panel.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_stack.add_child(_panel)
+	_sm.add_child(_panel)
 	_cloud_mat = _paint(Color(0.96, 0.97, 1.0, 0.0), 1.0)
 	_cloud_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_cloud_mat.emission_enabled = true
@@ -528,7 +564,7 @@ func _build_damage(dark: Material) -> void:
 	for dir: Vector3 in dirs:
 		var puff := Bodies.sphere(0.45, _cloud_mat, 10)
 		puff.visible = false
-		_stack.add_child(puff)
+		_sm.add_child(puff)
 		_puffs.append(puff)
 		_puff_dir.append(dir.normalized())
 	for i in 5:
@@ -539,9 +575,47 @@ func _build_damage(dark: Material) -> void:
 		chip.material_override = _paint(CSM_WHITE.darkened(0.15 * float(i % 3)), 0.6)
 		chip.visible = false
 		chip.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		_stack.add_child(chip)
+		_sm.add_child(chip)
 		_debris.append(chip)
 		_debris_dir.append(Vector3(0.7 + 0.15 * float(i), 0.35 - 0.2 * float(i % 3), -0.25 + 0.18 * float(i % 2)).normalized())
+
+
+func _build_wound(dark: Material) -> void:
+	_wound = Node3D.new()
+	_wound.visible = false
+	_sm.add_child(_wound)
+	# One panel gone, from near the Command Module base almost to the engine.
+	_box(Vector3(0.45, 1.55, 5.4), Vector3(1.75, 0.05, -0.3), dark, _wound)
+	var scrap := _paint(Color(0.45, 0.42, 0.38), 0.7)
+	_box(Vector3(0.7, 0.18, 0.35), Vector3(2.35, 0.35, -1.1), scrap, _wound)
+	_box(Vector3(0.22, 0.55, 0.22), Vector3(2.15, -0.15, -0.4), scrap, _wound)
+	_box(Vector3(0.4, 0.12, 0.5), Vector3(2.05, 0.55, 0.6), scrap, _wound)
+	# High-gain antenna beside the open bay.
+	_cylinder(0.06, 0.06, 1.3, 8, Vector3(2.5, 0.85, 1.5), scrap, _wound, false)
+	_box(Vector3(0.7, 0.08, 0.7), Vector3(2.7, 1.45, 1.5), scrap, _wound)
+
+
+func _build_lm_puff() -> void:
+	_lm_puff_mat = _glow_material(Color(0.82, 0.88, 0.95))
+	for dir: Vector3 in [Vector3(1, 0.3, 0.2), Vector3(-0.6, 0.5, 0.3), Vector3(0.2, -0.4, 0.8), Vector3(0.4, 0.2, -0.5)]:
+		var puff := Bodies.sphere(0.22, _lm_puff_mat, 8)
+		puff.visible = false
+		puff.position = Vector3(0, 0.25, 7.5)
+		_stack.add_child(puff)
+		_lm_puffs.append(puff)
+
+
+func _restack() -> void:
+	if _sm == null:
+		return
+	for ship: Node3D in [_sm, _odyssey, _aquarius]:
+		ship.visible = true
+		ship.position = Vector3.ZERO
+		ship.rotation = Vector3.ZERO
+	if _wound != null:
+		_wound.visible = false
+	if _panel != null:
+		_panel.visible = true
 
 
 func _apply_action(t: float) -> void:
@@ -555,7 +629,12 @@ func _apply_action(t: float) -> void:
 		return
 	if _ocean != null:
 		_ocean.visible = false
+	_restack()
+	_separate(t)
 	var travel: float = panel_travel(_action, t)
+	if _action == "sm_jettison" and _panel != null:
+		_panel.visible = false
+		travel = 0.0
 	var drift: float = smoothstep(0.25, 1.0, t) if _action == "explosion" else travel
 	_panel.position = PANEL_HOME + PANEL_DRIFT * travel
 	_panel.rotation = Vector3(0.5, 0.25, 1.1) * travel * 3.5
@@ -588,9 +667,36 @@ func _apply_action(t: float) -> void:
 		mat.emission_energy_multiplier = glow.y * 1.6
 
 
-func _window(size: Vector3, where: Vector3, aquarius: bool) -> void:
+func _separate(t: float) -> void:
+	var puff: float = 0.0
+	if _action == "sm_jettison":
+		var apart: float = sm_separation(t)
+		var shift := Vector3(0.6, 0.35, 6.5) * apart
+		_odyssey.position = shift
+		_aquarius.position = shift
+		_sm.rotation = Vector3(0.35, 1.15, 0.2) * apart
+		_sm.position = Vector3(-0.4, 0.1, -1.2) * apart
+		if _wound != null:
+			_wound.visible = true
+	elif _action == "lm_jettison":
+		var apart: float = lm_separation(t)
+		_sm.visible = false
+		_aquarius.position = Vector3(0.35, 0.15, 5.5) * apart
+		puff = lm_puff(t)
+	if _lm_puff_mat != null:
+		_lm_puff_mat.albedo_color = Color(0.82, 0.9, 1.0, puff)
+		_lm_puff_mat.emission_energy_multiplier = puff * 1.3
+	for i in _lm_puffs.size():
+		var cloud: MeshInstance3D = _lm_puffs[i]
+		cloud.visible = puff > 0.03
+		var spread: float = 0.3 + puff * (0.8 + float(i) * 0.25)
+		cloud.position = Vector3(0, 0.25, 7.5) + Vector3(0.6 - float(i) * 0.35, 0.2 * float(i % 2), 0.15 * float(i)) * spread
+		cloud.scale = Vector3.ONE * (0.4 + puff)
+
+
+func _window(size: Vector3, where: Vector3, aquarius: bool, parent: Node3D) -> void:
 	var material := _window_material()
-	_box(size, where, material, _stack)
+	_box(size, where, material, parent)
 	if aquarius:
 		_lm_windows.append(material)
 	else:

@@ -298,6 +298,14 @@ func test_cutscenes_have_editable_shots() -> void:
 	_check(e1_shots[1]["kind"] == "exterior" and e1_shots[1]["action"] == "explosion", "the bang cuts to a silent exterior explosion")
 	_check(e1_shots[2]["kind"] == "audio", "the problem audio plays after the explosion shot")
 	_check(e1_shots[3]["action"] == "lifeboat", "E1 ends with the move into Aquarius")
+	var sm_shot: Dictionary = data["reveals"]["service_module"]["shots"][0]
+	var sm_photo: Dictionary = data["reveals"]["service_module"]["shots"][1]
+	_check(sm_shot["kind"] == "exterior" and sm_shot["action"] == "sm_jettison", "the Service Module jettison is an exterior shot")
+	_check(sm_shot["audio"].ends_with("e5_sm.mp3"), "Lovell and Haise play over the jettison")
+	_check(sm_photo["kind"] == "photo" and sm_photo["image"].ends_with("service_module.jpg"), "then the photo of what the crew saw")
+	_check(Exterior.sm_separation(0.0) < 0.05 and Exterior.sm_separation(1.0) > 0.9, "Odyssey and Aquarius move off the Service Module")
+	_check(Exterior.lm_separation(0.0) < 0.05 and Exterior.lm_separation(1.0) > 0.9, "Aquarius drifts away from Odyssey")
+	_check(Exterior.lm_puff(0.1) > Exterior.lm_puff(1.0), "the tunnel puff is at the start of the separation")
 	_check(Exterior.panel_travel("explosion", 0.0) < 0.05, "the panel starts seated")
 	_check(Exterior.panel_travel("explosion", 1.0) > 0.9, "the panel ends clear of the hull")
 	_check(Exterior.cloud_alpha("lifeboat", 1.0) > 0.05 and Exterior.cloud_alpha("lifeboat", 1.0) < Exterior.cloud_alpha("lifeboat", 0.0),

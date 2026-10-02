@@ -292,21 +292,24 @@
       "effects": {"flags": {"sm_jettisoned": true}},
       "shots": [
         {
-          "kind": "photo",
-          "image": "res://assets/images/service_module.jpg",
-          "duration_s": 8.0,
-          "caption": "The crew lets the Service Module go and sees the damage."
-        },
-        {
-          "kind": "audio",
-          "audio": "res://assets/audio/e5_sm.mp3",
+          "kind": "exterior",
           "duration_s": 16.0,
-          "caption": "One whole side of the spacecraft is missing.",
+          "move": "orbit",
+          "body": "earth",
+          "action": "sm_jettison",
+          "audio": "res://assets/audio/e5_sm.mp3",
+          "caption": "The crew lets the Service Module go and sees the damage.",
           "subtitles": [
             {"at_s": 0.5, "hold_s": 5.0, "text": "Lovell: “And there's one whole side of that spacecraft missing.”"},
             {"at_s": 5.5, "hold_s": 5.5, "text": "Lovell: “Right by the high gain antenna, the whole panel is blown out,\nalmost from the base to the engine.”"},
             {"at_s": 11.2, "hold_s": 4.5, "text": "Haise: “Man, that's unbelievable!”"}
           ]
+        },
+        {
+          "kind": "photo",
+          "image": "res://assets/images/service_module.jpg",
+          "duration_s": 8.0,
+          "caption": "What the crew actually saw."
         }
       ]
     }

@@ -167,6 +167,8 @@ func _build_view(column: VBoxContainer) -> void:
 	line.add_child(_button("Plasma", Director.preview_plasma))
 	line.add_child(_button("Parachutes", Director.preview_parachute))
 	line.add_child(_button("Splashdown", Director.preview_splash))
+	line.add_child(_button("SM jettison", Director.preview_sm_jettison))
+	line.add_child(_button("LM jettison", Director.preview_lm_jettison))
 	line.add_child(_button("Mission map", Director.preview_map))
 	line.add_child(_button("Cabin", Director.preview_cabin))
 	column.add_child(line)

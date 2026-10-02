@@ -61,6 +61,7 @@ var _reentry_fired: Dictionary = {}
 var _reentry_hold_s: float = 0.0
 var _reentry_holding: bool = false
 var _reentry_beat: String = ""
+var _reentry_beat_span: float = 1.0
 var _parachute_playing: bool = false
 var _recovery_hold: bool = false
 var _radio_blackout: bool = false
@@ -467,6 +468,11 @@ func _present_reentry_step(step: Dictionary) -> void:
 		_reentry_beat = "farewell"
 		_reentry_holding = true
 		_reentry_hold_s = maxf(clip_s, Tuning.REENTRY_FAREWELL_HOLD_S)
+		_reentry_beat_span = _reentry_hold_s
+		_present_exterior("pan", "earth", "lm_jettison")
+		var hud := _hud()
+		if hud != null:
+			hud.set_panel_visible(false)
 		Game.pause()
 	elif id == "blackout":
 		_start_radio_blackout(step)
@@ -543,6 +549,12 @@ func _show_recovery_still() -> void:
 
 
 func _tick_reentry_beat() -> void:
+	if _reentry_beat == "farewell":
+		var farewell_t: float = clampf(1.0 - _reentry_hold_s / maxf(_reentry_beat_span, 0.5), 0.0, 1.0)
+		var separating := _exterior()
+		if separating != null:
+			separating.set_progress(farewell_t)
+		return
 	if _reentry_beat != "plasma" and _reentry_beat != "splash":
 		return
 	var span: float = Tuning.REENTRY_PLASMA_S if _reentry_beat == "plasma" else Tuning.REENTRY_SPLASH_S
@@ -826,6 +838,10 @@ func _begin_shot(shot: Dictionary) -> void:
 		if view != null:
 			view.hide_photo()
 		_present_exterior(str(shot.get("move", "orbit")), str(shot.get("body", "earth")), str(shot.get("action", "")))
+		if str(shot.get("audio", "")) != "":
+			var clip_s: float = _play_clip(str(shot.get("audio", "")))
+			if clip_s + 0.4 > _shot_left_s:
+				_shot_left_s = clip_s + 0.4
 	elif kind == "map":
 		if view != null:
 			view.hide_photo()
@@ -840,6 +856,9 @@ func _begin_shot(shot: Dictionary) -> void:
 		if effects != null:
 			effects.play_explosion_dim()
 	elif kind == "photo":
+		var playing := _bio()
+		if playing != null:
+			playing.stop_voice()
 		var texture: Texture2D = _load_texture(str(shot.get("image", "")))
 		if view != null:
 			if texture != null:
@@ -915,6 +934,17 @@ func preview_splash() -> void:
 	_begin_space_preview("splash", "pan", "earth", "splash")
 
 
+## Debug: Odyssey and Aquarius leaving the damaged Service Module.
+func preview_sm_jettison() -> void:
+	var shot: Dictionary = _shot_with_action("sm_jettison")
+	_begin_space_preview("sm_jettison", str(shot.get("move", "orbit")), str(shot.get("body", "earth")), "sm_jettison")
+
+
+## Debug: Aquarius drifting off Odyssey, with the puff from the tunnel.
+func preview_lm_jettison() -> void:
+	_begin_space_preview("lm_jettison", "pan", "earth", "lm_jettison")
+
+
 ## Debug: the free-return map with the ship at the current GET.
 func preview_map() -> void:
 	_space_preview = "map"
@@ -964,9 +994,11 @@ func _begin_space_preview(which: String, move: String, body: String, action: Str
 
 
 func _preview_span() -> float:
-	if _space_preview == "explosion" or _space_preview == "lifeboat":
+	if _space_preview == "explosion" or _space_preview == "lifeboat" or _space_preview == "sm_jettison":
 		var shot: Dictionary = _shot_with_action(_space_preview)
 		return maxf(float(shot.get("duration_s", Tuning.EXTERIOR_PREVIEW_S)), 0.5)
+	if _space_preview == "lm_jettison":
+		return Tuning.REENTRY_FAREWELL_HOLD_S
 	if _space_preview == "plasma":
 		return Tuning.REENTRY_PLASMA_S
 	if _space_preview == "parachute":
@@ -978,9 +1010,21 @@ func _preview_span() -> float:
 
 func _shot_with_action(action: String) -> Dictionary:
 	for event: Dictionary in Timeline.event_list(Game.events):
-		for shot: Variant in event.get("cutscene", {}).get("shots", []):
-			if shot is Dictionary and str(shot.get("action", "")) == action:
-				return shot
+		var found: Dictionary = _find_action(event.get("cutscene", {}).get("shots", []), action)
+		if not found.is_empty():
+			return found
+	for reveal_id: String in Game.events.get("reveals", {}):
+		var reveal: Dictionary = Game.events["reveals"][reveal_id]
+		var found: Dictionary = _find_action(reveal.get("shots", []), action)
+		if not found.is_empty():
+			return found
+	return {}
+
+
+func _find_action(shots: Array, action: String) -> Dictionary:
+	for shot: Variant in shots:
+		if shot is Dictionary and str(shot.get("action", "")) == action:
+			return shot
 	return {}
 
 
