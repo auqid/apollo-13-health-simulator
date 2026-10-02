@@ -17,6 +17,14 @@
         "shots": [
           {"kind": "bang", "duration_s": 2.0, "caption": "A bang, then the master alarm."},
           {
+            "kind": "exterior",
+            "duration_s": 8.0,
+            "move": "bay",
+            "body": "earth",
+            "action": "explosion",
+            "caption": "A panel blows off the Service Module.\nOxygen vents into the sunlight."
+          },
+          {
             "kind": "audio",
             "audio": "res://assets/audio/e1_problem.mp3",
             "duration_s": 28.0,
@@ -28,8 +36,14 @@
               {"at_s": 22.0, "hold_s": 6.0, "text": "Lousma: “Roger. Main B undervolt.”"}
             ]
           },
-          {"kind": "cabin", "duration_s": 5.0, "caption": "Oxygen is venting into space. Odyssey is dying."},
-          {"kind": "cabin", "duration_s": 5.0, "caption": "The crew moves into Aquarius and uses it as a lifeboat."}
+          {
+            "kind": "exterior",
+            "duration_s": 6.0,
+            "move": "push_in",
+            "body": "earth",
+            "action": "lifeboat",
+            "caption": "The crew moves into Aquarius, their lifeboat."
+          }
         ]
       },
       "poll": {

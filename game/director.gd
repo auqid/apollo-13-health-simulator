@@ -75,12 +75,12 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	if _space_preview == "exterior" and phase != PHASE_CUTSCENE:
-		_preview_t = fposmod(_preview_t + delta / Tuning.EXTERIOR_PREVIEW_S, 1.0)
+	if _space_preview != "" and _space_preview != "map" and phase != PHASE_CUTSCENE:
+		_preview_t = fposmod(_preview_t + delta / _preview_span(), 1.0)
 		var space := _exterior()
 		if space != null:
 			space.set_progress(_preview_t)
-	if phase == PHASE_INTRO:
+	if phase == PHASE_INTRO and _space_preview == "":
 		_card_left_s -= delta
 		if _card_left_s <= 0.0:
 			skip()
@@ -726,7 +726,7 @@ func _begin_shot(shot: Dictionary) -> void:
 	if kind == "exterior":
 		if view != null:
 			view.hide_photo()
-		_present_exterior(str(shot.get("move", "orbit")), str(shot.get("body", "earth")))
+		_present_exterior(str(shot.get("move", "orbit")), str(shot.get("body", "earth")), str(shot.get("action", "")))
 	elif kind == "map":
 		if view != null:
 			view.hide_photo()
@@ -786,13 +786,19 @@ func _end_cutscene() -> void:
 
 ## Debug: orbit the intact stack. Click Cabin in the debug panel to come back.
 func preview_exterior() -> void:
-	_space_preview = "exterior"
-	_preview_t = 0.0
-	var card := _stage()
-	if card != null:
-		card.hide_card()
-	Game.pause()
-	_present_exterior("orbit", "earth")
+	_begin_space_preview("exterior", "orbit", "earth", "")
+
+
+## Debug: the Service Module panel, debris and oxygen cloud, looping.
+func preview_explosion() -> void:
+	var shot: Dictionary = _shot_with_action("explosion")
+	_begin_space_preview("explosion", str(shot.get("move", "bay")), str(shot.get("body", "earth")), "explosion")
+
+
+## Debug: the push-in on the docking tunnel, with Odyssey going dark and Aquarius lighting up.
+func preview_lifeboat() -> void:
+	var shot: Dictionary = _shot_with_action("lifeboat")
+	_begin_space_preview("lifeboat", str(shot.get("move", "push_in")), str(shot.get("body", "earth")), "lifeboat")
 
 
 ## Debug: the free-return map with the ship at the current GET.
@@ -813,7 +819,7 @@ func preview_cabin() -> void:
 	_hide_space()
 	var kind: String = str(shot.get("kind", ""))
 	if kind == "exterior":
-		_present_exterior(str(shot.get("move", "orbit")), str(shot.get("body", "earth")))
+		_present_exterior(str(shot.get("move", "orbit")), str(shot.get("body", "earth")), str(shot.get("action", "")))
 		var space := _exterior()
 		if space != null:
 			space.set_progress(clampf(_shot_elapsed_s / maxf(float(shot.get("duration_s", 1.0)), 0.1), 0.0, 1.0))
@@ -833,13 +839,38 @@ func _finish_opening_map() -> void:
 	Game.play(_clock_target)
 
 
-func _present_exterior(move: String, body: String) -> void:
+func _begin_space_preview(which: String, move: String, body: String, action: String) -> void:
+	_space_preview = which
+	_preview_t = 0.0
+	var card := _stage()
+	if card != null:
+		card.hide_card()
+	Game.pause()
+	_present_exterior(move, body, action)
+
+
+func _preview_span() -> float:
+	if _space_preview == "explosion" or _space_preview == "lifeboat":
+		var shot: Dictionary = _shot_with_action(_space_preview)
+		return maxf(float(shot.get("duration_s", Tuning.EXTERIOR_PREVIEW_S)), 0.5)
+	return Tuning.EXTERIOR_PREVIEW_S
+
+
+func _shot_with_action(action: String) -> Dictionary:
+	for event: Dictionary in Timeline.event_list(Game.events):
+		for shot: Variant in event.get("cutscene", {}).get("shots", []):
+			if shot is Dictionary and str(shot.get("action", "")) == action:
+				return shot
+	return {}
+
+
+func _present_exterior(move: String, body: String, action: String = "") -> void:
 	var cabin := _cabin_node()
 	if cabin != null:
 		cabin.set_presented(false)
 	var space := _exterior()
 	if space != null:
-		space.show_exterior(move, body)
+		space.show_exterior(move, body, action)
 
 
 func _present_map(get_h: float, splashdown_h: float) -> void:

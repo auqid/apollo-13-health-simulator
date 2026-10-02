@@ -6,7 +6,10 @@ const Bodies := preload("res://scenes/space/bodies.gd")
 const MapPath := preload("res://scenes/space/map_path.gd")
 
 const GROUP := "exterior"
-const MOVES: Array[String] = ["orbit", "push_in", "pan"]
+const MOVES: Array[String] = ["orbit", "push_in", "pan", "bay"]
+const PANEL_HOME := Vector3(2.05, 0.15, 0.25)
+const PANEL_DRIFT := Vector3(5.8, 1.8, -1.4)
+const BAY := Vector3(1.72, 0.15, 0.25)
 
 # Stack axis: -Z is the Service Module engine, +Z is the Lunar Module.
 const FOCUS := Vector3(0.0, 0.6, 3.2)
@@ -25,7 +28,16 @@ var _scenic_moon: Node3D
 var _map: Node3D
 var _marker: MeshInstance3D
 var _move: String = "orbit"
+var _action: String = ""
 var _showing: bool = false
+var _panel: MeshInstance3D
+var _debris: Array[MeshInstance3D] = []
+var _debris_dir: Array[Vector3] = []
+var _puffs: Array[MeshInstance3D] = []
+var _puff_dir: Array[Vector3] = []
+var _cloud_mat: StandardMaterial3D
+var _cm_windows: Array[StandardMaterial3D] = []
+var _lm_windows: Array[StandardMaterial3D] = []
 
 
 func _ready() -> void:
@@ -48,7 +60,7 @@ func build() -> void:
 	add_child(_camera)
 
 
-func show_exterior(move: String, body: String) -> void:
+func show_exterior(move: String, body: String, action: String = "") -> void:
 	build()
 	_showing = true
 	visible = true
@@ -58,6 +70,7 @@ func show_exterior(move: String, body: String) -> void:
 	_scenic_moon.visible = true
 	_place_scenery(body)
 	_move = move if move in MOVES else "orbit"
+	_action = action
 	_world.environment = _environment
 	_camera.current = true
 	set_progress(0.0)
@@ -81,7 +94,9 @@ func show_map(get_h: float, splashdown_h: float) -> void:
 func set_progress(t: float) -> void:
 	if _camera == null:
 		return
-	_camera.global_transform = camera_transform(_move, clampf(t, 0.0, 1.0))
+	var amount: float = clampf(t, 0.0, 1.0)
+	_camera.global_transform = camera_transform(_move, amount, _action)
+	_apply_action(amount)
 
 
 func hide_view() -> void:
@@ -98,18 +113,57 @@ func is_showing() -> bool:
 
 
 ## Camera framing for a move. t goes from 0 to 1 over the shot.
-static func camera_transform(move: String, t: float) -> Transform3D:
+## The explosion watches the Service Module bay. The lifeboat push-in aims at the docking tunnel.
+static func camera_transform(move: String, t: float, action: String = "") -> Transform3D:
 	var amount: float = clampf(t, 0.0, 1.0)
+	var eased: float = smoothstep(0.0, 1.0, amount)
 	var from: Vector3
-	match move:
-		"push_in":
-			from = Vector3(7.0, 3.2, 16.0).lerp(Vector3(2.4, 1.4, 7.5), smoothstep(0.0, 1.0, amount))
-		"pan":
-			from = Vector3(lerpf(-9.0, 9.0, amount), 2.2, 13.0)
-		_:
-			var angle: float = lerpf(-0.8, 1.05, amount)
-			from = FOCUS + Vector3(sin(angle) * 16.0, 4.2, cos(angle) * 16.0)
-	return Transform3D(Basis.looking_at(FOCUS - from, Vector3.UP), from)
+	var aim: Vector3 = FOCUS
+	if action == "explosion" or move == "bay":
+		from = Vector3(8.2, 2.0, 3.2).lerp(Vector3(10.4, 2.6, 0.2), eased)
+		aim = Vector3(1.4, 0.2, 0.3)
+	elif action == "lifeboat":
+		from = Vector3(6.2, 2.2, 13.5).lerp(Vector3(1.7, 0.85, 8.6), eased)
+		aim = Vector3(0.0, 0.4, 7.6)
+	else:
+		match move:
+			"push_in":
+				from = Vector3(7.0, 3.2, 16.0).lerp(Vector3(2.4, 1.4, 7.5), eased)
+			"pan":
+				from = Vector3(lerpf(-9.0, 9.0, amount), 2.2, 13.0)
+			_:
+				var angle: float = lerpf(-0.8, 1.05, amount)
+				from = FOCUS + Vector3(sin(angle) * 16.0, 4.2, cos(angle) * 16.0)
+	return Transform3D(Basis.looking_at(aim - from, Vector3.UP), from)
+
+
+## 0 while the panel is on the hull, 1 when it has blown clear.
+static func panel_travel(action: String, t: float) -> float:
+	if action == "lifeboat":
+		return 1.0
+	if action == "explosion":
+		return smoothstep(0.06, 0.48, clampf(t, 0.0, 1.0))
+	return 0.0
+
+
+## Opacity of the oxygen cloud. The lifeboat shot starts with it already venting, then thinner.
+static func cloud_alpha(action: String, t: float) -> float:
+	var amount: float = clampf(t, 0.0, 1.0)
+	if action == "explosion":
+		return lerpf(0.0, 0.5, smoothstep(0.1, 0.8, amount))
+	if action == "lifeboat":
+		return lerpf(0.4, 0.14, amount)
+	return 0.0
+
+
+## Warm-window glow, x for Odyssey and y for Aquarius.
+static func window_glow(action: String, t: float) -> Vector2:
+	if action == "explosion":
+		return Vector2(1.0, 0.0)
+	if action == "lifeboat":
+		var swap: float = smoothstep(0.12, 0.88, clampf(t, 0.0, 1.0))
+		return Vector2(1.0 - swap, swap)
+	return Vector2.ZERO
 
 
 func _place_scenery(body: String) -> void:
@@ -168,7 +222,6 @@ func _build_stack() -> void:
 	var white := _paint(CSM_WHITE, 0.55)
 	var foil := _paint(FOIL, 0.72)
 	var dark := _paint(NOZZLE, 0.4)
-	var glass := _paint(WINDOW, 0.25)
 	# Service Module and its engine.
 	_cylinder(1.95, 1.95, 7.4, 16, Vector3(0, 0, 0), white, _stack)
 	_cylinder(1.15, 0.32, 1.7, 16, Vector3(0, 0, -4.55), dark, _stack)
@@ -176,13 +229,15 @@ func _build_stack() -> void:
 	# Command Module: heat shield aft, nose toward the Lunar Module.
 	_cylinder(1.95, 0.42, 3.4, 16, Vector3(0, 0, 5.55), white, _stack)
 	_cylinder(0.34, 0.34, 0.55, 12, Vector3(0, 0, 7.45), white, _stack)
-	_box(Vector3(0.28, 0.22, 0.02), Vector3(0.7, 0.35, 4.7), glass, _stack)
-	_box(Vector3(0.28, 0.22, 0.02), Vector3(-0.55, 0.55, 5.3), glass, _stack)
+	_window(Vector3(0.28, 0.22, 0.02), Vector3(0.7, 0.35, 4.7), false)
+	_window(Vector3(0.28, 0.22, 0.02), Vector3(-0.55, 0.55, 5.3), false)
 	# Lunar Module: ascent cabin, then the descent stage and four legs.
 	_box(Vector3(2.3, 2.5, 2.2), Vector3(0, 0.15, 9.0), foil, _stack)
 	_box(Vector3(4.1, 1.7, 4.1), Vector3(0, -0.85, 11.15), foil, _stack)
 	_cylinder(0.55, 0.55, 0.35, 12, Vector3(0, 1.5, 9.0), dark, _stack, false)
-	_box(Vector3(0.46, 0.46, 0.04), Vector3(0, 0.35, 7.88), glass, _stack)
+	_window(Vector3(0.46, 0.5, 0.04), Vector3(0, 0.4, 7.86), true)
+	_window(Vector3(0.04, 0.42, 0.55), Vector3(1.16, 0.35, 9.0), true)
+	_build_damage(dark)
 	for side: int in [-1, 1]:
 		for fore: int in [-1, 1]:
 			var root := Vector3(side * 1.7, -1.5, 11.15 + fore * 1.5)
@@ -241,6 +296,97 @@ func _ribbon(points: PackedVector3Array, width: float) -> ArrayMesh:
 		tool.add_vertex(b + side)
 		tool.add_vertex(b - side)
 	return tool.commit()
+
+
+func _build_damage(dark: Material) -> void:
+	_box(Vector3(0.4, 1.65, 1.25), BAY, dark, _stack)
+	_panel = MeshInstance3D.new()
+	var plate := BoxMesh.new()
+	plate.size = Vector3(0.12, 2.15, 1.55)
+	_panel.mesh = plate
+	_panel.material_override = _paint(CSM_WHITE, 0.5)
+	_panel.position = PANEL_HOME
+	_panel.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_stack.add_child(_panel)
+	_cloud_mat = _paint(Color(0.96, 0.97, 1.0, 0.0), 1.0)
+	_cloud_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_cloud_mat.emission_enabled = true
+	_cloud_mat.emission = Color(0.92, 0.95, 1.0)
+	_cloud_mat.emission_energy_multiplier = 0.85
+	_cloud_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var dirs: Array[Vector3] = [
+		Vector3(1.0, 0.15, 0.1), Vector3(0.85, 0.45, -0.2), Vector3(0.7, -0.15, 0.45),
+		Vector3(0.95, 0.3, -0.4), Vector3(0.6, 0.55, 0.2), Vector3(0.8, -0.35, -0.25),
+		Vector3(1.0, 0.05, 0.35),
+	]
+	for dir: Vector3 in dirs:
+		var puff := Bodies.sphere(0.45, _cloud_mat, 10)
+		puff.visible = false
+		_stack.add_child(puff)
+		_puffs.append(puff)
+		_puff_dir.append(dir.normalized())
+	for i in 5:
+		var chip := MeshInstance3D.new()
+		var box := BoxMesh.new()
+		box.size = Vector3(0.28, 0.08, 0.16) if i % 2 == 0 else Vector3(0.14, 0.22, 0.1)
+		chip.mesh = box
+		chip.material_override = _paint(CSM_WHITE.darkened(0.15 * float(i % 3)), 0.6)
+		chip.visible = false
+		chip.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_stack.add_child(chip)
+		_debris.append(chip)
+		_debris_dir.append(Vector3(0.7 + 0.15 * float(i), 0.35 - 0.2 * float(i % 3), -0.25 + 0.18 * float(i % 2)).normalized())
+
+
+func _apply_action(t: float) -> void:
+	var travel: float = panel_travel(_action, t)
+	var drift: float = smoothstep(0.25, 1.0, t) if _action == "explosion" else travel
+	_panel.position = PANEL_HOME + PANEL_DRIFT * travel
+	_panel.rotation = Vector3(0.5, 0.25, 1.1) * travel * 3.5
+	for i in _debris.size():
+		var piece: MeshInstance3D = _debris[i]
+		piece.visible = travel > 0.02
+		var out: float = travel * (3.2 + float(i) * 0.7) + drift * 1.4
+		piece.position = BAY + _debris_dir[i] * out
+		piece.rotation = _debris_dir[i] * travel * (2.0 + float(i))
+	var alpha: float = cloud_alpha(_action, t)
+	var spread: float = 0.0
+	if _action == "explosion":
+		spread = smoothstep(0.1, 1.0, t)
+	elif _action == "lifeboat":
+		spread = lerpf(0.85, 1.0, t)
+	var cloud_color := Color(0.96, 0.97, 1.0, alpha)
+	_cloud_mat.albedo_color = cloud_color
+	_cloud_mat.emission_energy_multiplier = alpha * 1.7
+	for i in _puffs.size():
+		var puff: MeshInstance3D = _puffs[i]
+		puff.visible = alpha > 0.02
+		var reach: float = spread * (1.6 + float(i) * 0.45)
+		puff.position = BAY + _puff_dir[i] * reach
+		var size: float = 0.35 + spread * (0.7 + float(i) * 0.18)
+		puff.scale = Vector3.ONE * size
+	var glow: Vector2 = window_glow(_action, t)
+	for mat: StandardMaterial3D in _cm_windows:
+		mat.emission_energy_multiplier = glow.x * 1.6
+	for mat: StandardMaterial3D in _lm_windows:
+		mat.emission_energy_multiplier = glow.y * 1.6
+
+
+func _window(size: Vector3, where: Vector3, aquarius: bool) -> void:
+	var material := _window_material()
+	_box(size, where, material, _stack)
+	if aquarius:
+		_lm_windows.append(material)
+	else:
+		_cm_windows.append(material)
+
+
+func _window_material() -> StandardMaterial3D:
+	var material := _paint(Color(0.12, 0.1, 0.08), 0.3)
+	material.emission_enabled = true
+	material.emission = Color(1.0, 0.82, 0.48)
+	material.emission_energy_multiplier = 0.0
+	return material
 
 
 func _cylinder(bottom: float, top: float, height: float, sides: int, where: Vector3, material: Material, parent: Node3D, along_ship: bool = true) -> void:

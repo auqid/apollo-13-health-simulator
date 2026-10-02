@@ -295,7 +295,16 @@ func test_cutscenes_have_editable_shots() -> void:
 		_check(total_s >= 20.0 and total_s <= 45.0, "%s cutscene is 20 to 45 seconds (%.0f)" % [event["id"], total_s])
 	var e1_shots: Array = data["events"][0]["cutscene"]["shots"]
 	_check(e1_shots[0]["kind"] == "bang", "E1 opens with the bang")
-	_check(e1_shots[1]["kind"] == "audio", "E1 plays the problem audio after the bang")
+	_check(e1_shots[1]["kind"] == "exterior" and e1_shots[1]["action"] == "explosion", "the bang cuts to a silent exterior explosion")
+	_check(e1_shots[2]["kind"] == "audio", "the problem audio plays after the explosion shot")
+	_check(e1_shots[3]["action"] == "lifeboat", "E1 ends with the move into Aquarius")
+	_check(Exterior.panel_travel("explosion", 0.0) < 0.05, "the panel starts seated")
+	_check(Exterior.panel_travel("explosion", 1.0) > 0.9, "the panel ends clear of the hull")
+	_check(Exterior.cloud_alpha("lifeboat", 1.0) > 0.05 and Exterior.cloud_alpha("lifeboat", 1.0) < Exterior.cloud_alpha("lifeboat", 0.0),
+		"the oxygen cloud is still there on the lifeboat shot, and fading")
+	var glow_early: Vector2 = Exterior.window_glow("lifeboat", 0.0)
+	var glow_late: Vector2 = Exterior.window_glow("lifeboat", 1.0)
+	_check(glow_early.x > glow_early.y and glow_late.y > glow_late.x, "Odyssey's windows go dark as Aquarius lights up")
 	var e2_open: Dictionary = data["events"][1]["cutscene"]["shots"][0]
 	_check(e2_open["kind"] == "exterior" and e2_open["move"] == "orbit", "E2 opens on an exterior orbit")
 	var far_side: bool = false

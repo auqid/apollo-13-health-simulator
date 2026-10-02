@@ -162,6 +162,8 @@ func _build_view(column: VBoxContainer) -> void:
 	for body: String in Cabin.OUTSIDE_VIEWS:
 		line.add_child(_button("%s outside" % body.capitalize(), cabin.set_outside_view.bind(body)))
 	line.add_child(_button("Exterior", Director.preview_exterior))
+	line.add_child(_button("Explosion", Director.preview_explosion))
+	line.add_child(_button("Lifeboat", Director.preview_lifeboat))
 	line.add_child(_button("Mission map", Director.preview_map))
 	line.add_child(_button("Cabin", Director.preview_cabin))
 	column.add_child(line)
