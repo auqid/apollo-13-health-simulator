@@ -663,6 +663,28 @@ func test_historical_run_matches_the_1970_scorecard() -> void:
 	_check(card["heat_shield_exposed"] == bench["heat_shield_exposed"]["value"], "heat shield stays covered")
 
 
+func test_scorecard_compares_the_historical_path_and_the_all_b_path() -> void:
+	var historical: Dictionary = _scorecard(_plan())
+	for key: String in History.BENCHMARKS:
+		_check(History.verdict(historical[key], key) == "same",
+			"historical %s matches 1970 (you %s)" % [key, str(historical[key])])
+	var all_b: Dictionary = _scorecard(_plan({"e1": "b", "e2": "b", "e3": "b", "e4": "b", "e5": "b"}))
+	var expect: Dictionary = {
+		"duration_h": "better",
+		"coldest_cabin_c": "better",
+		"peak_co2_mmhg": "better",
+		"drink_l_per_day": "better",
+		"water_left_pct": "better",
+		"weight_loss_kg": "better",
+		"haise_infection": "better",
+		"power_margin": "worse",
+		"heat_shield_exposed": "worse",
+	}
+	for key: String in expect:
+		_check(History.verdict(all_b[key], key) == expect[key],
+			"all-B %s is %s (you %s)" % [key, expect[key], str(all_b[key])])
+
+
 func test_every_option_combination_reaches_splashdown_safely() -> void:
 	var events: Dictionary = _load_events()
 	for combo in 32:

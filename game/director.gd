@@ -3,6 +3,7 @@ extends Node
 ## they work in every state. Cutscenes play photos, mission audio and captions.
 
 const Timeline := preload("res://sim/timeline.gd")
+const History := preload("res://sim/history.gd")
 const SimModel := preload("res://sim/sim_model.gd")
 const SimState := preload("res://sim/sim_state.gd")
 const Tuning := preload("res://sim/tuning.gd")
@@ -94,6 +95,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	var handled: bool = true
 	if event.is_action_pressed("advance"):
 		skip()
+	elif event is InputEventKey and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER):
+		if phase == PHASE_SCORECARD:
+			_reveal_scorecard(true)
 	elif event.is_action_pressed("choose_a"):
 		choose("a")
 	elif event.is_action_pressed("choose_b"):
@@ -175,7 +179,9 @@ func skip() -> void:
 			_toggle_timeskip()
 		PHASE_REENTRY:
 			complete_clock()
-		PHASE_POLL, PHASE_SCORECARD:
+		PHASE_SCORECARD:
+			_reveal_scorecard(false)
+		PHASE_POLL:
 			pass
 
 
@@ -234,7 +240,7 @@ func jump_to_state(state_id: String) -> void:
 		return
 	var events: Array = Timeline.event_list(Game.events)
 	if state_id == PHASE_SCORECARD:
-		_use_historical_plan(events.size())
+		_fill_unset_choices()
 		Game.replay_to(INF)
 		event_index = events.size() - 1
 		_begin_scorecard()
@@ -342,10 +348,46 @@ func _begin_scorecard() -> void:
 	phase = PHASE_SCORECARD
 	Game.pause()
 	var card: Dictionary = Game.events["scorecard"]
-	var when: String = "Splashdown at GET %s." % UiStyle.format_get(Game.state.time.current_get)
 	var stage := _stage()
 	if stage != null:
-		stage.show_scorecard(card["title"], when, card["closing"])
+		stage.show_scorecard(card["title"], _scorecard_choices(), _scorecard_rows(), card["closing"])
+
+
+func _reveal_scorecard(everything: bool) -> void:
+	var stage := _stage()
+	if stage == null:
+		return
+	if everything:
+		stage.reveal_all()
+	else:
+		stage.reveal_next()
+
+
+func _scorecard_choices() -> Array:
+	var choices: Array = []
+	for event: Dictionary in Timeline.event_list(Game.events):
+		var picked: String = str(Game.state.decisions.get(event["id"], ""))
+		var option: Dictionary = Timeline.find_option(event, picked)
+		choices.append({
+			"poll": event["title"],
+			"choice": option.get("label", picked),
+			"historical": option.get("historical", false),
+		})
+	return choices
+
+
+func _scorecard_rows() -> Array:
+	var you: Dictionary = Game.metrics.scorecard(Game.state)
+	var rows: Array = []
+	for row: Dictionary in Game.events["scorecard"]["rows"]:
+		var key: String = row["key"]
+		rows.append({
+			"label": row["label"],
+			"you": History.format_you(key, you[key]),
+			"history": row["history"],
+			"verdict": History.verdict(you[key], key),
+		})
+	return rows
 
 
 func _arrive() -> void:

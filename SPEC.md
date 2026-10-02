@@ -192,7 +192,8 @@ Benchmark sources:
 
 | Key | Action |
 |---|---|
-| Space or → | Advance or skip the current cutscene |
+| Space or → | Advance, skip the current cutscene, or reveal the next scorecard row |
+| Enter | Reveal every scorecard row |
 | A / B | Choose a poll option |
 | 1 / 2 / 3 | Focus Lovell / Swigert / Haise |
 | M | Mute or unmute |

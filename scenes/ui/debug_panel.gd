@@ -67,6 +67,7 @@ func _input(event: InputEvent) -> void:
 	if not visible or not (event is InputEventKey) or not event.is_pressed():
 		return
 	if event.is_action_pressed("toggle_debug") or event.is_action_pressed("advance") \
+			or event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER \
 			or event.is_action_pressed("choose_a") or event.is_action_pressed("choose_b") \
 			or event.is_action_pressed("toggle_mute") or event.is_action_pressed("silence_alarm") \
 			or event.is_action_pressed("toggle_hud") or event.is_action_pressed("toggle_fullscreen") \
