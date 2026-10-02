@@ -124,13 +124,13 @@ const EXPLOSION_STRESS_BPM: float = 25.0
 ## The explosion stress fades in a straight line to zero over this many hours.
 const EXPLOSION_STRESS_FADE_H: float = 2.0
 const BURN_STRESS_BPM: float = 10.0
-## Engine burns between the explosion and splashdown, from the Apollo 13 mission report.
-## TODO(fact-check): ignition times and durations.
+## Engine burns between the explosion and splashdown: ignition GET (h + min/60 + s/3600) and duration.
+## PC+2 at 079:27:40 is confirmed. TODO(fact-check): the other ignition times and all durations.
 const BURNS: Array = [
-	{"name": "Free-return burn", "get": 61.495, "duration_h": 0.0095},
-	{"name": "PC+2 burn", "get": 79.461, "duration_h": 0.0733},
-	{"name": "Course correction 5", "get": 105.308, "duration_h": 0.0039},
-	{"name": "Course correction 7", "get": 137.664, "duration_h": 0.0060},
+	{"name": "Free-return burn", "get": 61.0 + 29.0 / 60.0 + 43.0 / 3600.0, "duration_h": 34.0 / 3600.0},
+	{"name": "PC+2 burn", "get": 79.0 + 27.0 / 60.0 + 40.0 / 3600.0, "duration_h": 264.0 / 3600.0},
+	{"name": "Course correction 5", "get": 105.0 + 18.0 / 60.0 + 28.0 / 3600.0, "duration_h": 14.0 / 3600.0},
+	{"name": "Course correction 7", "get": 137.0 + 39.0 / 60.0 + 52.0 / 3600.0, "duration_h": 22.0 / 3600.0},
 ]
 const REENTRY_STRESS_BPM: float = 15.0
 const HEAT_SHIELD_EXTRA_STRESS_BPM: float = 20.0

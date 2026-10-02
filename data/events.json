@@ -59,12 +59,12 @@
         "images": ["res://assets/images/moon_far_side.jpg"],
         "captions": [
           "Aquarius swings around the far side of the Moon.",
-          "The next engine burn decides how fast they get home."
+          "Radio contact with Houston is restored.",
+          "The burn home, called PC+2, is set for GET 079:27:40."
         ]
       },
       "poll": {
-        "question": "We're behind the Moon. How fast do we go home?",
-        "fact_check": "TODO(fact-check): radio contact returned about GET 77:33 and the PC+2 burn ran about GET 79:28 in contact with Houston, so 'behind the Moon' may be wrong at GET 79.",
+        "question": "We've come around the Moon. How fast do we go home?",
         "options": [
           {
             "key": "a",

@@ -39,8 +39,8 @@ Each option carries an `effects` object in `events.json`. The option marked hist
   - About GET 77: behind the Moon, radio contact is lost. Play 4 seconds of silence. They are now farther from Earth than any humans before them.
 
 ### E2: The return burn (GET 79.0)
-- **Cutscene:** the far side of the Moon, then the burn. Use real audio from around the PC+2 burn.
-- **Poll:** "We're behind the Moon. How fast do we go home?"
+- **Cutscene:** in this order: the far side pass, radio contact restored, then the PC+2 burn at GET 079:27:40. Use real audio from around the PC+2 burn.
+- **Poll:** "We've come around the Moon. How fast do we go home?"
   - **A. Standard speed-up burn** (historical). Splashdown at GET 142.9.
   - **B. Drop the Service Module and burn harder.** Splashdown about 24 hours earlier (GET 119). This option was considered in 1970 and rejected, because the Service Module protected the heat shield from the cold of space. Set `heatShieldRisk = true`: reentry stress +20 bpm on top of the normal spike, and the scorecard shows the heat shield exposure. The Service Module photo reveal moves to this point.
 - **Timeskip to GET 88.0.** Caption: "CO2 is climbing. The LM's scrubbers were sized for two people."
@@ -241,7 +241,7 @@ Trim clips to 10–30 s and normalize the volume (Audacity is fine).
 
 **Day 2, cabin, effects and a Windows test.** Build the cabin scene, windows, lighting tied to the power margin, and camera presets. Implement the screen effects shader, camera shake, breath fog and the heartbeat, breathing and alarm audio. **Before the day ends, export to Windows and run it on the Windows laptop** so any graphics or performance problems show up early.
 
-**Day 3, flow.** Build the director state machine, cutscenes (photo pans, audio, captions), poll cards, timeskip captions, presenter keys, and the reentry sequence.
+**Day 3, flow.** Build the director state machine, cutscenes (photo pans, audio, captions), poll cards, timeskip captions, presenter keys, and the reentry sequence. The director slows the clock to near real time for the PC+2 burn and the reentry, so burn stress is visible.
 
 **Day 4, ending and polish.** Build the scorecard. Fill in the real assets and captions. Fact-check every caption. Add the optional CO2 mini-game only if everything else is done.
 
