@@ -99,9 +99,11 @@ func _on_caption_requested(text: String) -> void:
 	notice_requested.emit(text, Tuning.CAPTION_HOLD_S)
 
 
-## Development shortcuts after "--", e.g. godot --path . -- --get=100 --play --debug
+## Development shortcuts after "--", e.g.
+## godot --path . -- --get=100 --play --debug --camera=co2_panel --outside=moon --no-hud
 func _apply_command_line() -> void:
 	var notice: String = START_NOTICE
+	var cabin: Node = get_tree().get_first_node_in_group("cabin")
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--get="):
 			Game.seek(arg.trim_prefix("--get=").to_float())
@@ -110,4 +112,12 @@ func _apply_command_line() -> void:
 			notice = ""
 		elif arg == "--debug":
 			set_debug_visible(true)
+		elif arg == "--no-hud":
+			hud_visible = false
+			hud_visibility_changed.emit(hud_visible)
+			notice = ""
+		elif arg.begins_with("--camera=") and cabin != null:
+			cabin.camera_go_to(arg.trim_prefix("--camera="), true)
+		elif arg.begins_with("--outside=") and cabin != null:
+			cabin.set_outside_view(arg.trim_prefix("--outside="))
 	notice_requested.emit(notice, 0.0)

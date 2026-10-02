@@ -9,6 +9,8 @@ const SimModel := preload("res://sim/sim_model.gd")
 const Metrics := preload("res://sim/metrics.gd")
 const Timeline := preload("res://sim/timeline.gd")
 const GameScript := preload("res://game/game.gd")
+const FxMapping := preload("res://fx/fx_mapping.gd")
+const CabinScene := preload("res://scenes/cabin/cabin.tscn")
 
 const EFFECT_KEYS: Array[String] = ["flags", "power_margin", "fatigue"]
 const TEXT_KEYS: Array[String] = ["text", "question", "label", "hint", "note", "title", "closing", "history"]
@@ -724,3 +726,34 @@ func test_game_holds_release_back_to_the_model() -> void:
 	_check(game.state.overrides.is_empty(), "release all clears every hold")
 	_check(game.state.env.co2_mmhg > model_co2 and game.state.env.co2_mmhg < 2.0, "CO2 back on its curve")
 	game.free()
+
+
+# --- Effects and cabin ---
+
+func test_light_level_follows_the_power_margin() -> void:
+	_near(FxMapping.light_level(100.0), 1.0, 1e-9, "historical margin: full light")
+	_near(FxMapping.light_level(40.0), 0.35 + 0.65 * 0.4, 1e-9, "the minimum margin still leaves 61% light")
+	_near(FxMapping.light_level(50.0), 0.675, 1e-9, "heater and early power-up: 0.675")
+	_near(FxMapping.light_level(115.0), 0.35 + 0.65 * 1.15, 1e-9, "fast return: slightly brighter than 1970")
+
+
+func test_cabin_builds_with_presets_dimming_views_and_lamps() -> void:
+	var cabin = CabinScene.instantiate()
+	cabin.build()
+	_check(",".join(cabin.preset_names()) == "front_windows,co2_panel,overhead", "three camera presets")
+	_check(cabin.camera != null and cabin.camera.preset == "front_windows", "starts on the front windows")
+	cabin.set_light_level(0.5)
+	var dimmed: bool = not cabin._lights.is_empty()
+	for light: OmniLight3D in cabin._lights:
+		dimmed = dimmed and is_equal_approx(light.light_energy, cabin._base_energy[light] * 0.5)
+	_check(dimmed, "set_light_level scales every cabin light")
+	cabin.set_outside_view("moon")
+	_check(cabin._bodies["moon"].visible and not cabin._bodies["earth"].visible, "Moon outside")
+	cabin.set_outside_view("earth")
+	_check(cabin._bodies["earth"].visible and not cabin._bodies["moon"].visible, "Earth outside")
+	_check(",".join(cabin.lamp_names()) == "master_alarm,co2", "master alarm and CO2 lamps exist")
+	cabin.set_lamp("co2", true)
+	_check(cabin._lamps["co2"].emission_energy_multiplier > 0.0, "a lit lamp glows")
+	cabin.set_lamp("co2", false)
+	_check(is_zero_approx(cabin._lamps["co2"].emission_energy_multiplier), "an unlit lamp doesn't")
+	cabin.free()

@@ -7,6 +7,7 @@ const SimModel := preload("res://sim/sim_model.gd")
 const Timeline := preload("res://sim/timeline.gd")
 const Tuning := preload("res://sim/tuning.gd")
 const UiStyle := preload("res://scenes/ui/ui_style.gd")
+const Cabin := preload("res://scenes/cabin/cabin.gd")
 
 ## Values the panel can hold, with the range each number box offers.
 const ENV_FIELDS: Array[Dictionary] = [
@@ -93,6 +94,7 @@ func _build() -> void:
 
 	column.add_child(_heading("Debug panel. Press ` to close."))
 	_build_clock(column)
+	_build_view(column)
 	_build_jumps(column)
 	_build_choices(column)
 	_build_holds(column)
@@ -125,6 +127,19 @@ func _build_clock(column: VBoxContainer) -> void:
 	_scrub.drag_ended.connect(_on_scrub_drag_ended)
 	_scrub.value_changed.connect(_on_scrub_value_changed)
 	column.add_child(_scrub)
+
+
+func _build_view(column: VBoxContainer) -> void:
+	var cabin: Cabin = get_tree().get_first_node_in_group(Cabin.GROUP)
+	if cabin == null:
+		return
+	column.add_child(_heading("Camera and view"))
+	var line := HFlowContainer.new()
+	for preset_name: String in cabin.preset_names():
+		line.add_child(_button(cabin.preset_title(preset_name), cabin.camera_go_to.bind(preset_name, false)))
+	for body: String in Cabin.OUTSIDE_VIEWS:
+		line.add_child(_button("%s outside" % body.capitalize(), cabin.set_outside_view.bind(body)))
+	column.add_child(line)
 
 
 func _build_jumps(column: VBoxContainer) -> void:

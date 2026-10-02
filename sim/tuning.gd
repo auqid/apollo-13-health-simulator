@@ -156,3 +156,23 @@ const DEBUG_RATES_H_PER_S: Array = [0.1, 0.5, 1.0, 2.0, 4.0, 8.0]
 
 # --- Display scales ---
 const HUD_CO2_BAR_MAX_MMHG: float = 20.0
+
+# --- Cabin light level (SPEC.md section 4): floor + span x (power margin / 100) ---
+const LIGHT_LEVEL_FLOOR: float = 0.35
+const LIGHT_LEVEL_SPAN: float = 0.65
+
+# --- Cabin camera, real seconds ---
+const CAMERA_MOVE_S: float = 2.0
+## Zero-g idle drift: position and rotation wander on slow sine waves, one period per channel.
+const CAMERA_DRIFT_M: float = 0.02
+const CAMERA_DRIFT_DEG: float = 0.6
+const CAMERA_DRIFT_PERIODS_S: Array = [9.7, 13.3, 17.9, 11.1, 15.7, 21.3]
+
+# --- Loose objects floating in the cabin, real seconds ---
+const FLOAT_DRIFT_M_MIN: float = 0.03
+const FLOAT_DRIFT_M_MAX: float = 0.07
+const FLOAT_DRIFT_PERIOD_S_MIN: float = 18.0
+const FLOAT_DRIFT_PERIOD_S_MAX: float = 34.0
+const FLOAT_SPIN_DEG_PER_S_MIN: float = 4.0
+const FLOAT_SPIN_DEG_PER_S_MAX: float = 11.0
+const FLOAT_SEED: int = 1970
