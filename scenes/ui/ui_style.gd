@@ -54,6 +54,19 @@ const VITAL_COLUMN_WIDTH := 96
 const CO2_BAR_HEIGHT := 10
 const CO2_MARKER_OVERHANG := 5
 const CO2_MARKER_WIDTH := 2
+const DEBUG_PANEL_WIDTH := 660
+const DEBUG_PANEL_TOP := 200
+const DEBUG_FILL := Color(INSTRUMENT_BLACK, 0.96)
+const DEBUG_LINE := Color(PANEL_GREY, 0.9)
+const DEBUG_SPIN_WIDTH := 150
+const DEBUG_ID_WIDTH := 44
+const DEBUG_STATUS_WIDTH := 96
+const DEBUG_SCROLL_GUTTER := 18
+const DEBUG_BUTTON_FILL := Color(PANEL_GREY, 0.45)
+const DEBUG_BUTTON_HOVER := Color(PANEL_GREY, 0.75)
+const DEBUG_BUTTON_PRESSED := Color(SENSOR_TEAL, 0.35)
+const DEBUG_BUTTON_PADDING_H := 10
+const DEBUG_BUTTON_PADDING_V := 4
 const CAPTION_OUTLINE_SIZE := 8
 const CAPTION_OUTLINE := Color(0.0, 0.0, 0.0, 0.85)
 const FADE_S := 0.4
@@ -114,6 +127,11 @@ static func divider() -> ColorRect:
 static func format_get(get_hours: float) -> String:
 	var total_s: int = floori(maxf(get_hours, 0.0) * 3600.0 + 1e-6)
 	return "%03d:%02d:%02d" % [floori(total_s / 3600.0), floori((total_s % 3600) / 60.0), total_s % 60]
+
+
+## Mission clock without seconds, as hhh:mm.
+static func format_get_short(get_hours: float) -> String:
+	return format_get(get_hours).left(6)
 
 
 ## A duration in plain words, like "23 h 06 min".

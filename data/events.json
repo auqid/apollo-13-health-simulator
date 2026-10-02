@@ -223,6 +223,7 @@
     "steps": [
       {
         "id": "lm_jettison",
+        "title": "LM jettison",
         "get_from_splashdown": -1.4,
         "audio": "res://assets/audio/e5_farewell.mp3",
         "captions": ["Aquarius is released. “Farewell, Aquarius, and we thank you.”"],
@@ -230,17 +231,20 @@
       },
       {
         "id": "entry",
+        "title": "Entry",
         "get_from_splashdown": -0.23,
         "captions": ["Odyssey enters the atmosphere."]
       },
       {
         "id": "blackout",
+        "title": "Blackout",
         "get_from_splashdown": -0.21,
         "screen_s": 20,
         "captions": ["Radio blackout. Usually about four minutes; this one lasted about six."]
       },
       {
         "id": "contact",
+        "title": "Contact",
         "get_from_splashdown": -0.11,
         "audio": "res://assets/audio/e5_splash.mp3",
         "images": ["res://assets/images/parachutes.jpg"],
@@ -248,6 +252,7 @@
       },
       {
         "id": "splashdown",
+        "title": "Splashdown",
         "get_from_splashdown": 0.0,
         "images": ["res://assets/images/recovery.jpg"],
         "captions": ["Splashdown in the South Pacific."]

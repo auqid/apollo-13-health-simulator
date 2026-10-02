@@ -63,6 +63,12 @@ func set_debug_visible(value: bool) -> void:
 	debug_visibility_changed.emit(debug_visible)
 
 
+func restart_now() -> void:
+	_restart_armed_until_ms = 0
+	Game.reset()
+	notice_requested.emit(START_NOTICE, 0.0)
+
+
 func _advance() -> void:
 	if Timeline.at_splashdown(Game.state):
 		return
@@ -73,9 +79,7 @@ func _advance() -> void:
 func _restart() -> void:
 	var now_ms: int = Time.get_ticks_msec()
 	if now_ms <= _restart_armed_until_ms:
-		_restart_armed_until_ms = 0
-		Game.reset()
-		notice_requested.emit(START_NOTICE, 0.0)
+		restart_now()
 		return
 	_restart_armed_until_ms = now_ms + roundi(Tuning.RESTART_CONFIRM_S * 1000.0)
 	notice_requested.emit(RESTART_NOTICE, Tuning.RESTART_CONFIRM_S)

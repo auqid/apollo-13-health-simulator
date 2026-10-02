@@ -8,6 +8,7 @@ const SimState := preload("res://sim/sim_state.gd")
 const SimModel := preload("res://sim/sim_model.gd")
 const Metrics := preload("res://sim/metrics.gd")
 const Timeline := preload("res://sim/timeline.gd")
+const GameScript := preload("res://game/game.gd")
 
 const EFFECT_KEYS: Array[String] = ["flags", "power_margin", "fatigue"]
 const TEXT_KEYS: Array[String] = ["text", "question", "label", "hint", "note", "title", "closing", "history"]
@@ -660,3 +661,66 @@ func test_every_option_combination_reaches_splashdown_safely() -> void:
 		_check(s.flags.heat_shield_risk == fast, label + " heat shield risk only on the fast return")
 		_check(s.flags.sm_jettisoned, label + " Service Module gone by splashdown")
 		_check(_same_keys(metrics.scorecard(s), History.BENCHMARKS.keys()), label + " scorecard has every row")
+
+
+# --- Game autoload tests (game.gd depends only on sim/, so it runs headless here) ---
+
+func _new_game() -> GameScript:
+	var game: GameScript = GameScript.new()
+	game._ready()
+	return game
+
+
+func test_game_clock_runs_the_timeskip_to_splashdown() -> void:
+	var game: GameScript = _new_game()
+	game.play()
+	var ticks: int = 0
+	while game.running and ticks < 10000:
+		game._physics_process(1.0 / 60.0)
+		ticks += 1
+	_near(game.state.time.current_get, 142.9, 1e-6, "the timeskip stops at splashdown")
+	_check(absi(ticks - 2610) <= 2, "at 2 GET hours per second it takes about 43.5 s (%d ticks)" % ticks)
+	_check(game.state.decisions.size() == 5, "the historical plan was applied on the way")
+	game.free()
+
+
+func test_game_seeking_back_replays_the_history() -> void:
+	var game: GameScript = _new_game()
+	game.seek(100.0)
+	_near(game.metrics.peak_co2_mmhg, 15.0, 0.05, "past the CO2 peak")
+	game.seek(80.0)
+	_near(game.state.time.current_get, 80.0, 1e-6, "clock moved back")
+	_near(game.metrics.peak_co2_mmhg, 2.0, 1e-6, "metrics replayed: no CO2 peak yet at GET 80")
+	_check(",".join(game.state.reached_events) == "e1,e2", "only E1 and E2 reached")
+	game.free()
+
+
+func test_game_jump_and_choices_follow_the_plan() -> void:
+	var game: GameScript = _new_game()
+	game.set_choice("e2", "b")
+	game.jump_to(Timeline.find_event(game.events, "e5"))
+	_near(game.state.time.current_get, 114.0, 1e-6, "with E2-B planned, E5 is at GET 114")
+	game.seek(100.0)
+	game.set_choice("e1", "b")
+	_near(game.state.time.current_get, 100.0, 1e-6, "changing a past choice keeps the clock where it is")
+	_check(game.state.flags.heating == "one" and is_equal_approx(game.state.env.power_margin, 85.0),
+		"and replays with the new choice (heater -30, fast return +15)")
+	game.free()
+
+
+func test_game_holds_release_back_to_the_model() -> void:
+	var game: GameScript = _new_game()
+	game.seek(70.0)
+	var model_co2: float = game.state.env.co2_mmhg
+	game.hold(SimState.env_path("co2_mmhg"), 12.0)
+	game.hold(SimState.crew_path("haise", "fatigue"), 0.9)
+	_near(game.state.env.co2_mmhg, 12.0, 1e-9, "CO2 held")
+	game.seek(75.0)
+	_near(game.state.crew["haise"].fatigue, 0.9, 1e-9, "holds stay while the clock moves")
+	game.release(SimState.crew_path("haise", "fatigue"))
+	_check(game.state.crew["haise"].fatigue < 0.9 and game.state.overrides.size() == 1, "released fatigue goes back to the model")
+	_near(game.state.env.co2_mmhg, 12.0, 1e-9, "other holds survive the replay")
+	game.release_all()
+	_check(game.state.overrides.is_empty(), "release all clears every hold")
+	_check(game.state.env.co2_mmhg > model_co2 and game.state.env.co2_mmhg < 2.0, "CO2 back on its curve")
+	game.free()
