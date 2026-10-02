@@ -157,12 +157,22 @@ const CAPTION_HOLD_S: float = 4.0
 const DEBUG_RATES_H_PER_S: Array = [0.1, 0.5, 1.0, 2.0, 4.0, 8.0]
 ## How far a cutscene photo zooms during its pan.
 const CUTSCENE_PHOTO_ZOOM: float = 1.08
+## How long the mission map stays up at the start of a timeskip, in real seconds.
+const MAP_HOLD_S: float = 4.0
+## One loop of the exterior preview orbit.
+const EXTERIOR_PREVIEW_S: float = 12.0
 ## How long the chosen poll option stays highlighted before the session continues.
 const POLL_CHOICE_HOLD_S: float = 1.5
 ## Farewell line stays at least this long, so it can be read when the clip is missing.
 const REENTRY_FAREWELL_HOLD_S: float = 6.0
 ## Recovery photo before the scorecard.
 const REENTRY_RECOVERY_HOLD_S: float = 6.0
+## Silent exterior of Odyssey, heat shield first, before the radio blackout.
+const REENTRY_PLASMA_S: float = 8.0
+## Debug loop of the parachute descent. In the session it follows the clock from contact to splashdown.
+const REENTRY_PARACHUTE_S: float = 10.0
+## Splash, then the capsule floating, before the recovery photo.
+const REENTRY_SPLASH_S: float = 6.0
 ## Near real time, so the PC+2 burn and the reentry stress are visible. About 36 GET seconds per real second.
 const TIMESKIP_SLOW_H_PER_S: float = 0.012
 

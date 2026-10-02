@@ -14,6 +14,8 @@ const Effects := preload("res://fx/effects.gd")
 const CabinScene := preload("res://scenes/cabin/cabin.tscn")
 const Cabin := preload("res://scenes/cabin/cabin.gd")
 const AudioMix := preload("res://audio/audio_mix.gd")
+const MapPath := preload("res://scenes/space/map_path.gd")
+const Exterior := preload("res://scenes/space/exterior.gd")
 
 const EFFECT_KEYS: Array[String] = ["flags", "power_margin", "fatigue"]
 const TEXT_KEYS: Array[String] = ["text", "question", "label", "hint", "note", "title", "closing", "history", "caption", "heat_shield_text"]
@@ -293,12 +295,57 @@ func test_cutscenes_have_editable_shots() -> void:
 		_check(total_s >= 20.0 and total_s <= 45.0, "%s cutscene is 20 to 45 seconds (%.0f)" % [event["id"], total_s])
 	var e1_shots: Array = data["events"][0]["cutscene"]["shots"]
 	_check(e1_shots[0]["kind"] == "bang", "E1 opens with the bang")
-	_check(e1_shots[1]["kind"] == "audio", "E1 plays the problem audio after the bang")
+	_check(e1_shots[1]["kind"] == "exterior" and e1_shots[1]["action"] == "explosion", "the bang cuts to a silent exterior explosion")
+	_check(e1_shots[2]["kind"] == "audio", "the problem audio plays after the explosion shot")
+	_check(e1_shots[3]["action"] == "lifeboat", "E1 ends with the move into Aquarius")
+	var sm_shot: Dictionary = data["reveals"]["service_module"]["shots"][0]
+	var sm_photo: Dictionary = data["reveals"]["service_module"]["shots"][1]
+	_check(sm_shot["kind"] == "exterior" and sm_shot["action"] == "sm_jettison", "the Service Module jettison is an exterior shot")
+	_check(sm_shot["audio"].ends_with("e5_sm.mp3"), "Lovell and Haise play over the jettison")
+	_check(sm_photo["kind"] == "photo" and sm_photo["image"].ends_with("service_module.jpg"), "then the photo of what the crew saw")
+	_check(Exterior.sm_separation(0.0) < 0.05 and Exterior.sm_separation(1.0) > 0.9, "Odyssey and Aquarius move off the Service Module")
+	_check(Exterior.lm_separation(0.0) < 0.05 and Exterior.lm_separation(1.0) > 0.9, "Aquarius drifts away from Odyssey")
+	_check(Exterior.lm_puff(0.1) > Exterior.lm_puff(1.0), "the tunnel puff is at the start of the separation")
+	_check(Exterior.panel_travel("explosion", 0.0) < 0.05, "the panel starts seated")
+	_check(Exterior.panel_travel("explosion", 1.0) > 0.9, "the panel ends clear of the hull")
+	_check(Exterior.cloud_alpha("lifeboat", 1.0) > 0.05 and Exterior.cloud_alpha("lifeboat", 1.0) < Exterior.cloud_alpha("lifeboat", 0.0),
+		"the oxygen cloud is still there on the lifeboat shot, and fading")
+	var glow_early: Vector2 = Exterior.window_glow("lifeboat", 0.0)
+	var glow_late: Vector2 = Exterior.window_glow("lifeboat", 1.0)
+	_check(glow_early.x > glow_early.y and glow_late.y > glow_late.x, "Odyssey's windows go dark as Aquarius lights up")
+	var e2_open: Dictionary = data["events"][1]["cutscene"]["shots"][0]
+	_check(e2_open["kind"] == "exterior" and e2_open["move"] == "orbit", "E2 opens on an exterior orbit")
 	var far_side: bool = false
 	for caption: Dictionary in data["events"][0]["timeskip"]["captions"]:
 		if "Artemis II in 2026" in caption["text"]:
 			far_side = true
 	_check(far_side, "the far-side caption names the distance record")
+
+
+func test_map_and_exterior_camera_follow_the_mission() -> void:
+	var outbound: Vector2 = MapPath.position(60.0, 142.9)
+	var far: Vector2 = MapPath.position(MapPath.FAR_SIDE_GET, 142.9)
+	var home: Vector2 = MapPath.position(142.9, 142.9)
+	var early: Vector2 = MapPath.position(60.0, 119.0)
+	_check(outbound.distance_to(MapPath.MOON) < outbound.distance_to(MapPath.EARTH),
+		"by GET 60 the ship is closer to the Moon than to Earth")
+	_check(is_equal_approx(outbound.x, early.x) and is_equal_approx(outbound.y, early.y),
+		"the outbound leg does not depend on the return speed")
+	_check(far.x > MapPath.MOON.x, "the far-side pass is beyond the Moon")
+	_check(home.distance_to(MapPath.EARTH) < 0.5, "splashdown is back at Earth")
+	var fast_return: Vector2 = MapPath.position(100.0, 119.0)
+	var slow_return: Vector2 = MapPath.position(100.0, 142.9)
+	_check(fast_return.distance_to(MapPath.EARTH) < slow_return.distance_to(MapPath.EARTH),
+		"the fast return is farther along the trip home at the same GET")
+	var wide: Transform3D = Exterior.camera_transform("orbit", 0.0)
+	var close: Transform3D = Exterior.camera_transform("push_in", 1.0)
+	_check(wide.origin.distance_to(close.origin) > 1.0, "push-in ends closer than the orbit starts")
+	_check(Exterior.camera_transform("pan", 0.0).origin.distance_to(Exterior.camera_transform("pan", 1.0).origin) > 1.0,
+		"the pan travels")
+	var exterior := Exterior.new()
+	exterior.build()
+	_check(exterior.get_child_count() > 3, "the exterior scene builds the stack, planets and map")
+	exterior.free()
 
 
 func test_reentry_sequence_is_timed_from_splashdown() -> void:
@@ -311,8 +358,15 @@ func test_reentry_sequence_is_timed_from_splashdown() -> void:
 	_near(float(steps["blackout"]["screen_s"]), 20.0, 0.1, "blackout compresses to about 20 s")
 	_check("about six minutes" in steps["blackout"]["captions"][0], "blackout caption")
 	_check("heat shield" in steps["blackout"]["heat_shield_text"], "heat-shield line for the fast return")
-	_check(steps["contact"]["images"][0].ends_with("parachutes.jpg"), "parachutes photo")
+	_check(not steps["contact"].has("images"), "the parachute still is replaced by the descent")
+	_check(steps["contact"]["action"] == "parachute", "contact plays the parachute shot")
 	_check(steps["contact"]["audio"].ends_with("e5_splash.mp3"), "splashdown audio")
+	_check(Exterior.plasma_strength(0.0) < Exterior.plasma_strength(1.0), "the plasma glow builds")
+	var early_chutes: Vector2 = Exterior.parachute_open(0.2)
+	var late_chutes: Vector2 = Exterior.parachute_open(0.9)
+	_check(early_chutes.x > early_chutes.y, "drogues open before the mains")
+	_check(late_chutes.y > 0.8 and late_chutes.y > late_chutes.x, "three mains are open at the end of the descent")
+	_check(Exterior.splash_float(0.0) < 0.2 and Exterior.splash_float(1.0) > 0.9, "splashdown ends with the capsule floating")
 	_check(steps["splashdown"]["images"][0].ends_with("recovery.jpg"), "recovery photo")
 	for splashdown: float in Tuning.SPLASHDOWN_GET_BY_RETURN.values():
 		var jettison: float = splashdown + float(steps["lm_jettison"]["get_from_splashdown"])

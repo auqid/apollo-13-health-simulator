@@ -12,12 +12,14 @@ const Notice := preload("res://scenes/ui/notice.gd")
 const DebugPanel := preload("res://scenes/ui/debug_panel.gd")
 const StageCard := preload("res://scenes/ui/stage_card.gd")
 const CutsceneView := preload("res://scenes/ui/cutscene_view.gd")
+const Exterior := preload("res://scenes/space/exterior.gd")
 
 
 func _ready() -> void:
 	RenderingServer.set_default_clear_color(UiStyle.BACKDROP)
 	var cabin: Cabin = CabinScene.instantiate()
 	add_child(cabin)
+	add_child(Exterior.new())
 	var effects := Effects.new()
 	effects.cabin = cabin
 	add_child(effects)

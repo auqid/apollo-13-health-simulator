@@ -17,6 +17,14 @@
         "shots": [
           {"kind": "bang", "duration_s": 2.0, "caption": "A bang, then the master alarm."},
           {
+            "kind": "exterior",
+            "duration_s": 8.0,
+            "move": "bay",
+            "body": "earth",
+            "action": "explosion",
+            "caption": "A panel blows off the Service Module.\nOxygen vents into the sunlight."
+          },
+          {
             "kind": "audio",
             "audio": "res://assets/audio/e1_problem.mp3",
             "duration_s": 28.0,
@@ -28,8 +36,14 @@
               {"at_s": 22.0, "hold_s": 6.0, "text": "Lousma: “Roger. Main B undervolt.”"}
             ]
           },
-          {"kind": "cabin", "duration_s": 5.0, "caption": "Oxygen is venting into space. Odyssey is dying."},
-          {"kind": "cabin", "duration_s": 5.0, "caption": "The crew moves into Aquarius and uses it as a lifeboat."}
+          {
+            "kind": "exterior",
+            "duration_s": 6.0,
+            "move": "push_in",
+            "body": "earth",
+            "action": "lifeboat",
+            "caption": "The crew moves into Aquarius, their lifeboat."
+          }
         ]
       },
       "poll": {
@@ -70,10 +84,25 @@
       "cutscene": {
         "shots": [
           {
-            "kind": "photo",
-            "image": "res://assets/images/moon_far_side.jpg",
-            "duration_s": 8.0,
+            "kind": "exterior",
+            "duration_s": 7.0,
+            "move": "orbit",
+            "body": "moon",
             "caption": "Aquarius swings around the far side of the Moon."
+          },
+          {
+            "kind": "exterior",
+            "duration_s": 6.0,
+            "move": "push_in",
+            "body": "moon",
+            "caption": "The ship is still one stack: Odyssey, then Aquarius."
+          },
+          {
+            "kind": "exterior",
+            "duration_s": 5.0,
+            "move": "pan",
+            "body": "moon",
+            "caption": "Sunlight moves along the hull."
           },
           {"kind": "cabin", "duration_s": 4.0, "caption": "Radio contact with Houston is restored at about 77:33."},
           {
@@ -263,21 +292,24 @@
       "effects": {"flags": {"sm_jettisoned": true}},
       "shots": [
         {
-          "kind": "photo",
-          "image": "res://assets/images/service_module.jpg",
-          "duration_s": 8.0,
-          "caption": "The crew lets the Service Module go and sees the damage."
-        },
-        {
-          "kind": "audio",
-          "audio": "res://assets/audio/e5_sm.mp3",
+          "kind": "exterior",
           "duration_s": 16.0,
-          "caption": "One whole side of the spacecraft is missing.",
+          "move": "orbit",
+          "body": "earth",
+          "action": "sm_jettison",
+          "audio": "res://assets/audio/e5_sm.mp3",
+          "caption": "The crew lets the Service Module go and sees the damage.",
           "subtitles": [
             {"at_s": 0.5, "hold_s": 5.0, "text": "Lovell: “And there's one whole side of that spacecraft missing.”"},
             {"at_s": 5.5, "hold_s": 5.5, "text": "Lovell: “Right by the high gain antenna, the whole panel is blown out,\nalmost from the base to the engine.”"},
             {"at_s": 11.2, "hold_s": 4.5, "text": "Haise: “Man, that's unbelievable!”"}
           ]
+        },
+        {
+          "kind": "photo",
+          "image": "res://assets/images/service_module.jpg",
+          "duration_s": 8.0,
+          "caption": "What the crew actually saw."
         }
       ]
     }
@@ -310,7 +342,7 @@
         "title": "Contact",
         "get_from_splashdown": -0.161389,
         "audio": "res://assets/audio/e5_splash.mp3",
-        "images": ["res://assets/images/parachutes.jpg"],
+        "action": "parachute",
         "captions": ["Contact restored.", "Three main parachutes open."]
       },
       {

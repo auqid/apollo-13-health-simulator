@@ -13,6 +13,8 @@ const CutsceneView := preload("res://scenes/ui/cutscene_view.gd")
 const BioAudio := preload("res://audio/bio_audio.gd")
 const Effects := preload("res://fx/effects.gd")
 const Hud := preload("res://scenes/ui/hud.gd")
+const Exterior := preload("res://scenes/space/exterior.gd")
+const Cabin := preload("res://scenes/cabin/cabin.gd")
 
 signal hud_visibility_changed(visible: bool)
 signal debug_visibility_changed(visible: bool)
@@ -58,8 +60,15 @@ var missing_assets: PackedStringArray = []
 var _reentry_fired: Dictionary = {}
 var _reentry_hold_s: float = 0.0
 var _reentry_holding: bool = false
+var _reentry_beat: String = ""
+var _reentry_beat_span: float = 1.0
+var _parachute_playing: bool = false
 var _recovery_hold: bool = false
 var _radio_blackout: bool = false
+var _map_left_s: float = 0.0
+## "", "exterior" or "map". Debug preview, cleared when a real shot takes the camera.
+var _space_preview: String = ""
+var _preview_t: float = 0.0
 
 
 func _ready() -> void:
@@ -69,7 +78,12 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	if phase == PHASE_INTRO:
+	if _space_preview != "" and _space_preview != "map" and phase != PHASE_CUTSCENE:
+		_preview_t = fposmod(_preview_t + delta / _preview_span(), 1.0)
+		var space := _exterior()
+		if space != null:
+			space.set_progress(_preview_t)
+	if phase == PHASE_INTRO and _space_preview == "":
 		_card_left_s -= delta
 		if _card_left_s <= 0.0:
 			skip()
@@ -174,6 +188,9 @@ func skip() -> void:
 		PHASE_HOLD:
 			finish_choice_hold()
 		PHASE_TIMESKIP:
+			if _map_left_s > 0.0:
+				_finish_opening_map()
+				return
 			if _silence_left_s > 0.0:
 				return
 			_toggle_timeskip()
@@ -321,8 +338,8 @@ func _begin_timeskip() -> void:
 	if card != null:
 		card.hide_card()
 	notice_requested.emit("", 0.0)
-	Game.set_rate(_clock_rate())
-	Game.play(_clock_target)
+	_map_left_s = Tuning.MAP_HOLD_S
+	_present_map(Game.state.time.current_get, Game.state.time.splashdown_get)
 
 
 func _begin_reentry() -> void:
@@ -416,11 +433,12 @@ func _run_reentry(delta: float) -> void:
 		return
 	if _reentry_holding:
 		_reentry_hold_s -= delta
+		_tick_reentry_beat()
 		if _reentry_hold_s <= 0.0:
-			_reentry_holding = false
-			Game.set_rate(_clock_rate())
-			Game.play(_clock_target)
+			_end_reentry_beat()
 		return
+	if _parachute_playing:
+		_tick_parachute()
 	_fire_reentry_steps()
 
 
@@ -447,29 +465,134 @@ func _present_reentry_step(step: Dictionary) -> void:
 		_hide_reentry_photo()
 		_show_reentry_caption(_step_caption(step))
 		var clip_s: float = _play_clip(str(step.get("audio", "")))
+		_reentry_beat = "farewell"
 		_reentry_holding = true
 		_reentry_hold_s = maxf(clip_s, Tuning.REENTRY_FAREWELL_HOLD_S)
+		_reentry_beat_span = _reentry_hold_s
+		_present_exterior("pan", "earth", "lm_jettison")
+		var hud := _hud()
+		if hud != null:
+			hud.set_panel_visible(false)
 		Game.pause()
 	elif id == "blackout":
 		_start_radio_blackout(step)
 	elif id == "contact":
 		_end_radio_blackout()
-		_show_reentry_photo(_first_image(step))
+		_hide_reentry_photo()
 		_show_reentry_caption(_step_caption(step))
 		_play_clip(str(step.get("audio", "")))
+		_parachute_playing = true
+		_present_exterior("pan", "earth", "parachute")
+		var hud := _hud()
+		if hud != null:
+			hud.set_panel_visible(false)
 
 
 func _begin_recovery() -> void:
-	if _recovery_hold or phase != PHASE_REENTRY:
+	if _recovery_hold or _reentry_beat == "splash" or phase != PHASE_REENTRY:
 		return
 	_end_radio_blackout()
+	_parachute_playing = false
+	_reentry_holding = false
+	_start_splash()
+
+
+func _start_plasma() -> void:
+	var bio := _bio()
+	if bio != null:
+		bio.stop_voice()
+	_reentry_beat = "plasma"
+	_reentry_holding = true
+	_reentry_hold_s = Tuning.REENTRY_PLASMA_S
+	_show_reentry_caption(_step_caption(_reentry_step("entry")))
+	_present_exterior("bay", "earth", "plasma")
+	var hud := _hud()
+	if hud != null:
+		hud.set_panel_visible(false)
+	Game.pause()
+
+
+func _finish_plasma() -> void:
+	var blackout_get: float = _reentry_get("blackout")
+	if Game.state.time.current_get < blackout_get - Timeline.EPSILON_H:
+		Game.seek(blackout_get)
+	_reentry_fired["blackout"] = true
+	_hide_space()
+	_start_radio_blackout(_reentry_step("blackout"))
+	Game.set_rate(_clock_rate())
+	Game.play(_clock_target)
+
+
+func _start_splash() -> void:
+	_reentry_beat = "splash"
+	_reentry_holding = true
+	_reentry_hold_s = Tuning.REENTRY_SPLASH_S
+	var step: Dictionary = _reentry_step("splashdown")
+	_show_reentry_caption(_step_caption(step))
+	_present_exterior("pan", "earth", "splash")
+	var hud := _hud()
+	if hud != null:
+		hud.set_panel_visible(false)
+	Game.pause()
+
+
+func _show_recovery_still() -> void:
+	_reentry_beat = ""
 	_reentry_holding = false
 	_recovery_hold = true
+	_hide_space()
 	var step: Dictionary = _reentry_step("splashdown")
 	_show_reentry_photo(_first_image(step))
 	_show_reentry_caption(_step_caption(step))
 	_reentry_hold_s = Tuning.REENTRY_RECOVERY_HOLD_S
 	Game.pause()
+
+
+func _tick_reentry_beat() -> void:
+	if _reentry_beat == "farewell":
+		var farewell_t: float = clampf(1.0 - _reentry_hold_s / maxf(_reentry_beat_span, 0.5), 0.0, 1.0)
+		var separating := _exterior()
+		if separating != null:
+			separating.set_progress(farewell_t)
+		return
+	if _reentry_beat != "plasma" and _reentry_beat != "splash":
+		return
+	var span: float = Tuning.REENTRY_PLASMA_S if _reentry_beat == "plasma" else Tuning.REENTRY_SPLASH_S
+	var t: float = clampf(1.0 - _reentry_hold_s / span, 0.0, 1.0)
+	var space := _exterior()
+	if space != null:
+		space.set_progress(t)
+	if _reentry_beat != "plasma":
+		return
+	var cover: float = smoothstep(0.72, 1.0, t) * Tuning.FX_RADIO_BLACKOUT
+	var effects := _effects()
+	if effects != null:
+		effects.set_radio_blackout(cover)
+
+
+func _tick_parachute() -> void:
+	var start: float = _reentry_get("contact")
+	var end: float = Game.state.time.splashdown_get
+	var span: float = maxf(end - start, 0.001)
+	var t: float = clampf((Game.state.time.current_get - start) / span, 0.0, 1.0)
+	var space := _exterior()
+	if space != null:
+		space.set_progress(t)
+
+
+func _end_reentry_beat() -> void:
+	var beat: String = _reentry_beat
+	_reentry_holding = false
+	_reentry_beat = ""
+	if beat == "farewell":
+		_start_plasma()
+	elif beat == "plasma":
+		_finish_plasma()
+	elif beat == "splash":
+		_show_recovery_still()
+	else:
+		Game.set_rate(_clock_rate())
+		Game.play(_clock_target)
 
 
 func _start_radio_blackout(step: Dictionary) -> void:
@@ -522,6 +645,8 @@ func _blackout_rate() -> float:
 func _clear_reentry_presentation() -> void:
 	_radio_blackout = false
 	_reentry_holding = false
+	_reentry_beat = ""
+	_parachute_playing = false
 	_recovery_hold = false
 	_reentry_hold_s = 0.0
 	var bio := _bio()
@@ -681,7 +806,11 @@ func _run_cutscene(delta: float) -> void:
 	_shot_elapsed_s += delta
 	_shot_left_s -= delta
 	var shot: Dictionary = _shots[_shot_index]
-	if shot.get("kind", "") == "photo":
+	if shot.get("kind", "") == "exterior":
+		var space := _exterior()
+		if space != null:
+			space.set_progress(clampf(_shot_elapsed_s / maxf(float(shot.get("duration_s", 1.0)), 0.1), 0.0, 1.0))
+	elif shot.get("kind", "") == "photo":
 		var view := _cutscene()
 		if view != null:
 			view.set_pan(clampf(_shot_elapsed_s / maxf(float(shot.get("duration_s", 1.0)), 0.1), 0.0, 1.0))
@@ -702,9 +831,22 @@ func _advance_shot() -> void:
 
 
 func _begin_shot(shot: Dictionary) -> void:
+	_hide_space()
 	var view := _cutscene()
 	var kind: String = shot.get("kind", "cabin")
-	if kind == "bang":
+	if kind == "exterior":
+		if view != null:
+			view.hide_photo()
+		_present_exterior(str(shot.get("move", "orbit")), str(shot.get("body", "earth")), str(shot.get("action", "")))
+		if str(shot.get("audio", "")) != "":
+			var clip_s: float = _play_clip(str(shot.get("audio", "")))
+			if clip_s + 0.4 > _shot_left_s:
+				_shot_left_s = clip_s + 0.4
+	elif kind == "map":
+		if view != null:
+			view.hide_photo()
+		_present_map(Game.state.time.current_get, Game.state.time.splashdown_get)
+	elif kind == "bang":
 		if view != null:
 			view.hide_photo()
 		var bio := _bio()
@@ -714,6 +856,9 @@ func _begin_shot(shot: Dictionary) -> void:
 		if effects != null:
 			effects.play_explosion_dim()
 	elif kind == "photo":
+		var playing := _bio()
+		if playing != null:
+			playing.stop_voice()
 		var texture: Texture2D = _load_texture(str(shot.get("image", "")))
 		if view != null:
 			if texture != null:
@@ -757,7 +902,192 @@ func _end_cutscene() -> void:
 		_begin_poll()
 
 
+## Debug: orbit the intact stack. Click Cabin in the debug panel to come back.
+func preview_exterior() -> void:
+	_begin_space_preview("exterior", "orbit", "earth", "")
+
+
+## Debug: the Service Module panel, debris and oxygen cloud, looping.
+func preview_explosion() -> void:
+	var shot: Dictionary = _shot_with_action("explosion")
+	_begin_space_preview("explosion", str(shot.get("move", "bay")), str(shot.get("body", "earth")), "explosion")
+
+
+## Debug: the push-in on the docking tunnel, with Odyssey going dark and Aquarius lighting up.
+func preview_lifeboat() -> void:
+	var shot: Dictionary = _shot_with_action("lifeboat")
+	_begin_space_preview("lifeboat", str(shot.get("move", "push_in")), str(shot.get("body", "earth")), "lifeboat")
+
+
+## Debug: Odyssey heat-shield first, plasma building, then a fade toward black.
+func preview_plasma() -> void:
+	_begin_space_preview("plasma", "bay", "earth", "plasma")
+
+
+## Debug: drogues, then the three main parachutes, descending.
+func preview_parachute() -> void:
+	_begin_space_preview("parachute", "pan", "earth", "parachute")
+
+
+## Debug: the splash, then the capsule floating.
+func preview_splash() -> void:
+	_begin_space_preview("splash", "pan", "earth", "splash")
+
+
+## Debug: Odyssey and Aquarius leaving the damaged Service Module.
+func preview_sm_jettison() -> void:
+	var shot: Dictionary = _shot_with_action("sm_jettison")
+	_begin_space_preview("sm_jettison", str(shot.get("move", "orbit")), str(shot.get("body", "earth")), "sm_jettison")
+
+
+## Debug: Aquarius drifting off Odyssey, with the puff from the tunnel.
+func preview_lm_jettison() -> void:
+	_begin_space_preview("lm_jettison", "pan", "earth", "lm_jettison")
+
+
+## Debug: the free-return map with the ship at the current GET.
+func preview_map() -> void:
+	_space_preview = "map"
+	var card := _stage()
+	if card != null:
+		card.hide_card()
+	Game.pause()
+	_present_map(Game.state.time.current_get, Game.state.time.splashdown_get)
+
+
+## Debug: back to the cabin, and the card for whatever the session was doing.
+func preview_cabin() -> void:
+	var shot: Dictionary = {}
+	if phase == PHASE_CUTSCENE and _shot_index >= 0 and _shot_index < _shots.size():
+		shot = _shots[_shot_index]
+	_hide_space()
+	var kind: String = str(shot.get("kind", ""))
+	if kind == "exterior":
+		_present_exterior(str(shot.get("move", "orbit")), str(shot.get("body", "earth")), str(shot.get("action", "")))
+		var space := _exterior()
+		if space != null:
+			space.set_progress(clampf(_shot_elapsed_s / maxf(float(shot.get("duration_s", 1.0)), 0.1), 0.0, 1.0))
+		return
+	if kind == "map":
+		_present_map(Game.state.time.current_get, Game.state.time.splashdown_get)
+		return
+	_restore_stage()
+
+
+func _finish_opening_map() -> void:
+	_map_left_s = 0.0
+	_hide_space()
+	if phase != PHASE_TIMESKIP:
+		return
+	Game.set_rate(_clock_rate())
+	Game.play(_clock_target)
+
+
+func _begin_space_preview(which: String, move: String, body: String, action: String) -> void:
+	_space_preview = which
+	_preview_t = 0.0
+	var card := _stage()
+	if card != null:
+		card.hide_card()
+	Game.pause()
+	_present_exterior(move, body, action)
+
+
+func _preview_span() -> float:
+	if _space_preview == "explosion" or _space_preview == "lifeboat" or _space_preview == "sm_jettison":
+		var shot: Dictionary = _shot_with_action(_space_preview)
+		return maxf(float(shot.get("duration_s", Tuning.EXTERIOR_PREVIEW_S)), 0.5)
+	if _space_preview == "lm_jettison":
+		return Tuning.REENTRY_FAREWELL_HOLD_S
+	if _space_preview == "plasma":
+		return Tuning.REENTRY_PLASMA_S
+	if _space_preview == "parachute":
+		return Tuning.REENTRY_PARACHUTE_S
+	if _space_preview == "splash":
+		return Tuning.REENTRY_SPLASH_S
+	return Tuning.EXTERIOR_PREVIEW_S
+
+
+func _shot_with_action(action: String) -> Dictionary:
+	for event: Dictionary in Timeline.event_list(Game.events):
+		var found: Dictionary = _find_action(event.get("cutscene", {}).get("shots", []), action)
+		if not found.is_empty():
+			return found
+	for reveal_id: String in Game.events.get("reveals", {}):
+		var reveal: Dictionary = Game.events["reveals"][reveal_id]
+		var found: Dictionary = _find_action(reveal.get("shots", []), action)
+		if not found.is_empty():
+			return found
+	return {}
+
+
+func _find_action(shots: Array, action: String) -> Dictionary:
+	for shot: Variant in shots:
+		if shot is Dictionary and str(shot.get("action", "")) == action:
+			return shot
+	return {}
+
+
+func _present_exterior(move: String, body: String, action: String = "") -> void:
+	var cabin := _cabin_node()
+	if cabin != null:
+		cabin.set_presented(false)
+	var space := _exterior()
+	if space != null:
+		space.show_exterior(move, body, action)
+
+
+func _present_map(get_h: float, splashdown_h: float) -> void:
+	var cabin := _cabin_node()
+	if cabin != null:
+		cabin.set_presented(false)
+	var space := _exterior()
+	if space != null:
+		space.show_map(get_h, splashdown_h)
+
+
+func _hide_space() -> void:
+	_space_preview = ""
+	_map_left_s = 0.0
+	var space := _exterior()
+	if space != null:
+		space.hide_view()
+	var cabin := _cabin_node()
+	if cabin != null:
+		cabin.set_presented(true)
+
+
+func _restore_stage() -> void:
+	var card := _stage()
+	if card == null:
+		return
+	match phase:
+		PHASE_INTRO:
+			card.show_intro(str(Game.events["intro"]["text"]))
+		PHASE_POLL:
+			_show_poll()
+		PHASE_HOLD, PHASE_SCORECARD:
+			card.visible = true
+		_:
+			card.hide_card()
+
+
+func _exterior() -> Exterior:
+	var nodes: Array[Node] = get_tree().get_nodes_in_group(Exterior.GROUP)
+	if nodes.is_empty():
+		return null
+	return nodes[0] as Exterior
+
+
+func _cabin_node() -> Cabin:
+	var nodes: Array[Node] = get_tree().get_nodes_in_group(Cabin.GROUP)
+	if nodes.is_empty():
+		return null
+	return nodes[0] as Cabin
+
+
 func _hide_cutscene() -> void:
+	_hide_space()
 	var view := _cutscene()
 	if view != null:
 		view.hide_view()
@@ -809,6 +1139,11 @@ func _asset_exists(path: String) -> bool:
 
 func _run_timeskip_captions(delta: float) -> void:
 	if phase != PHASE_TIMESKIP:
+		return
+	if _map_left_s > 0.0:
+		_map_left_s -= delta
+		if _map_left_s <= 0.0:
+			_finish_opening_map()
 		return
 	if _silence_left_s > 0.0:
 		_silence_left_s -= delta
