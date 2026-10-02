@@ -194,12 +194,14 @@ const FX_SHAKE_SEED: int = 1971
 ## Breath fog: none at 12 °C, full at 3 °C. Alpha of a puff at full density.
 const FX_FOG_BELOW_C: float = 12.0
 const FX_FOG_FULL_C: float = 3.0
-const FX_FOG_MAX_ALPHA: float = 0.2
-const FX_FOG_PARTICLES: int = 14
-const FX_FOG_LIFETIME_S: float = 1.8
-const FX_FOG_SPEED_MIN: float = 0.02
-const FX_FOG_SPEED_MAX: float = 0.05
-const FX_FOG_PUFF_M: float = 0.022
+## One soft puff per exhale. It stays low and off to the side, and is gone within FX_FOG_PUFF_S.
+const FX_FOG_MAX_ALPHA: float = 0.22
+const FX_FOG_PUFF_S: float = 1.5
+const FX_FOG_PUFF_M: float = 0.08
+const FX_FOG_DISTANCE_M: float = 0.8
+const FX_FOG_SIDE_M: float = 0.18
+const FX_FOG_DROP_M: float = 0.22
+const FX_FOG_DRIFT_M: float = 0.035
 ## Cold tint: grows from 18 °C down to 3 °C, up to this strength.
 const FX_TINT_BELOW_C: float = 18.0
 const FX_TINT_FULL_C: float = 3.0

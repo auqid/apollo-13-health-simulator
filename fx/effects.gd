@@ -37,7 +37,12 @@ var strength: float = 1.0
 
 var _material: ShaderMaterial
 var _hud: CanvasLayer
-var _fog: CPUParticles3D
+var _puffs: Array[MeshInstance3D] = []
+var _puff_age: Array[float] = []
+var _puff_from: Array[Vector3] = []
+var _puff_drift: Array[Vector3] = []
+var _next_puff: int = 0
+var _breath_phase: float = 0.0
 var _vignette: float = 0.0
 var _blur_px: float = 0.0
 var _wobble_px: float = 0.0
@@ -257,14 +262,35 @@ func _shake_offset() -> Vector3:
 
 
 func _apply_fog() -> void:
-	if _fog == null:
+	if _puffs.is_empty():
 		return
-	var visible_fog: bool = _fog_amount > 0.02
-	_fog.visible = visible_fog
-	_fog.emitting = visible_fog
-	var color: Color = _fog.color
-	color.a = Tuning.FX_FOG_MAX_ALPHA * _fog_amount
-	_fog.color = color
+	var phase: float = 0.0
+	var bio := get_tree().get_first_node_in_group("bio_audio")
+	if bio != null:
+		phase = bio.breath_phase()
+	var exhale: float = Tuning.AUDIO_BREATH_INHALE
+	if _fog_amount > 0.05 and _breath_phase < exhale and phase >= exhale:
+		_start_puff()
+	_breath_phase = phase
+	var life_s: float = Tuning.FX_FOG_PUFF_S
+	var dt_s: float = get_process_delta_time()
+	for i in _puffs.size():
+		if _puff_age[i] < 0.0:
+			_puffs[i].visible = false
+			continue
+		_puff_age[i] += dt_s
+		var t: float = _puff_age[i] / life_s
+		if t >= 1.0:
+			_puff_age[i] = -1.0
+			_puffs[i].visible = false
+			continue
+		var fade: float = smoothstep(0.0, 0.2, t) * (1.0 - smoothstep(0.35, 1.0, t))
+		_puffs[i].position = _puff_from[i] + _puff_drift[i] * t
+		_puffs[i].visible = true
+		var material: StandardMaterial3D = _puffs[i].material_override
+		var color: Color = material.albedo_color
+		color.a = fade * Tuning.FX_FOG_MAX_ALPHA * _fog_amount
+		material.albedo_color = color
 
 
 func _apply_wobble() -> void:
@@ -351,40 +377,49 @@ func _build_screen() -> void:
 	add_child(layer)
 
 
+func _start_puff() -> void:
+	var i: int = _next_puff
+	_next_puff = (_next_puff + 1) % _puffs.size()
+	var side: float = Tuning.FX_FOG_SIDE_M if i == 0 else -Tuning.FX_FOG_SIDE_M
+	_puff_from[i] = Vector3(side, -Tuning.FX_FOG_DROP_M, -Tuning.FX_FOG_DISTANCE_M)
+	_puff_drift[i] = Vector3(Tuning.FX_FOG_DRIFT_M * (1.0 if i == 0 else -1.0), Tuning.FX_FOG_DRIFT_M * 0.35, 0.0)
+	_puff_age[i] = 0.0
+
+
 func _build_fog() -> void:
 	if cabin == null or cabin.camera == null:
 		return
-	_fog = CPUParticles3D.new()
-	_fog.amount = Tuning.FX_FOG_PARTICLES
-	_fog.lifetime = Tuning.FX_FOG_LIFETIME_S
-	_fog.preprocess = Tuning.FX_FOG_LIFETIME_S
-	_fog.explosiveness = 0.0
-	_fog.randomness = 0.4
-	_fog.local_coords = true
-	_fog.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
-	_fog.emission_sphere_radius = 0.03
-	_fog.direction = Vector3(0.15, 0.35, -1.0)
-	_fog.spread = 18.0
-	_fog.gravity = Vector3.ZERO
-	_fog.initial_velocity_min = Tuning.FX_FOG_SPEED_MIN
-	_fog.initial_velocity_max = Tuning.FX_FOG_SPEED_MAX
-	_fog.scale_amount_min = 0.6
-	_fog.scale_amount_max = 1.4
-	_fog.color = Color(0.82, 0.88, 0.92, 0.0)
-	var puff := SphereMesh.new()
-	puff.radius = Tuning.FX_FOG_PUFF_M
-	puff.height = Tuning.FX_FOG_PUFF_M * 2.0
-	puff.radial_segments = 8
-	puff.rings = 4
-	var material := StandardMaterial3D.new()
-	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.albedo_color = Color.WHITE
-	material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	puff.material = material
-	_fog.mesh = puff
-	_fog.position = Vector3(0.02, -0.16, -0.55)
-	_fog.emitting = false
-	_fog.visible = false
-	_fog.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	cabin.camera.add_child(_fog)
+	var disc := QuadMesh.new()
+	disc.size = Vector2(Tuning.FX_FOG_PUFF_M, Tuning.FX_FOG_PUFF_M)
+	var texture := _soft_disc()
+	for i in 2:
+		var puff := MeshInstance3D.new()
+		puff.mesh = disc
+		var material := StandardMaterial3D.new()
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		material.albedo_texture = texture
+		material.albedo_color = Color(0.86, 0.91, 0.95, 0.0)
+		material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+		material.cull_mode = BaseMaterial3D.CULL_DISABLED
+		puff.material_override = material
+		puff.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		puff.visible = false
+		cabin.camera.add_child(puff)
+		_puffs.append(puff)
+		_puff_age.append(-1.0)
+		_puff_from.append(Vector3.ZERO)
+		_puff_drift.append(Vector3.ZERO)
+
+
+func _soft_disc() -> ImageTexture:
+	var size: int = 64
+	var image := Image.create_empty(size, size, false, Image.FORMAT_RGBA8)
+	var center: float = size * 0.5
+	for y in size:
+		for x in size:
+			var dist: float = Vector2(x + 0.5 - center, y + 0.5 - center).length() / center
+			var alpha: float = clampf(1.0 - dist, 0.0, 1.0)
+			alpha *= alpha
+			image.set_pixel(x, y, Color(1.0, 1.0, 1.0, alpha))
+	return ImageTexture.create_from_image(image)

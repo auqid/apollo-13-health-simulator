@@ -83,6 +83,13 @@ func play_test_voice() -> void:
 	_voice.play()
 
 
+## 0 at the start of an inhale, crossing AUDIO_BREATH_INHALE at the start of the exhale.
+func breath_phase() -> float:
+	if _breath_len_s <= 0.0:
+		return 0.0
+	return clampf(_breath_pos_s / _breath_len_s, 0.0, 1.0)
+
+
 func summary() -> String:
 	var crew: String = "Lovell"
 	var host := get_node_or_null("/root/Game")
