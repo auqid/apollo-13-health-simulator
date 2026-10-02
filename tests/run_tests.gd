@@ -12,11 +12,14 @@ const GameScript := preload("res://game/game.gd")
 const FxMapping := preload("res://fx/fx_mapping.gd")
 const Effects := preload("res://fx/effects.gd")
 const CabinScene := preload("res://scenes/cabin/cabin.tscn")
+const Cabin := preload("res://scenes/cabin/cabin.gd")
 const AudioMix := preload("res://audio/audio_mix.gd")
 
 const EFFECT_KEYS: Array[String] = ["flags", "power_margin", "fatigue"]
 const TEXT_KEYS: Array[String] = ["text", "question", "label", "hint", "note", "title", "closing", "history"]
 const EVENT_IDS: Array[String] = ["e1", "e2", "e3", "e4", "e5"]
+## This one drives the autoloads, which are not in the tree yet during _init.
+const SESSION_TEST := "test_every_option_combination_reaches_the_scorecard"
 ## Step size for the 32 full runs; every event and CO2 peak lands on a step.
 const COMBO_STEP_H: float = 0.1
 
@@ -38,14 +41,23 @@ func _init() -> void:
 	var test_names: Array[String] = []
 	for method: Dictionary in get_method_list():
 		var method_name: String = method["name"]
-		if method_name.begins_with("test_"):
+		if method_name.begins_with("test_") and method_name != SESSION_TEST:
 			test_names.append(method_name)
 	for test_name in test_names:
-		_test_failures = 0
-		call(test_name)
-		print("%s  %s" % ["PASS" if _test_failures == 0 else "FAIL", test_name])
-	print("%d tests, %d checks, %d failures" % [test_names.size(), _checks, _failures])
+		_run_one(test_name)
+	_run_session_test.call_deferred(test_names.size())
+
+
+func _run_session_test(already: int) -> void:
+	_run_one(SESSION_TEST)
+	print("%d tests, %d checks, %d failures" % [already + 1, _checks, _failures])
 	quit(1 if _failures > 0 else 0)
+
+
+func _run_one(test_name: String) -> void:
+	_test_failures = 0
+	call(test_name)
+	print("%s  %s" % ["PASS" if _test_failures == 0 else "FAIL", test_name])
 
 
 # --- Helpers ---
@@ -919,3 +931,46 @@ func test_voice_ducks_bio_and_alarm_then_releases() -> void:
 	_check(duck < 0.05, "then Bio and Alarm come back")
 	for bus_name in AudioMix.DUCKED_BUSES:
 		_check(bus_name != AudioMix.BUS_VOICE, "Voice itself is not ducked")
+
+
+func test_each_event_sets_a_camera_and_an_outside_view() -> void:
+	for event: Dictionary in _load_events()["events"]:
+		_check(Cabin.PRESETS.has(event.get("camera", "")), "%s has a camera preset" % event["id"])
+		_check(event.get("outside", "") in Cabin.OUTSIDE_VIEWS, "%s has an outside view" % event["id"])
+		var outside: String = "moon" if event["id"] == "e2" else "earth"
+		_check(event.get("outside", "") == outside, "%s looks out on %s" % [event["id"], outside])
+
+
+func test_every_option_combination_reaches_the_scorecard() -> void:
+	var session: Node = root.get_node_or_null("Director")
+	var played: Node = root.get_node_or_null("Game")
+	if session == null or played == null:
+		_check(false, "the Game and Director autoloads are loaded")
+		return
+	for combo in 32:
+		var picks: PackedStringArray = []
+		for i in EVENT_IDS.size():
+			picks.append("b" if ((combo >> i) & 1) == 1 else "a")
+		var label: String = "".join(picks)
+		session.call("start_session")
+		var steps: int = 0
+		var phase: String = session.get("phase")
+		while phase != "scorecard" and steps < 40:
+			steps += 1
+			var before: String = phase
+			if phase == "poll":
+				session.call("choose", picks[int(session.get("event_index"))])
+				session.call("finish_choice_hold")
+			elif phase == "timeskip" or phase == "reentry":
+				session.call("complete_clock")
+			else:
+				session.call("skip")
+			phase = session.get("phase")
+			if phase == before:
+				break
+		_check(phase == "scorecard", "%s reaches the scorecard (stopped in %s)" % [label, phase])
+		var played_state: SimState = played.get("state")
+		var splashdown: float = 119.0 if picks[1] == "b" else 142.9
+		_near(played_state.time.current_get, splashdown, 1e-3, "%s splashdown" % label)
+		for i in EVENT_IDS.size():
+			_check(played_state.decisions.get(EVENT_IDS[i], "") == picks[i], "%s records %s" % [label, EVENT_IDS[i]])

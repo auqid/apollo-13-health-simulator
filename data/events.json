@@ -9,6 +9,8 @@
     {
       "id": "e1",
       "title": "Explosion and lifeboat",
+      "camera": "front_windows",
+      "outside": "earth",
       "get": 55.9,
       "cutscene": {
         "audio": "res://assets/audio/e1_problem.mp3",
@@ -53,6 +55,8 @@
     {
       "id": "e2",
       "title": "The return burn",
+      "camera": "front_windows",
+      "outside": "moon",
       "get": 79.0,
       "cutscene": {
         "audio": "res://assets/audio/e2_burn.mp3",
@@ -93,6 +97,8 @@
     {
       "id": "e3",
       "title": "The CO2 crisis",
+      "camera": "co2_panel",
+      "outside": "earth",
       "get": 88.0,
       "cutscene": {
         "audio": "res://assets/audio/e3_procedure.mp3",
@@ -140,6 +146,8 @@
     {
       "id": "e4",
       "title": "The cold coast",
+      "camera": "front_windows",
+      "outside": "earth",
       "get": 96.0,
       "cutscene": {
         "images": ["res://assets/images/dark_cabin.jpg"],
@@ -181,6 +189,8 @@
     {
       "id": "e5",
       "title": "Wake up Odyssey",
+      "camera": "overhead",
+      "outside": "earth",
       "get_from_splashdown": -5.0,
       "cutscene": {
         "reveal": "service_module",

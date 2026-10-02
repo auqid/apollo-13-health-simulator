@@ -66,7 +66,11 @@ func _ready() -> void:
 func _input(event: InputEvent) -> void:
 	if not visible or not (event is InputEventKey) or not event.is_pressed():
 		return
-	if event.is_action_pressed("toggle_debug") or event.is_action_pressed("advance"):
+	if event.is_action_pressed("toggle_debug") or event.is_action_pressed("advance") \
+			or event.is_action_pressed("choose_a") or event.is_action_pressed("choose_b") \
+			or event.is_action_pressed("toggle_mute") or event.is_action_pressed("silence_alarm") \
+			or event.is_action_pressed("toggle_hud") or event.is_action_pressed("toggle_fullscreen") \
+			or event.is_action_pressed("restart"):
 		var focused: Control = get_viewport().gui_get_focus_owner()
 		if focused != null and is_ancestor_of(focused):
 			focused.release_focus()
@@ -111,6 +115,7 @@ func _build() -> void:
 	_build_view(column)
 	_build_effects(column)
 	_build_sound(column)
+	_build_flow(column)
 	_build_jumps(column)
 	_build_choices(column)
 	_build_holds(column)
@@ -262,6 +267,14 @@ func _mark_effect_mode(mode_name: String) -> void:
 		var button: Button = _effect_buttons[mode]
 		var title: String = Effects.MODE_TITLES[mode]
 		button.text = ("• " + title) if mode == mode_name else title
+
+
+func _build_flow(column: VBoxContainer) -> void:
+	column.add_child(_heading("Session"))
+	var line := HFlowContainer.new()
+	for state: Dictionary in Director.flow_states():
+		line.add_child(_button(state["label"], Director.jump_to_state.bind(state["id"])))
+	column.add_child(line)
 
 
 func _build_jumps(column: VBoxContainer) -> void:

@@ -32,12 +32,17 @@ const SIZE_NAME := 24
 const SIZE_ENV_VALUE := 28
 const SIZE_VITAL := 32
 const SIZE_CAPTION := 32
+const SIZE_POLL := 36
+const SIZE_QUESTION := 40
+const SIZE_CARD_TITLE := 64
 const SIZE_CLOCK := 46
 
 ## Screen effects draw under the HUD so the HUD never blurs.
 const LAYER_SCREEN_FX := 1
 const LAYER_HUD := 10
 const LAYER_NOTICE := 15
+## Intro, cutscene, poll, reentry and scorecard cards. Above the HUD, under the debug panel.
+const LAYER_CARD := 16
 const LAYER_DEBUG := 20
 
 const MARGIN := 40
@@ -50,6 +55,7 @@ const FOCUS_BAR_WIDTH := 3
 const ROW_GAP := 10
 const SECTION_GAP := 20
 ## Fits the name column, four vital columns and the row and panel padding.
+const CARD_COLUMN_WIDTH := 1080
 const HUD_PANEL_WIDTH := 552
 const NAME_COLUMN_WIDTH := 96
 const VITAL_COLUMN_WIDTH := 96

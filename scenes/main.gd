@@ -10,6 +10,7 @@ const BioAudio := preload("res://audio/bio_audio.gd")
 const Hud := preload("res://scenes/ui/hud.gd")
 const Notice := preload("res://scenes/ui/notice.gd")
 const DebugPanel := preload("res://scenes/ui/debug_panel.gd")
+const StageCard := preload("res://scenes/ui/stage_card.gd")
 
 
 func _ready() -> void:
@@ -22,4 +23,5 @@ func _ready() -> void:
 	add_child(BioAudio.new())
 	add_child(Hud.new())
 	add_child(Notice.new())
+	add_child(StageCard.new())
 	add_child(DebugPanel.new())

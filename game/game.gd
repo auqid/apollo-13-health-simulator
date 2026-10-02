@@ -45,6 +45,38 @@ func _physics_process(delta: float) -> void:
 		target_reached.emit(state.time.current_get)
 
 
+func clear_plan() -> void:
+	plan = {}
+
+
+## Clock stopped at at_get, with the vitals that moment would have at the start of the mission.
+## Poll choices already made stay in the plan; call replay_to() to apply them.
+func begin_at(at_get: float) -> void:
+	running = false
+	target_get = INF
+	metrics = Metrics.new()
+	var fresh: SimState = SimModel.initial_state(at_get)
+	metrics.observe(fresh)
+	_set_state(fresh)
+	_set_state(Timeline.advance(state, 0.0, events, plan, metrics))
+	clock_changed.emit(running, rate_h_per_s)
+
+
+## Replays from the explosion with the current plan and stops at at_get, or at splashdown.
+func replay_to(at_get: float) -> void:
+	if at_get <= Tuning.EXPLOSION_GET + Timeline.EPSILON_H:
+		begin_at(at_get)
+		return
+	running = false
+	target_get = INF
+	metrics = Metrics.new()
+	var fresh: SimState = SimModel.initial_state()
+	metrics.observe(fresh)
+	var rebuilt: SimState = Timeline.run_to(fresh, at_get, events, plan, metrics)
+	_set_state(rebuilt)
+	clock_changed.emit(running, rate_h_per_s)
+
+
 ## Back to the explosion with the clock stopped and no holds. The plan is kept.
 func reset() -> void:
 	running = false
@@ -104,6 +136,9 @@ func set_choice(event_id: String, option_key: String) -> void:
 	plan[event_id] = option_key
 	if state.decisions.has(event_id) and state.decisions[event_id] != option_key:
 		_replay_to_now(state.overrides)
+		return
+	if event_id in state.reached_events and not state.decisions.has(event_id):
+		_set_state(Timeline.advance(state, 0.0, events, plan, metrics))
 
 
 ## Holds a value (an override path from SimState) until it's released.
