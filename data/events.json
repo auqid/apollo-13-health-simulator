@@ -70,10 +70,25 @@
       "cutscene": {
         "shots": [
           {
-            "kind": "photo",
-            "image": "res://assets/images/moon_far_side.jpg",
-            "duration_s": 8.0,
+            "kind": "exterior",
+            "duration_s": 7.0,
+            "move": "orbit",
+            "body": "moon",
             "caption": "Aquarius swings around the far side of the Moon."
+          },
+          {
+            "kind": "exterior",
+            "duration_s": 6.0,
+            "move": "push_in",
+            "body": "moon",
+            "caption": "The ship is still one stack: Odyssey, then Aquarius."
+          },
+          {
+            "kind": "exterior",
+            "duration_s": 5.0,
+            "move": "pan",
+            "body": "moon",
+            "caption": "Sunlight moves along the hull."
           },
           {"kind": "cabin", "duration_s": 4.0, "caption": "Radio contact with Houston is restored at about 77:33."},
           {

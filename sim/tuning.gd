@@ -157,6 +157,10 @@ const CAPTION_HOLD_S: float = 4.0
 const DEBUG_RATES_H_PER_S: Array = [0.1, 0.5, 1.0, 2.0, 4.0, 8.0]
 ## How far a cutscene photo zooms during its pan.
 const CUTSCENE_PHOTO_ZOOM: float = 1.08
+## How long the mission map stays up at the start of a timeskip, in real seconds.
+const MAP_HOLD_S: float = 4.0
+## One loop of the exterior preview orbit.
+const EXTERIOR_PREVIEW_S: float = 12.0
 ## How long the chosen poll option stays highlighted before the session continues.
 const POLL_CHOICE_HOLD_S: float = 1.5
 ## Farewell line stays at least this long, so it can be read when the clip is missing.

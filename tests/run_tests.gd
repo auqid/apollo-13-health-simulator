@@ -14,6 +14,8 @@ const Effects := preload("res://fx/effects.gd")
 const CabinScene := preload("res://scenes/cabin/cabin.tscn")
 const Cabin := preload("res://scenes/cabin/cabin.gd")
 const AudioMix := preload("res://audio/audio_mix.gd")
+const MapPath := preload("res://scenes/space/map_path.gd")
+const Exterior := preload("res://scenes/space/exterior.gd")
 
 const EFFECT_KEYS: Array[String] = ["flags", "power_margin", "fatigue"]
 const TEXT_KEYS: Array[String] = ["text", "question", "label", "hint", "note", "title", "closing", "history", "caption", "heat_shield_text"]
@@ -294,11 +296,39 @@ func test_cutscenes_have_editable_shots() -> void:
 	var e1_shots: Array = data["events"][0]["cutscene"]["shots"]
 	_check(e1_shots[0]["kind"] == "bang", "E1 opens with the bang")
 	_check(e1_shots[1]["kind"] == "audio", "E1 plays the problem audio after the bang")
+	var e2_open: Dictionary = data["events"][1]["cutscene"]["shots"][0]
+	_check(e2_open["kind"] == "exterior" and e2_open["move"] == "orbit", "E2 opens on an exterior orbit")
 	var far_side: bool = false
 	for caption: Dictionary in data["events"][0]["timeskip"]["captions"]:
 		if "Artemis II in 2026" in caption["text"]:
 			far_side = true
 	_check(far_side, "the far-side caption names the distance record")
+
+
+func test_map_and_exterior_camera_follow_the_mission() -> void:
+	var outbound: Vector2 = MapPath.position(60.0, 142.9)
+	var far: Vector2 = MapPath.position(MapPath.FAR_SIDE_GET, 142.9)
+	var home: Vector2 = MapPath.position(142.9, 142.9)
+	var early: Vector2 = MapPath.position(60.0, 119.0)
+	_check(outbound.distance_to(MapPath.MOON) < outbound.distance_to(MapPath.EARTH),
+		"by GET 60 the ship is closer to the Moon than to Earth")
+	_check(is_equal_approx(outbound.x, early.x) and is_equal_approx(outbound.y, early.y),
+		"the outbound leg does not depend on the return speed")
+	_check(far.x > MapPath.MOON.x, "the far-side pass is beyond the Moon")
+	_check(home.distance_to(MapPath.EARTH) < 0.5, "splashdown is back at Earth")
+	var fast_return: Vector2 = MapPath.position(100.0, 119.0)
+	var slow_return: Vector2 = MapPath.position(100.0, 142.9)
+	_check(fast_return.distance_to(MapPath.EARTH) < slow_return.distance_to(MapPath.EARTH),
+		"the fast return is farther along the trip home at the same GET")
+	var wide: Transform3D = Exterior.camera_transform("orbit", 0.0)
+	var close: Transform3D = Exterior.camera_transform("push_in", 1.0)
+	_check(wide.origin.distance_to(close.origin) > 1.0, "push-in ends closer than the orbit starts")
+	_check(Exterior.camera_transform("pan", 0.0).origin.distance_to(Exterior.camera_transform("pan", 1.0).origin) > 1.0,
+		"the pan travels")
+	var exterior := Exterior.new()
+	exterior.build()
+	_check(exterior.get_child_count() > 3, "the exterior scene builds the stack, planets and map")
+	exterior.free()
 
 
 func test_reentry_sequence_is_timed_from_splashdown() -> void:

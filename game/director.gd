@@ -13,6 +13,8 @@ const CutsceneView := preload("res://scenes/ui/cutscene_view.gd")
 const BioAudio := preload("res://audio/bio_audio.gd")
 const Effects := preload("res://fx/effects.gd")
 const Hud := preload("res://scenes/ui/hud.gd")
+const Exterior := preload("res://scenes/space/exterior.gd")
+const Cabin := preload("res://scenes/cabin/cabin.gd")
 
 signal hud_visibility_changed(visible: bool)
 signal debug_visibility_changed(visible: bool)
@@ -60,6 +62,10 @@ var _reentry_hold_s: float = 0.0
 var _reentry_holding: bool = false
 var _recovery_hold: bool = false
 var _radio_blackout: bool = false
+var _map_left_s: float = 0.0
+## "", "exterior" or "map". Debug preview, cleared when a real shot takes the camera.
+var _space_preview: String = ""
+var _preview_t: float = 0.0
 
 
 func _ready() -> void:
@@ -69,6 +75,11 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if _space_preview == "exterior" and phase != PHASE_CUTSCENE:
+		_preview_t = fposmod(_preview_t + delta / Tuning.EXTERIOR_PREVIEW_S, 1.0)
+		var space := _exterior()
+		if space != null:
+			space.set_progress(_preview_t)
 	if phase == PHASE_INTRO:
 		_card_left_s -= delta
 		if _card_left_s <= 0.0:
@@ -174,6 +185,9 @@ func skip() -> void:
 		PHASE_HOLD:
 			finish_choice_hold()
 		PHASE_TIMESKIP:
+			if _map_left_s > 0.0:
+				_finish_opening_map()
+				return
 			if _silence_left_s > 0.0:
 				return
 			_toggle_timeskip()
@@ -321,8 +335,8 @@ func _begin_timeskip() -> void:
 	if card != null:
 		card.hide_card()
 	notice_requested.emit("", 0.0)
-	Game.set_rate(_clock_rate())
-	Game.play(_clock_target)
+	_map_left_s = Tuning.MAP_HOLD_S
+	_present_map(Game.state.time.current_get, Game.state.time.splashdown_get)
 
 
 func _begin_reentry() -> void:
@@ -681,7 +695,11 @@ func _run_cutscene(delta: float) -> void:
 	_shot_elapsed_s += delta
 	_shot_left_s -= delta
 	var shot: Dictionary = _shots[_shot_index]
-	if shot.get("kind", "") == "photo":
+	if shot.get("kind", "") == "exterior":
+		var space := _exterior()
+		if space != null:
+			space.set_progress(clampf(_shot_elapsed_s / maxf(float(shot.get("duration_s", 1.0)), 0.1), 0.0, 1.0))
+	elif shot.get("kind", "") == "photo":
 		var view := _cutscene()
 		if view != null:
 			view.set_pan(clampf(_shot_elapsed_s / maxf(float(shot.get("duration_s", 1.0)), 0.1), 0.0, 1.0))
@@ -702,9 +720,18 @@ func _advance_shot() -> void:
 
 
 func _begin_shot(shot: Dictionary) -> void:
+	_hide_space()
 	var view := _cutscene()
 	var kind: String = shot.get("kind", "cabin")
-	if kind == "bang":
+	if kind == "exterior":
+		if view != null:
+			view.hide_photo()
+		_present_exterior(str(shot.get("move", "orbit")), str(shot.get("body", "earth")))
+	elif kind == "map":
+		if view != null:
+			view.hide_photo()
+		_present_map(Game.state.time.current_get, Game.state.time.splashdown_get)
+	elif kind == "bang":
 		if view != null:
 			view.hide_photo()
 		var bio := _bio()
@@ -757,7 +784,115 @@ func _end_cutscene() -> void:
 		_begin_poll()
 
 
+## Debug: orbit the intact stack. Click Cabin in the debug panel to come back.
+func preview_exterior() -> void:
+	_space_preview = "exterior"
+	_preview_t = 0.0
+	var card := _stage()
+	if card != null:
+		card.hide_card()
+	Game.pause()
+	_present_exterior("orbit", "earth")
+
+
+## Debug: the free-return map with the ship at the current GET.
+func preview_map() -> void:
+	_space_preview = "map"
+	var card := _stage()
+	if card != null:
+		card.hide_card()
+	Game.pause()
+	_present_map(Game.state.time.current_get, Game.state.time.splashdown_get)
+
+
+## Debug: back to the cabin, and the card for whatever the session was doing.
+func preview_cabin() -> void:
+	var shot: Dictionary = {}
+	if phase == PHASE_CUTSCENE and _shot_index >= 0 and _shot_index < _shots.size():
+		shot = _shots[_shot_index]
+	_hide_space()
+	var kind: String = str(shot.get("kind", ""))
+	if kind == "exterior":
+		_present_exterior(str(shot.get("move", "orbit")), str(shot.get("body", "earth")))
+		var space := _exterior()
+		if space != null:
+			space.set_progress(clampf(_shot_elapsed_s / maxf(float(shot.get("duration_s", 1.0)), 0.1), 0.0, 1.0))
+		return
+	if kind == "map":
+		_present_map(Game.state.time.current_get, Game.state.time.splashdown_get)
+		return
+	_restore_stage()
+
+
+func _finish_opening_map() -> void:
+	_map_left_s = 0.0
+	_hide_space()
+	if phase != PHASE_TIMESKIP:
+		return
+	Game.set_rate(_clock_rate())
+	Game.play(_clock_target)
+
+
+func _present_exterior(move: String, body: String) -> void:
+	var cabin := _cabin_node()
+	if cabin != null:
+		cabin.set_presented(false)
+	var space := _exterior()
+	if space != null:
+		space.show_exterior(move, body)
+
+
+func _present_map(get_h: float, splashdown_h: float) -> void:
+	var cabin := _cabin_node()
+	if cabin != null:
+		cabin.set_presented(false)
+	var space := _exterior()
+	if space != null:
+		space.show_map(get_h, splashdown_h)
+
+
+func _hide_space() -> void:
+	_space_preview = ""
+	_map_left_s = 0.0
+	var space := _exterior()
+	if space != null:
+		space.hide_view()
+	var cabin := _cabin_node()
+	if cabin != null:
+		cabin.set_presented(true)
+
+
+func _restore_stage() -> void:
+	var card := _stage()
+	if card == null:
+		return
+	match phase:
+		PHASE_INTRO:
+			card.show_intro(str(Game.events["intro"]["text"]))
+		PHASE_POLL:
+			_show_poll()
+		PHASE_HOLD, PHASE_SCORECARD:
+			card.visible = true
+		_:
+			card.hide_card()
+
+
+func _exterior() -> Exterior:
+	var nodes: Array[Node] = get_tree().get_nodes_in_group(Exterior.GROUP)
+	if nodes.is_empty():
+		return null
+	return nodes[0] as Exterior
+
+
+func _cabin_node() -> Cabin:
+	var nodes: Array[Node] = get_tree().get_nodes_in_group(Cabin.GROUP)
+	if nodes.is_empty():
+		return null
+	return nodes[0] as Cabin
+
+
 func _hide_cutscene() -> void:
+	_hide_space()
 	var view := _cutscene()
 	if view != null:
 		view.hide_view()
@@ -809,6 +944,11 @@ func _asset_exists(path: String) -> bool:
 
 func _run_timeskip_captions(delta: float) -> void:
 	if phase != PHASE_TIMESKIP:
+		return
+	if _map_left_s > 0.0:
+		_map_left_s -= delta
+		if _map_left_s <= 0.0:
+			_finish_opening_map()
 		return
 	if _silence_left_s > 0.0:
 		_silence_left_s -= delta

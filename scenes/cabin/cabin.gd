@@ -11,7 +11,7 @@ const CabinCamera := preload("res://scenes/cabin/cabin_camera.gd")
 const Floater := preload("res://scenes/cabin/floater.gd")
 const UiStyle := preload("res://scenes/ui/ui_style.gd")
 const Tuning := preload("res://sim/tuning.gd")
-const ATMOSPHERE_SHADER := "res://scenes/cabin/atmosphere.gdshader"
+const Bodies := preload("res://scenes/space/bodies.gd")
 
 const GROUP := "cabin"
 const START_PRESET := "front_windows"
@@ -82,17 +82,12 @@ const OUTSIDE_LAYER := 2
 ## Direction the sunlight travels for each outside view: Earth mostly lit, the Moon side-lit for relief.
 const SUN_DIRECTIONS: Dictionary = {"earth": Vector3(-0.6, -0.2, -0.75), "moon": Vector3(-1.0, -0.15, -0.3)}
 const SUN_ENERGY := 1.6
-const STAR_COUNT := 3000
-const STAR_SEED := 1304
-const STAR_MAP_SIZE := Vector2i(4096, 2048)
-const STAR_BRIGHTNESS := 0.8
 const EARTH_DISTANCE := 80.0
 const EARTH_RADIUS := 6.0
 const CLOUD_SCALE := 1.012
 const ATMOSPHERE_SCALE := 1.04
 const MOON_DISTANCE := 95.0
 const MOON_RADIUS := 62.0
-const PLANET_TEXTURE_SIZE := Vector2i(1024, 512)
 const CHECKLIST_COVER := Color("#D9D2BF")
 const BAG_FABRIC := Color("#B8B2A4")
 const HOSE_COLOR := Color("#7F94A3")
@@ -103,6 +98,7 @@ var outside_view: String = "earth"
 var _lights: Array[OmniLight3D] = []
 var _base_energy: Dictionary = {}
 var _environment: Environment
+var _world: WorldEnvironment
 ## Lamp name -> StandardMaterial3D shared by every lamp with that name
 var _lamps: Dictionary = {}
 var _bodies: Dictionary = {}
@@ -182,6 +178,15 @@ func lamp_names() -> PackedStringArray:
 	return PackedStringArray(_lamps.keys())
 
 
+## Hides the cabin while an exterior or map shot uses the only camera.
+func set_presented(shown: bool) -> void:
+	visible = shown
+	if camera != null:
+		camera.current = shown
+	if _world != null:
+		_world.environment = _environment if shown else null
+
+
 # --- Building ---
 
 func _make_materials() -> void:
@@ -199,8 +204,8 @@ func _build_environment() -> void:
 	_environment = Environment.new()
 	_environment.background_mode = Environment.BG_SKY
 	var sky_material := PanoramaSkyMaterial.new()
-	sky_material.panorama = _star_map()
-	sky_material.energy_multiplier = STAR_BRIGHTNESS
+	sky_material.panorama = Bodies.star_panorama()
+	sky_material.energy_multiplier = Bodies.STAR_BRIGHTNESS
 	_environment.sky = Sky.new()
 	_environment.sky.sky_material = sky_material
 	_environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
@@ -210,9 +215,9 @@ func _build_environment() -> void:
 	_environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	_environment.glow_enabled = true
 	_environment.glow_intensity = GLOW_INTENSITY
-	var world := WorldEnvironment.new()
-	world.environment = _environment
-	add_child(world)
+	_world = WorldEnvironment.new()
+	_world.environment = _environment
+	add_child(_world)
 
 
 func _build_shell() -> void:
@@ -377,18 +382,17 @@ func _build_outside() -> void:
 
 	var earth := Node3D.new()
 	earth.position = eye + (left_window - eye).normalized() * EARTH_DISTANCE
-	earth.add_child(_sphere(EARTH_RADIUS, _earth_material()))
-	earth.add_child(_sphere(EARTH_RADIUS * CLOUD_SCALE, _cloud_material()))
-	var atmosphere := ShaderMaterial.new()
-	if ResourceLoader.exists(ATMOSPHERE_SHADER):
-		atmosphere.shader = load(ATMOSPHERE_SHADER)
+	earth.add_child(_sphere(EARTH_RADIUS, Bodies.earth_material()))
+	earth.add_child(_sphere(EARTH_RADIUS * CLOUD_SCALE, Bodies.cloud_material()))
+	var atmosphere := Bodies.atmosphere_material()
+	if atmosphere.shader != null:
 		earth.add_child(_sphere(EARTH_RADIUS * ATMOSPHERE_SCALE, atmosphere))
 	add_child(earth)
 	_bodies["earth"] = earth
 
 	var moon := Node3D.new()
 	moon.position = eye + (between_windows - eye).normalized() * MOON_DISTANCE
-	moon.add_child(_sphere(MOON_RADIUS, _moon_material()))
+	moon.add_child(_sphere(MOON_RADIUS, Bodies.moon_material()))
 	add_child(moon)
 	_bodies["moon"] = moon
 
@@ -584,81 +588,3 @@ func _glass_material() -> StandardMaterial3D:
 	glass.cull_mode = BaseMaterial3D.CULL_DISABLED
 	return glass
 
-
-# --- Outside textures ---
-
-func _star_map() -> ImageTexture:
-	var image := Image.create_empty(STAR_MAP_SIZE.x, STAR_MAP_SIZE.y, false, Image.FORMAT_L8)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = STAR_SEED
-	for i in STAR_COUNT:
-		var brightness: float = pow(rng.randf(), 3.0)
-		var x: int = rng.randi_range(0, STAR_MAP_SIZE.x - 1)
-		var y: int = rng.randi_range(0, STAR_MAP_SIZE.y - 1)
-		image.set_pixel(x, y, Color(brightness, brightness, brightness))
-	return ImageTexture.create_from_image(image)
-
-
-func _earth_material() -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
-	material.albedo_texture = _noise_texture(11, 2.5, [0.0, 0.55, 0.6, 0.7, 0.85, 1.0],
-		[Color(0.02, 0.07, 0.2), Color(0.05, 0.18, 0.42), Color(0.2, 0.32, 0.22), Color(0.36, 0.33, 0.2),
-		Color(0.5, 0.43, 0.3), Color(0.9, 0.9, 0.9)])
-	material.roughness = 0.9
-	return material
-
-
-func _cloud_material() -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
-	material.albedo_texture = _noise_texture(23, 4.0, [0.0, 0.5, 0.68, 1.0],
-		[Color(1, 1, 1, 0), Color(1, 1, 1, 0), Color(1, 1, 1, 0.75), Color(1, 1, 1, 0.95)])
-	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	material.roughness = 1.0
-	return material
-
-
-func _moon_material() -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
-	var noise := FastNoiseLite.new()
-	noise.seed = 7
-	noise.noise_type = FastNoiseLite.TYPE_CELLULAR
-	noise.cellular_return_type = FastNoiseLite.RETURN_DISTANCE
-	noise.frequency = 6.0 / PLANET_TEXTURE_SIZE.x
-	noise.fractal_type = FastNoiseLite.FRACTAL_FBM
-	noise.fractal_octaves = 4
-	material.albedo_texture = _noise_texture_from(noise, [0.0, 0.6, 1.0],
-		[Color(0.5, 0.48, 0.45), Color(0.36, 0.35, 0.33), Color(0.22, 0.21, 0.2)])
-	var bumps := NoiseTexture2D.new()
-	bumps.width = PLANET_TEXTURE_SIZE.x
-	bumps.height = PLANET_TEXTURE_SIZE.y
-	bumps.seamless = true
-	bumps.noise = noise
-	bumps.as_normal_map = true
-	bumps.bump_strength = 12.0
-	material.normal_enabled = true
-	material.normal_texture = bumps
-	material.roughness = 1.0
-	return material
-
-
-func _noise_texture(seed_value: int, cycles: float, offsets: Array, colors: Array) -> NoiseTexture2D:
-	var noise := FastNoiseLite.new()
-	noise.seed = seed_value
-	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
-	noise.frequency = cycles / PLANET_TEXTURE_SIZE.x
-	noise.fractal_type = FastNoiseLite.FRACTAL_FBM
-	noise.fractal_octaves = 5
-	return _noise_texture_from(noise, offsets, colors)
-
-
-func _noise_texture_from(noise: FastNoiseLite, offsets: Array, colors: Array) -> NoiseTexture2D:
-	var ramp := Gradient.new()
-	ramp.offsets = PackedFloat32Array(offsets)
-	ramp.colors = PackedColorArray(colors)
-	var texture := NoiseTexture2D.new()
-	texture.width = PLANET_TEXTURE_SIZE.x
-	texture.height = PLANET_TEXTURE_SIZE.y
-	texture.seamless = true
-	texture.noise = noise
-	texture.color_ramp = ramp
-	return texture
