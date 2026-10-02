@@ -114,9 +114,16 @@ static func run_to_event(state: SimState, event_id: String, events: Dictionary, 
 	if event.is_empty():
 		push_error("No event '%s'" % event_id)
 		return state
+	return run_to_mark(state, event, events, plan, metrics, max_step_h)
+
+
+## Like run_to, but the target is anything with "get" or "get_from_splashdown" (an event or a
+## reentry step), re-checked every step because choices can move splashdown.
+static func run_to_mark(state: SimState, mark: Dictionary, events: Dictionary, plan: Dictionary,
+		metrics: Metrics = null, max_step_h: float = Tuning.SEEK_STEP_H) -> SimState:
 	var s: SimState = state
-	while s.time.current_get < minf(event_get(event, s), s.time.splashdown_get) - EPSILON_H:
-		var remaining_h: float = minf(event_get(event, s), s.time.splashdown_get) - s.time.current_get
+	while s.time.current_get < minf(event_get(mark, s), s.time.splashdown_get) - EPSILON_H:
+		var remaining_h: float = minf(event_get(mark, s), s.time.splashdown_get) - s.time.current_get
 		s = advance(s, minf(max_step_h, remaining_h), events, plan, metrics)
 	return s
 
