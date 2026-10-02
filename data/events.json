@@ -1,0 +1,278 @@
+{
+  "intro": {
+    "start_get": 55.866667,
+    "duration_s": 10,
+    "images": ["res://assets/images/earth_from_lm.jpg"],
+    "text": "April 13, 1970. Apollo 13 is about 330,000 km from Earth, two days into a smooth flight to the Moon."
+  },
+  "events": [
+    {
+      "id": "e1",
+      "title": "Explosion and lifeboat",
+      "get": 55.9,
+      "cutscene": {
+        "audio": "res://assets/audio/e1_problem.mp3",
+        "images": [],
+        "captions": [
+          "A bang, then the master alarm.",
+          "Swigert: “Okay, Houston, we've had a problem here.”",
+          "Lovell: “Houston, we've had a problem.”",
+          "Oxygen is venting into space. Odyssey, the command module, is dying.",
+          "The crew moves into Aquarius, the lunar module, and uses it as a lifeboat."
+        ],
+        "fact_check": "TODO(fact-check): exact wording of both quotes (about GET 55:55)."
+      },
+      "poll": {
+        "question": "Aquarius was built to keep two people alive for two days. Now it has to keep three alive for four. What do we do with the heat?",
+        "options": [
+          {
+            "key": "a",
+            "label": "Shut everything down",
+            "hint": "The cabin heads toward 3 °C. Power margin unchanged.",
+            "historical": true,
+            "effects": {"flags": {"heating": "off"}}
+          },
+          {
+            "key": "b",
+            "label": "Keep one heater running",
+            "hint": "The cabin bottoms out near 10 °C and the crew sleeps better. Power margin −30.",
+            "historical": false,
+            "effects": {"flags": {"heating": "one"}, "power_margin": -30}
+          }
+        ]
+      },
+      "timeskip": {
+        "captions": [
+          {"get": 61.5, "text": "A short engine burn puts them back on a path that loops around the Moon and home."},
+          {"get": 77.0, "text": "Behind the Moon, radio contact is lost.", "silence_s": 4},
+          {"get": 77.0, "text": "They are now farther from Earth than any humans before them."}
+        ],
+        "fact_check": "TODO(fact-check): GET of loss of signal behind the Moon and of the distance record."
+      }
+    },
+    {
+      "id": "e2",
+      "title": "The return burn",
+      "get": 79.0,
+      "cutscene": {
+        "audio": "res://assets/audio/e2_burn.mp3",
+        "images": ["res://assets/images/moon_far_side.jpg"],
+        "captions": [
+          "Aquarius swings around the far side of the Moon.",
+          "The next engine burn decides how fast they get home."
+        ]
+      },
+      "poll": {
+        "question": "We're behind the Moon. How fast do we go home?",
+        "fact_check": "TODO(fact-check): radio contact returned about GET 77:33 and the PC+2 burn ran about GET 79:28 in contact with Houston, so 'behind the Moon' may be wrong at GET 79.",
+        "options": [
+          {
+            "key": "a",
+            "label": "Standard speed-up burn",
+            "hint": "Splashdown at GET 142:54.",
+            "historical": true,
+            "effects": {"flags": {"return_mode": "standard"}}
+          },
+          {
+            "key": "b",
+            "label": "Drop the Service Module and burn harder",
+            "hint": "Home about 24 hours sooner, but the heat shield is left exposed to the cold.",
+            "historical": false,
+            "note": "Considered in 1970 and rejected, because the Service Module protected the heat shield from the cold of space.",
+            "reveal": "service_module",
+            "effects": {"flags": {"return_mode": "fast", "heat_shield_risk": true, "sm_jettisoned": true}, "power_margin": 15}
+          }
+        ]
+      },
+      "timeskip": {
+        "captions": [
+          {"get": 82.0, "text": "CO2 is climbing. The LM's scrubbers were sized for two people."}
+        ]
+      }
+    },
+    {
+      "id": "e3",
+      "title": "The CO2 crisis",
+      "get": 88.0,
+      "cutscene": {
+        "audio": "res://assets/audio/e3_procedure.mp3",
+        "images": ["res://assets/images/co2_adapter.jpg"],
+        "captions": [
+          "The CO2 caution light comes on.",
+          "The command module's square filter canisters don't fit the lunar module's round sockets.",
+          "Engineers in Houston work out an adapter from parts on board: plastic bags, cardboard, a hose and tape."
+        ],
+        "fact_check": "TODO(fact-check): when the adapter procedure was read up (SPEC says about GET 90) and the parts list."
+      },
+      "poll": {
+        "question": "The ground team's adapter isn't fully tested yet. Do we build now or wait?",
+        "options": [
+          {
+            "key": "a",
+            "label": "Wait for the tested procedure",
+            "hint": "CO2 climbs to about 15 mmHg first, then falls to a safe level.",
+            "historical": true,
+            "effects": {"flags": {"adapter": "wait"}}
+          },
+          {
+            "key": "b",
+            "label": "Build our own version now",
+            "hint": "CO2 peaks near 10 mmHg, but a leaky seal keeps it a little higher. The crew tires faster.",
+            "historical": false,
+            "effects": {"flags": {"adapter": "now"}, "fatigue": 0.15}
+          }
+        ]
+      },
+      "minigame": {
+        "items": ["Canister", "Bag", "Cardboard cover", "Hose", "Tape"]
+      },
+      "timeskip": {
+        "captions": [
+          {
+            "get": 93.0,
+            "text": "Haise reports that their do-it-yourself canister change is complete.",
+            "audio": "res://assets/audio/e3_complete.mp3",
+            "fact_check": "TODO(fact-check): who made this report and at what GET."
+          }
+        ]
+      }
+    },
+    {
+      "id": "e4",
+      "title": "The cold coast",
+      "get": 96.0,
+      "cutscene": {
+        "images": ["res://assets/images/dark_cabin.jpg"],
+        "captions": [
+          "To save power, almost everything is switched off. The cabin is dark, cold and wet.",
+          "Water isn't just for drinking. The lunar module needs it to cool its electronics."
+        ]
+      },
+      "poll": {
+        "question": "How much water do the crew drink?",
+        "options": [
+          {
+            "key": "a",
+            "label": "Strict ration",
+            "hint": "About 0.18 L (6 oz) per person a day. Saves water, but the crew dehydrates.",
+            "historical": true,
+            "effects": {"flags": {"ration": "strict"}}
+          },
+          {
+            "key": "b",
+            "label": "Moderate ration",
+            "hint": "About 0.5 L per person a day. Better for the crew, with less water left at the end.",
+            "historical": false,
+            "effects": {"flags": {"ration": "moderate"}}
+          }
+        ]
+      },
+      "timeskip": {
+        "captions": [
+          {"get": 105.3, "text": "A manual course correction, steered by keeping Earth's day/night line steady in the window."},
+          {
+            "get": 112.0,
+            "text": "Aquarius starts recharging Odyssey's reentry batteries.",
+            "fact_check": "TODO(fact-check): SPEC says day 5; the GET when charging started."
+          }
+        ]
+      }
+    },
+    {
+      "id": "e5",
+      "title": "Wake up Odyssey",
+      "get_from_splashdown": -5.0,
+      "cutscene": {
+        "reveal": "service_module",
+        "captions": []
+      },
+      "poll": {
+        "question": "Odyssey is frozen and wet inside. When do we power it up?",
+        "options": [
+          {
+            "key": "a",
+            "label": "As late as possible",
+            "hint": "Saves power. The cabin stays cold and wet.",
+            "historical": true,
+            "effects": {"flags": {"power_up": "late"}}
+          },
+          {
+            "key": "b",
+            "label": "Early, to warm and dry the cabin",
+            "hint": "About 5 °C warmer and drier for the final hours. Power margin −20.",
+            "historical": false,
+            "effects": {"flags": {"power_up": "early"}, "power_margin": -20}
+          }
+        ]
+      }
+    }
+  ],
+  "reveals": {
+    "service_module": {
+      "effects": {"flags": {"sm_jettisoned": true}},
+      "audio": "res://assets/audio/e5_sm.mp3",
+      "images": ["res://assets/images/service_module.jpg"],
+      "captions": [
+        "The crew jettisons the Service Module and sees the damage for the first time.",
+        "Lovell: “There's one whole side of that spacecraft missing!”"
+      ],
+      "fact_check": "TODO(fact-check): exact wording of Lovell's line (about GET 138:02)."
+    }
+  },
+  "reentry": {
+    "steps": [
+      {
+        "id": "lm_jettison",
+        "get_from_splashdown": -1.4,
+        "audio": "res://assets/audio/e5_farewell.mp3",
+        "captions": ["Aquarius is released. “Farewell, Aquarius, and we thank you.”"],
+        "fact_check": "TODO(fact-check): who said the farewell line (likely CAPCOM Joe Kerwin)."
+      },
+      {
+        "id": "entry",
+        "get_from_splashdown": -0.23,
+        "captions": ["Odyssey enters the atmosphere."]
+      },
+      {
+        "id": "blackout",
+        "get_from_splashdown": -0.21,
+        "screen_s": 20,
+        "captions": ["Radio blackout. Usually about four minutes; this one lasted about six."]
+      },
+      {
+        "id": "contact",
+        "get_from_splashdown": -0.11,
+        "audio": "res://assets/audio/e5_splash.mp3",
+        "images": ["res://assets/images/parachutes.jpg"],
+        "captions": ["Contact restored.", "Three main parachutes open."]
+      },
+      {
+        "id": "splashdown",
+        "get_from_splashdown": 0.0,
+        "images": ["res://assets/images/recovery.jpg"],
+        "captions": ["Splashdown in the South Pacific."]
+      }
+    ],
+    "fact_check": "TODO(fact-check): GET offsets for blackout start and contact (blackout about six minutes)."
+  },
+  "captions": {
+    "fever": "Haise is running a fever."
+  },
+  "scorecard": {
+    "title": "Every path brings them home. How much margin did you leave them?",
+    "you_column": "You",
+    "history_column": "Apollo 13, 1970",
+    "rows": [
+      {"key": "duration_h", "label": "Explosion to splashdown", "history": "87 h"},
+      {"key": "coldest_cabin_c", "label": "Coldest cabin temperature", "history": "About 3 °C (38 °F)"},
+      {"key": "peak_co2_mmhg", "label": "Peak CO2", "history": "About 15 mmHg (safe limit 7.6)"},
+      {"key": "drink_l_per_day", "label": "Drinking water per person", "history": "About 0.18 L (6 oz) a day, a fifth of normal"},
+      {"key": "water_left_pct", "label": "Water left at splashdown", "history": "About 9%"},
+      {"key": "weight_loss_kg", "label": "Crew weight loss (combined)", "history": "14.3 kg (31.5 lb)"},
+      {"key": "haise_infection", "label": "Haise's infection", "history": "Yes, a urinary tract infection with fever"},
+      {"key": "power_margin", "label": "Power margin", "history": "100 (game index)"},
+      {"key": "heat_shield_exposed", "label": "Heat shield exposed", "history": "No, the Service Module stayed attached until near the end"}
+    ],
+    "closing": "The real crew made it home with almost nothing to spare."
+  }
+}
