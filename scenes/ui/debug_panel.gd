@@ -483,6 +483,12 @@ func _readout_text(state: SimState) -> String:
 	for path: String in state.overrides:
 		holds.append("%s = %s" % [path, String.num(state.overrides[path], 2)])
 	lines.append("Holds: " + (", ".join(holds) if not holds.is_empty() else "none"))
+	if Director.missing_assets.is_empty():
+		lines.append("Missing assets: none")
+	else:
+		lines.append("Missing assets:")
+		for path: String in Director.missing_assets:
+			lines.append("  " + path.get_file())
 	return "\n".join(lines)
 
 

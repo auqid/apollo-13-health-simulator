@@ -153,8 +153,8 @@ const RESTART_CONFIRM_S: float = 3.0
 const CAPTION_HOLD_S: float = 4.0
 ## Clock speeds offered in the debug panel, in GET hours per real second.
 const DEBUG_RATES_H_PER_S: Array = [0.1, 0.5, 1.0, 2.0, 4.0, 8.0]
-## Placeholder title cards. Space skips them. The real cutscenes replace these.
-const CUTSCENE_PLACEHOLDER_S: float = 3.0
+## How far a cutscene photo zooms during its pan.
+const CUTSCENE_PHOTO_ZOOM: float = 1.08
 ## How long the chosen poll option stays highlighted before the session continues.
 const POLL_CHOICE_HOLD_S: float = 1.5
 ## Near real time, so the PC+2 burn and the reentry stress are visible. About 36 GET seconds per real second.

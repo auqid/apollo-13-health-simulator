@@ -16,7 +16,7 @@ const Cabin := preload("res://scenes/cabin/cabin.gd")
 const AudioMix := preload("res://audio/audio_mix.gd")
 
 const EFFECT_KEYS: Array[String] = ["flags", "power_margin", "fatigue"]
-const TEXT_KEYS: Array[String] = ["text", "question", "label", "hint", "note", "title", "closing", "history"]
+const TEXT_KEYS: Array[String] = ["text", "question", "label", "hint", "note", "title", "closing", "history", "caption"]
 const EVENT_IDS: Array[String] = ["e1", "e2", "e3", "e4", "e5"]
 ## This one drives the autoloads, which are not in the tree yet during _init.
 const SESSION_TEST := "test_every_option_combination_reaches_the_scorecard"
@@ -168,7 +168,7 @@ func _collect_asset_paths(node: Variant, out: Array[String]) -> void:
 	if node is Dictionary:
 		for key: String in node:
 			var value: Variant = node[key]
-			if key == "audio" and value is String:
+			if (key == "audio" or key == "image") and value is String and not value.is_empty():
 				out.append(value)
 			elif key == "images" and value is Array:
 				for path: Variant in value:
@@ -274,6 +274,31 @@ func test_timeskip_captions_fall_inside_their_timeskip() -> void:
 				var caption_get: float = caption["get"]
 				_check(caption_get > start and caption_get < end,
 					"%s caption at GET %.1f falls between %.1f and %.1f" % [events[i]["id"], caption_get, start, end])
+
+
+func test_cutscenes_have_editable_shots() -> void:
+	var data: Dictionary = _load_events()
+	for event: Dictionary in data.get("events", []):
+		var shots: Array = event.get("cutscene", {}).get("shots", [])
+		if event["id"] == "e5":
+			shots = data["reveals"]["service_module"]["shots"]
+		_check(not shots.is_empty(), "%s has cutscene shots" % event["id"])
+		var total_s: float = 0.0
+		for shot: Dictionary in shots:
+			_check(shot.has("kind") and float(shot.get("duration_s", 0.0)) > 0.0, "%s shot has a kind and a duration" % event["id"])
+			total_s += float(shot["duration_s"])
+			for cue: Dictionary in shot.get("subtitles", []):
+				_check(cue.has("text") and float(cue.get("at_s", -1.0)) >= 0.0 and float(cue.get("hold_s", 0.0)) > 0.0,
+					"%s subtitle can be edited" % event["id"])
+		_check(total_s >= 20.0 and total_s <= 45.0, "%s cutscene is 20 to 45 seconds (%.0f)" % [event["id"], total_s])
+	var e1_shots: Array = data["events"][0]["cutscene"]["shots"]
+	_check(e1_shots[0]["kind"] == "bang", "E1 opens with the bang")
+	_check(e1_shots[1]["kind"] == "audio", "E1 plays the problem audio after the bang")
+	var far_side: bool = false
+	for caption: Dictionary in data["events"][0]["timeskip"]["captions"]:
+		if "Artemis II in 2026" in caption["text"]:
+			far_side = true
+	_check(far_side, "the far-side caption names the distance record")
 
 
 func test_reentry_steps_are_in_order_before_splashdown() -> void:

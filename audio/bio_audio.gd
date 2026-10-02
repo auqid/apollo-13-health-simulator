@@ -83,6 +83,34 @@ func play_test_voice() -> void:
 	_voice.play()
 
 
+## A short muffled thud. There is no recording of the tank explosion itself.
+func play_bang() -> void:
+	_voice.stream = _bang_tone()
+	_voice.play()
+
+
+## Plays a mission clip on the Voice bus. Returns false when the file is missing.
+func play_voice_file(path: String) -> bool:
+	if path.is_empty() or not ResourceLoader.exists(path):
+		return false
+	var stream: Resource = load(path)
+	if stream == null:
+		return false
+	_voice.stream = stream
+	_voice.play()
+	return true
+
+
+func stop_voice() -> void:
+	_voice.stop()
+
+
+func voice_length_s() -> float:
+	if _voice.stream == null:
+		return 0.0
+	return _voice.stream.get_length()
+
+
 ## 0 at the start of an inhale, crossing AUDIO_BREATH_INHALE at the start of the exhale.
 func breath_phase() -> float:
 	if _breath_len_s <= 0.0:
@@ -227,6 +255,26 @@ func _apply_volumes() -> void:
 		AudioServer.set_bus_volume_db(idx, db)
 
 
+func _bang_tone() -> AudioStreamWAV:
+	var rate: int = Tuning.AUDIO_MIX_RATE
+	var count: int = int(0.7 * rate)
+	var bytes := PackedByteArray()
+	bytes.resize(count * 2)
+	var low: float = 0.0
+	var noise_state: int = 19
+	for i in count:
+		var t_s: float = float(i) / rate
+		var env: float = exp(-t_s / 0.11)
+		noise_state = (noise_state * 1103515245 + 12345) & 0x7fffffff
+		var noise: float = float(noise_state % 10000) / 5000.0 - 1.0
+		low = lerpf(low, noise, 0.06)
+		var hz: float = lerpf(80.0, 36.0, clampf(t_s / 0.45, 0.0, 1.0))
+		var thud: float = sin(TAU * hz * t_s)
+		var sample: float = (thud * 0.55 + low * 0.4) * env * 0.7
+		bytes.encode_s16(i * 2, clampi(int(sample * 32767.0), -32767, 32767))
+	return _wav_from(bytes, rate)
+
+
 func _voice_tone() -> AudioStreamWAV:
 	var rate: int = Tuning.AUDIO_MIX_RATE
 	var count: int = int(Tuning.AUDIO_TEST_VOICE_S * rate)
@@ -243,6 +291,10 @@ func _voice_tone() -> AudioStreamWAV:
 		var wobble: float = 0.85 + 0.15 * sin(TAU * 3.0 * t_s)
 		var sample: float = sin(TAU * Tuning.AUDIO_TEST_VOICE_HZ * t_s) * wobble * env * Tuning.AUDIO_TEST_VOICE_GAIN
 		bytes.encode_s16(i * 2, clampi(int(sample * 32767.0), -32767, 32767))
+	return _wav_from(bytes, rate)
+
+
+func _wav_from(bytes: PackedByteArray, rate: int) -> AudioStreamWAV:
 	var wav := AudioStreamWAV.new()
 	wav.format = AudioStreamWAV.FORMAT_16_BITS
 	wav.mix_rate = rate

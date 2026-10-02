@@ -13,16 +13,22 @@
       "outside": "earth",
       "get": 55.9,
       "cutscene": {
-        "audio": "res://assets/audio/e1_problem.mp3",
-        "images": [],
-        "captions": [
-          "A bang, then the master alarm.",
-          "Swigert: “Okay, Houston, we've had a problem here.”",
-          "Lovell: “Houston, we've had a problem.”",
-          "Oxygen is venting into space. Odyssey, the command module, is dying.",
-          "The crew moves into Aquarius, the lunar module, and uses it as a lifeboat."
-        ],
-        "fact_check": "TODO(fact-check): exact wording of both quotes (about GET 55:55)."
+        "fact_check": "TODO(fact-check): exact wording of both quotes (about GET 55:55), and the subtitle timings once e1_problem.mp3 is trimmed.",
+        "shots": [
+          {"kind": "bang", "duration_s": 2.0, "caption": "A bang, then the master alarm."},
+          {
+            "kind": "audio",
+            "audio": "res://assets/audio/e1_problem.mp3",
+            "duration_s": 12.0,
+            "caption": "The crew calls Houston.",
+            "subtitles": [
+              {"at_s": 0.8, "hold_s": 4.0, "text": "Swigert: “Okay, Houston, we've had a problem here.”"},
+              {"at_s": 5.5, "hold_s": 4.0, "text": "Lovell: “Houston, we've had a problem.”"}
+            ]
+          },
+          {"kind": "cabin", "duration_s": 5.0, "caption": "Oxygen is venting into space. Odyssey is dying."},
+          {"kind": "cabin", "duration_s": 5.0, "caption": "The crew moves into Aquarius and uses it as a lifeboat."}
+        ]
       },
       "poll": {
         "question": "The lifeboat is short on power. Do we keep the crew warm?",
@@ -49,7 +55,7 @@
         "captions": [
           {"get": 61.5, "text": "A short engine burn puts them back on a path that loops around the Moon and home."},
           {"get": 77.0, "text": "Behind the Moon, radio contact is lost.", "silence_s": 4},
-          {"get": 77.0, "text": "They are now farther from Earth than any humans before them."}
+          {"get": 77.0, "text": "They are now farther from Earth than any humans before them.\nA distance record that stood until Artemis II in 2026."}
         ],
         "fact_check": "TODO(fact-check): GET of loss of signal behind the Moon and of the distance record."
       }
@@ -61,12 +67,23 @@
       "outside": "moon",
       "get": 79.0,
       "cutscene": {
-        "audio": "res://assets/audio/e2_burn.mp3",
-        "images": ["res://assets/images/moon_far_side.jpg"],
-        "captions": [
-          "Aquarius swings around the far side of the Moon.",
-          "Radio contact with Houston is restored.",
-          "The burn home, called PC+2, is set for GET 079:27:40."
+        "shots": [
+          {
+            "kind": "photo",
+            "image": "res://assets/images/moon_far_side.jpg",
+            "duration_s": 8.0,
+            "caption": "Aquarius swings around the far side of the Moon."
+          },
+          {"kind": "cabin", "duration_s": 4.0, "caption": "Radio contact with Houston is restored."},
+          {
+            "kind": "audio",
+            "audio": "res://assets/audio/e2_burn.mp3",
+            "duration_s": 12.0,
+            "caption": "The burn home, called PC+2, is set for GET 079:27:40.",
+            "subtitles": [
+              {"at_s": 1.0, "hold_s": 6.0, "text": "Houston and the crew count through the burn."}
+            ]
+          }
         ]
       },
       "poll": {
@@ -105,14 +122,25 @@
       "outside": "earth",
       "get": 88.0,
       "cutscene": {
-        "audio": "res://assets/audio/e3_procedure.mp3",
-        "images": ["res://assets/images/co2_adapter.jpg"],
-        "captions": [
-          "The CO2 caution light comes on.",
-          "The command module's square filter canisters don't fit the lunar module's round sockets.",
-          "Engineers in Houston work out an adapter from parts on board: plastic bags, cardboard, a hose and tape."
-        ],
-        "fact_check": "TODO(fact-check): when the adapter procedure was read up (SPEC says about GET 90) and the parts list."
+        "fact_check": "TODO(fact-check): when the adapter procedure was read up (SPEC says about GET 90), the parts list, and the subtitle timings once e3_procedure.mp3 is trimmed.",
+        "shots": [
+          {"kind": "cabin", "duration_s": 5.0, "caption": "The CO2 caution light comes on."},
+          {
+            "kind": "photo",
+            "image": "res://assets/images/co2_adapter.jpg",
+            "duration_s": 8.0,
+            "caption": "The square canisters don't fit the round sockets."
+          },
+          {
+            "kind": "audio",
+            "audio": "res://assets/audio/e3_procedure.mp3",
+            "duration_s": 14.0,
+            "caption": "Houston reads up an adapter made from bags, cardboard, a hose and tape.",
+            "subtitles": [
+              {"at_s": 1.0, "hold_s": 8.0, "text": "CAPCOM reads up the procedure, step by step."}
+            ]
+          }
+        ]
       },
       "poll": {
         "question": "CO2 is building up. Houston's fix isn't fully tested yet.",
@@ -156,10 +184,15 @@
       "outside": "earth",
       "get": 96.0,
       "cutscene": {
-        "images": ["res://assets/images/dark_cabin.jpg"],
-        "captions": [
-          "To save power, almost everything is switched off. The cabin is dark, cold and wet.",
-          "Water isn't just for drinking. The lunar module needs it to cool its electronics."
+        "shots": [
+          {"kind": "cabin", "duration_s": 6.0, "caption": "To save power, almost everything is switched off."},
+          {
+            "kind": "photo",
+            "image": "res://assets/images/dark_cabin.jpg",
+            "duration_s": 8.0,
+            "caption": "The cabin is dark, cold and wet."
+          },
+          {"kind": "cabin", "duration_s": 6.0, "caption": "Water isn't just for drinking. It cools the electronics too."}
         ]
       },
       "poll": {
@@ -202,7 +235,7 @@
       "get_from_splashdown": -5.0,
       "cutscene": {
         "reveal": "service_module",
-        "captions": []
+        "shots": []
       },
       "poll": {
         "question": "The landing capsule is frozen and wet inside. When do we switch it on?",
@@ -230,13 +263,24 @@
   "reveals": {
     "service_module": {
       "effects": {"flags": {"sm_jettisoned": true}},
-      "audio": "res://assets/audio/e5_sm.mp3",
-      "images": ["res://assets/images/service_module.jpg"],
-      "captions": [
-        "The crew jettisons the Service Module and sees the damage for the first time.",
-        "Lovell: “There's one whole side of that spacecraft missing!”"
-      ],
-      "fact_check": "TODO(fact-check): exact wording of Lovell's line (about GET 138:02)."
+      "fact_check": "TODO(fact-check): exact wording of Lovell's line (about GET 138:02), and the subtitle timing once e5_sm.mp3 is trimmed.",
+      "shots": [
+        {
+          "kind": "photo",
+          "image": "res://assets/images/service_module.jpg",
+          "duration_s": 8.0,
+          "caption": "The crew lets the Service Module go and sees the damage."
+        },
+        {
+          "kind": "audio",
+          "audio": "res://assets/audio/e5_sm.mp3",
+          "duration_s": 12.0,
+          "caption": "One whole side of the spacecraft is missing.",
+          "subtitles": [
+            {"at_s": 1.0, "hold_s": 6.0, "text": "Lovell: “There's one whole side of that spacecraft missing!”"}
+          ]
+        }
+      ]
     }
   },
   "reentry": {

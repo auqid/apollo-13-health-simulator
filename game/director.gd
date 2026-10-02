@@ -1,6 +1,6 @@
 extends Node
 ## Session flow (SPEC.md section 1) and presenter keys (section 7). Keys are handled here so
-## they work in every state. Cutscenes, reentry and the scorecard are placeholders for now.
+## they work in every state. Cutscenes play photos, mission audio and captions.
 
 const Timeline := preload("res://sim/timeline.gd")
 const SimModel := preload("res://sim/sim_model.gd")
@@ -8,6 +8,9 @@ const SimState := preload("res://sim/sim_state.gd")
 const Tuning := preload("res://sim/tuning.gd")
 const UiStyle := preload("res://scenes/ui/ui_style.gd")
 const StageCard := preload("res://scenes/ui/stage_card.gd")
+const CutsceneView := preload("res://scenes/ui/cutscene_view.gd")
+const BioAudio := preload("res://audio/bio_audio.gd")
+const Effects := preload("res://fx/effects.gd")
 
 signal hud_visibility_changed(visible: bool)
 signal debug_visibility_changed(visible: bool)
@@ -39,6 +42,17 @@ var _hold_left_s: float = 0.0
 var _clock_target: float = INF
 var _restart_armed_until_ms: int = 0
 var _card: StageCard
+## Where the current cutscene goes when it ends: poll or timeskip.
+var _cutscene_next: String = PHASE_POLL
+var _shots: Array = []
+var _shot_index: int = 0
+var _shot_left_s: float = 0.0
+var _shot_elapsed_s: float = 0.0
+var _caption_index: int = 0
+var _silence_left_s: float = 0.0
+var _resume_after_silence: bool = false
+## Asset paths a cutscene asked for and did not find.
+var missing_assets: PackedStringArray = []
 
 
 func _ready() -> void:
@@ -48,17 +62,20 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	if phase == PHASE_INTRO or phase == PHASE_CUTSCENE:
+	if phase == PHASE_INTRO:
 		_card_left_s -= delta
 		if _card_left_s <= 0.0:
 			skip()
+	elif phase == PHASE_CUTSCENE:
+		_run_cutscene(delta)
 	elif phase == PHASE_HOLD:
 		_hold_left_s -= delta
 		if _hold_left_s <= 0.0:
 			finish_choice_hold()
 	elif phase == PHASE_TIMESKIP or phase == PHASE_REENTRY:
+		_run_timeskip_captions(delta)
 		var rate: float = _clock_rate()
-		if not is_equal_approx(rate, Game.rate_h_per_s):
+		if Game.running and not is_equal_approx(rate, Game.rate_h_per_s):
 			Game.set_rate(rate)
 
 
@@ -139,10 +156,12 @@ func skip() -> void:
 		PHASE_INTRO:
 			_begin_cutscene()
 		PHASE_CUTSCENE:
-			_begin_poll()
+			_end_cutscene()
 		PHASE_HOLD:
 			finish_choice_hold()
 		PHASE_TIMESKIP:
+			if _silence_left_s > 0.0:
+				return
 			_toggle_timeskip()
 		PHASE_REENTRY:
 			complete_clock()
@@ -171,6 +190,8 @@ func finish_choice_hold() -> void:
 	_hold_left_s = 0.0
 	if _current_event()["id"] == "e5":
 		_begin_reentry()
+	elif _choice_has_reveal():
+		_play_reveal_then_timeskip()
 	else:
 		_begin_timeskip()
 
@@ -214,12 +235,13 @@ func jump_to_state(state_id: String) -> void:
 	if index < 0 or parts[1] not in [PHASE_CUTSCENE, PHASE_POLL, PHASE_TIMESKIP]:
 		push_warning("Unknown session state '%s'" % state_id)
 		return
+	var sm_before: bool = Game.state.flags.sm_jettisoned
 	_use_historical_plan(index + 1 if parts[1] == PHASE_TIMESKIP else index)
 	event_index = index
 	Game.replay_to(_event_get(events[index]))
 	_apply_event_view()
 	if parts[1] == PHASE_CUTSCENE:
-		_show_cutscene()
+		_start_event_cutscene(sm_before)
 	elif parts[1] == PHASE_POLL:
 		_show_poll()
 	else:
@@ -229,23 +251,29 @@ func jump_to_state(state_id: String) -> void:
 func _begin_cutscene() -> void:
 	var events: Array = Timeline.event_list(Game.events)
 	var event: Dictionary = events[event_index]
+	var sm_before: bool = Game.state.flags.sm_jettisoned
 	var at_get: float = _event_get(event)
 	if Game.state.time.current_get < at_get - Timeline.EPSILON_H:
 		Game.seek(at_get)
 	_apply_event_view()
-	_show_cutscene()
+	_start_event_cutscene(sm_before)
 
 
-func _show_cutscene() -> void:
-	phase = PHASE_CUTSCENE
-	_card_left_s = Tuning.CUTSCENE_PLACEHOLDER_S
+func _start_event_cutscene(sm_already_gone: bool) -> void:
+	_cutscene_next = PHASE_POLL
 	var event: Dictionary = _current_event()
-	var card := _stage()
-	if card != null:
-		card.show_cutscene(event["title"], UiStyle.format_get(_event_get(event)))
+	if event["id"] == "e5" and sm_already_gone:
+		_start_shots([{"kind": "cabin", "duration_s": 5.0,
+			"caption": "The Service Module is already gone. Odyssey is waiting."}])
+		return
+	if event["id"] == "e5":
+		_start_shots(_reveal_shots(str(event.get("cutscene", {}).get("reveal", ""))))
+		return
+	_start_shots(event.get("cutscene", {}).get("shots", []))
 
 
 func _begin_poll() -> void:
+	_hide_cutscene()
 	_show_poll()
 
 
@@ -261,6 +289,10 @@ func _begin_timeskip() -> void:
 	var events: Array = Timeline.event_list(Game.events)
 	_clock_target = _event_get(events[event_index + 1])
 	phase = PHASE_TIMESKIP
+	_caption_index = 0
+	_silence_left_s = 0.0
+	_resume_after_silence = false
+	_hide_cutscene()
 	var card := _stage()
 	if card != null:
 		card.hide_card()
@@ -270,6 +302,7 @@ func _begin_timeskip() -> void:
 
 
 func _begin_reentry() -> void:
+	_hide_cutscene()
 	_clock_target = Game.state.time.splashdown_get
 	phase = PHASE_REENTRY
 	var steps: PackedStringArray = []
@@ -283,6 +316,7 @@ func _begin_reentry() -> void:
 
 
 func _begin_scorecard() -> void:
+	_hide_cutscene()
 	phase = PHASE_SCORECARD
 	Game.pause()
 	var card: Dictionary = Game.events["scorecard"]
@@ -350,6 +384,219 @@ func _plan_preview() -> SimState:
 	return preview
 
 
+func _play_reveal_then_timeskip() -> void:
+	var option: Dictionary = Timeline.find_option(_current_event(), Game.state.decisions.get(_current_event()["id"], ""))
+	_cutscene_next = PHASE_TIMESKIP
+	_start_shots(_reveal_shots(str(option.get("reveal", ""))))
+
+
+func _choice_has_reveal() -> bool:
+	var option: Dictionary = Timeline.find_option(_current_event(), Game.state.decisions.get(_current_event()["id"], ""))
+	return not str(option.get("reveal", "")).is_empty()
+
+
+func _reveal_shots(reveal_id: String) -> Array:
+	var reveal: Dictionary = Game.events.get("reveals", {}).get(reveal_id, {})
+	var shots: Array = reveal.get("shots", [])
+	if shots.is_empty():
+		return [{"kind": "cabin", "duration_s": 4.0, "caption": "The Service Module comes off."}]
+	return shots
+
+
+func _start_shots(shots: Array) -> void:
+	phase = PHASE_CUTSCENE
+	_shots = _with_cabin_beats(shots)
+	_shot_index = -1
+	_shot_left_s = 0.0
+	var card := _stage()
+	if card != null:
+		card.hide_card()
+	if shots.is_empty():
+		_end_cutscene()
+		return
+	_advance_shot()
+
+
+func _run_cutscene(delta: float) -> void:
+	if _shot_index < 0 or _shot_index >= _shots.size():
+		return
+	_shot_elapsed_s += delta
+	_shot_left_s -= delta
+	var shot: Dictionary = _shots[_shot_index]
+	if shot.get("kind", "") == "photo":
+		var view := _cutscene()
+		if view != null:
+			view.set_pan(clampf(_shot_elapsed_s / maxf(float(shot.get("duration_s", 1.0)), 0.1), 0.0, 1.0))
+	_show_shot_line(shot)
+	if _shot_left_s <= 0.0:
+		_advance_shot()
+
+
+func _advance_shot() -> void:
+	_shot_index += 1
+	if _shot_index >= _shots.size():
+		_end_cutscene()
+		return
+	var shot: Dictionary = _shots[_shot_index]
+	_shot_elapsed_s = 0.0
+	_shot_left_s = maxf(float(shot.get("duration_s", 4.0)), 0.5)
+	_begin_shot(shot)
+
+
+func _begin_shot(shot: Dictionary) -> void:
+	var view := _cutscene()
+	var kind: String = shot.get("kind", "cabin")
+	if kind == "bang":
+		if view != null:
+			view.hide_photo()
+		var bio := _bio()
+		if bio != null:
+			bio.play_bang()
+		var effects := _effects()
+		if effects != null:
+			effects.play_explosion_dim()
+	elif kind == "photo":
+		var texture: Texture2D = _load_texture(str(shot.get("image", "")))
+		if view != null:
+			if texture != null:
+				view.show_photo(texture, _shot_index % 2 == 1)
+			else:
+				view.hide_photo()
+	elif kind == "audio":
+		if view != null:
+			view.hide_photo()
+		var clip_s: float = _play_clip(str(shot.get("audio", "")))
+		if clip_s > _shot_left_s:
+			_shot_left_s = clip_s + 0.4
+	else:
+		if view != null:
+			view.hide_photo()
+	_show_shot_line(shot)
+
+
+func _show_shot_line(shot: Dictionary) -> void:
+	var line: String = str(shot.get("caption", ""))
+	for cue: Variant in shot.get("subtitles", []):
+		if cue is not Dictionary:
+			continue
+		var start_s: float = float(cue.get("at_s", 0.0))
+		var hold_s: float = float(cue.get("hold_s", 3.0))
+		if _shot_elapsed_s >= start_s and _shot_elapsed_s < start_s + hold_s:
+			line = str(cue.get("text", line))
+			break
+	var view := _cutscene()
+	if view != null:
+		view.show_caption(line)
+
+
+func _end_cutscene() -> void:
+	_shots = []
+	_shot_index = -1
+	_hide_cutscene()
+	if _cutscene_next == PHASE_TIMESKIP:
+		_begin_timeskip()
+	else:
+		_begin_poll()
+
+
+func _hide_cutscene() -> void:
+	var view := _cutscene()
+	if view != null:
+		view.hide_view()
+	var bio := _bio()
+	if bio != null:
+		bio.stop_voice()
+
+
+func _with_cabin_beats(shots: Array) -> Array:
+	var prepared: Array = []
+	var previous_photo: bool = false
+	for shot: Variant in shots:
+		if shot is not Dictionary:
+			continue
+		var is_photo: bool = shot.get("kind", "") == "photo"
+		if is_photo and previous_photo:
+			prepared.append({"kind": "cabin", "duration_s": 2.5, "caption": str(shot.get("caption", ""))})
+		prepared.append(shot)
+		previous_photo = is_photo
+	return prepared
+
+
+## Plays a clip on the Voice bus. Returns its length in seconds, or 0 when the file is missing.
+func _play_clip(path: String) -> float:
+	if path.is_empty() or not _asset_exists(path):
+		return 0.0
+	var bio := _bio()
+	if bio == null or not bio.play_voice_file(path):
+		return 0.0
+	return bio.voice_length_s()
+
+
+func _load_texture(path: String) -> Texture2D:
+	if not _asset_exists(path):
+		return null
+	var resource: Resource = load(path)
+	return resource as Texture2D
+
+
+func _asset_exists(path: String) -> bool:
+	if path.is_empty():
+		return false
+	if ResourceLoader.exists(path):
+		return true
+	if path not in missing_assets:
+		missing_assets.append(path)
+	return false
+
+
+func _run_timeskip_captions(delta: float) -> void:
+	if phase != PHASE_TIMESKIP:
+		return
+	if _silence_left_s > 0.0:
+		_silence_left_s -= delta
+		if _silence_left_s <= 0.0 and _resume_after_silence:
+			_resume_after_silence = false
+			notice_requested.emit("", 0.0)
+			Game.set_rate(_clock_rate())
+			Game.play(_clock_target)
+		return
+	var captions: Array = _current_event().get("timeskip", {}).get("captions", [])
+	if _caption_index >= captions.size():
+		return
+	var caption: Dictionary = captions[_caption_index]
+	if Game.state.time.current_get + Timeline.EPSILON_H < float(caption.get("get", INF)):
+		return
+	_caption_index += 1
+	notice_requested.emit(str(caption.get("text", "")), 0.0)
+	_play_clip(str(caption.get("audio", "")))
+	var silence_s: float = float(caption.get("silence_s", 0.0))
+	if silence_s > 0.0:
+		_resume_after_silence = Game.running
+		_silence_left_s = silence_s
+		Game.pause()
+
+
+func _cutscene() -> CutsceneView:
+	var nodes: Array[Node] = get_tree().get_nodes_in_group(CutsceneView.GROUP)
+	if nodes.is_empty():
+		return null
+	return nodes[0] as CutsceneView
+
+
+func _bio() -> BioAudio:
+	var nodes: Array[Node] = get_tree().get_nodes_in_group(BioAudio.GROUP)
+	if nodes.is_empty():
+		return null
+	return nodes[0] as BioAudio
+
+
+func _effects() -> Effects:
+	var nodes: Array[Node] = get_tree().get_nodes_in_group(Effects.GROUP)
+	if nodes.is_empty():
+		return null
+	return nodes[0] as Effects
+
+
 func _current_event() -> Dictionary:
 	return Timeline.event_list(Game.events)[event_index]
 
@@ -390,10 +637,6 @@ func _restart() -> void:
 	notice_requested.emit(RESTART_NOTICE, Tuning.RESTART_CONFIRM_S)
 
 
-func _bio() -> Node:
-	return get_tree().get_first_node_in_group("bio_audio")
-
-
 func _toggle_mute() -> void:
 	var bio := _bio()
 	if bio == null:
@@ -420,8 +663,25 @@ func _on_caption_requested(text: String) -> void:
 
 
 func _boot() -> void:
+	_collect_missing_assets(Game.events)
 	start_session()
 	_apply_command_line()
+
+
+func _collect_missing_assets(node: Variant) -> void:
+	if node is Dictionary:
+		for key: String in node:
+			var value: Variant = node[key]
+			if (key == "audio" or key == "image") and value is String:
+				_asset_exists(value)
+			elif key == "images" and value is Array:
+				for path: Variant in value:
+					_asset_exists(str(path))
+			else:
+				_collect_missing_assets(value)
+	elif node is Array:
+		for item: Variant in node:
+			_collect_missing_assets(item)
 
 
 ## Development shortcuts after "--", e.g. godot --path . -- --debug --fx=co2

@@ -36,7 +36,7 @@ Each option carries an `effects` object in `events.json`. The option marked hist
   - **B. Keep a heater on.** Good: a warmer crew that sleeps better. Cost: less battery for the trip home. Cabin temperature bottoms out around 10 °C, and the fatigue rate drops 25%. Power margin −30.
 - **Timeskip to GET 79.0.** Captions:
   - About GET 61.5: a short engine burn puts them back on a path that loops around the Moon and home.
-  - About GET 77: behind the Moon, radio contact is lost. Play 4 seconds of silence. They are now farther from Earth than any humans before them.
+  - About GET 77: behind the Moon, radio contact is lost. Play 4 seconds of silence. They are now farther from Earth than any humans before them. A distance record that stood until Artemis II in 2026.
 
 ### E2: The return burn (GET 79.0)
 - **Cutscene:** in this order: the far side pass, radio contact restored, then the PC+2 burn at GET 079:27:40. Use real audio from around the PC+2 burn.
