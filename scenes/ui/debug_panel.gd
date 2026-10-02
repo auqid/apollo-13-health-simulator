@@ -352,7 +352,7 @@ func _rebuild_jumps() -> void:
 	var planned: SimState = _planned_state()
 	var start_mark: Dictionary = {"get": Tuning.EXPLOSION_GET}
 	var co2_peak: float = Tuning.CO2_CURVE_BY_ADAPTER["wait"]["peak_get"]
-	_jump_box.add_child(_button("CO2 peak %s" % UiStyle.format_get_short(co2_peak), Game.jump_to.bind({"get": co2_peak})))
+	_jump_box.add_child(_button("CO2 peak", Game.jump_to.bind({"get": co2_peak})))
 	_jump_box.add_child(_button("Cold coast %s" % UiStyle.format_get_short(Tuning.DEBUG_COLD_COAST_GET),
 		Game.jump_to.bind({"get": Tuning.DEBUG_COLD_COAST_GET})))
 	_jump_box.add_child(_button("Start %s" % UiStyle.format_get_short(Tuning.EXPLOSION_GET), Game.jump_to.bind(start_mark)))

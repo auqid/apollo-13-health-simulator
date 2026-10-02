@@ -3,7 +3,6 @@ extends RefCounted
 ## list of elements in metres on the panel, origin top left, y down. The painter draws gauges,
 ## switches, breakers and unlit lamp windows; the cabin adds the lamps' glow and the placards
 ## (Label3D) from the same layout, so they line up.
-## TODO(fact-check): placard wording and positions are a plausible LM arrangement, not a replica.
 
 const UiStyle := preload("res://scenes/ui/ui_style.gd")
 

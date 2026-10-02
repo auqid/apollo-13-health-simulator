@@ -13,17 +13,19 @@
       "outside": "earth",
       "get": 55.9,
       "cutscene": {
-        "fact_check": "TODO(fact-check): exact wording of both quotes (about GET 55:55), and the subtitle timings once e1_problem.mp3 is trimmed.",
+        "fact_check": "TODO(fact-check): subtitle timings once e1_problem.mp3 is trimmed. The words below are the 55:55:20 to 55:55:42 exchange.",
         "shots": [
           {"kind": "bang", "duration_s": 2.0, "caption": "A bang, then the master alarm."},
           {
             "kind": "audio",
             "audio": "res://assets/audio/e1_problem.mp3",
-            "duration_s": 12.0,
+            "duration_s": 28.0,
             "caption": "The crew calls Houston.",
             "subtitles": [
-              {"at_s": 0.8, "hold_s": 4.0, "text": "Swigert: “Okay, Houston, we've had a problem here.”"},
-              {"at_s": 5.5, "hold_s": 4.0, "text": "Lovell: “Houston, we've had a problem.”"}
+              {"at_s": 0.0, "hold_s": 8.0, "text": "Swigert: “Okay, Houston, we've had a problem here.”"},
+              {"at_s": 8.0, "hold_s": 7.0, "text": "Lousma: “This is Houston. Say again, please.”"},
+              {"at_s": 15.0, "hold_s": 7.0, "text": "Lovell: “Houston, we've had a problem. We've had a main B bus undervolt.”"},
+              {"at_s": 22.0, "hold_s": 6.0, "text": "Lousma: “Roger. Main B undervolt.”"}
             ]
           },
           {"kind": "cabin", "duration_s": 5.0, "caption": "Oxygen is venting into space. Odyssey is dying."},
@@ -53,11 +55,10 @@
       },
       "timeskip": {
         "captions": [
-          {"get": 61.5, "text": "A short engine burn puts them back on a path that loops around the Moon and home."},
-          {"get": 77.0, "text": "Behind the Moon, radio contact is lost.", "silence_s": 4},
-          {"get": 77.0, "text": "They are now farther from Earth than any humans before them.\nA distance record that stood until Artemis II in 2026."}
-        ],
-        "fact_check": "TODO(fact-check): GET of loss of signal behind the Moon and of the distance record."
+          {"get": 61.495417, "text": "A 34-second burn puts them back on a path that loops around the Moon and home."},
+          {"get": 77.133333, "text": "Behind the Moon, radio contact is lost for about 25 minutes.", "silence_s": 4},
+          {"get": 77.133333, "text": "On the far-side pass, they are farther from Earth than any humans before them.\nA distance record that stood until Artemis II in 2026."}
+        ]
       }
     },
     {
@@ -74,12 +75,12 @@
             "duration_s": 8.0,
             "caption": "Aquarius swings around the far side of the Moon."
           },
-          {"kind": "cabin", "duration_s": 4.0, "caption": "Radio contact with Houston is restored."},
+          {"kind": "cabin", "duration_s": 4.0, "caption": "Radio contact with Houston is restored at about 77:33."},
           {
             "kind": "audio",
             "audio": "res://assets/audio/e2_burn.mp3",
             "duration_s": 12.0,
-            "caption": "The burn home, called PC+2, is set for GET 079:27:40.",
+            "caption": "The burn home, called PC+2, is set for GET 079:27:39.",
             "subtitles": [
               {"at_s": 1.0, "hold_s": 6.0, "text": "Houston and the crew count through the burn."}
             ]
@@ -122,7 +123,6 @@
       "outside": "earth",
       "get": 88.0,
       "cutscene": {
-        "fact_check": "TODO(fact-check): when the adapter procedure was read up (SPEC says about GET 90), the parts list, and the subtitle timings once e3_procedure.mp3 is trimmed.",
         "shots": [
           {"kind": "cabin", "duration_s": 5.0, "caption": "The CO2 caution light comes on."},
           {
@@ -135,9 +135,9 @@
             "kind": "audio",
             "audio": "res://assets/audio/e3_procedure.mp3",
             "duration_s": 14.0,
-            "caption": "Houston reads up an adapter made from bags, cardboard, a hose and tape.",
+            "caption": "Two lithium hydroxide canisters, gray tape, bags from two cooling garments,\nan LM cue card, suit hoses and a sock.",
             "subtitles": [
-              {"at_s": 1.0, "hold_s": 8.0, "text": "CAPCOM reads up the procedure, step by step."}
+              {"at_s": 1.0, "hold_s": 8.0, "text": "Kerwin begins reading the procedure at about 90:22."}
             ]
           }
         ]
@@ -164,15 +164,14 @@
         ]
       },
       "minigame": {
-        "items": ["Canister", "Bag", "Cardboard cover", "Hose", "Tape"]
+        "items": ["Lithium hydroxide canister", "Gray tape", "Cooling garment bag", "LM cue card", "Suit hose", "Sock"]
       },
       "timeskip": {
         "captions": [
           {
-            "get": 93.0,
-            "text": "Haise reports that their do-it-yourself canister change is complete.",
-            "audio": "res://assets/audio/e3_complete.mp3",
-            "fact_check": "TODO(fact-check): who made this report and at what GET."
+            "get": 91.5,
+            "text": "Haise: “Our do-it-yourself lithium hydroxide canister change is complete.”",
+            "audio": "res://assets/audio/e3_complete.mp3"
           }
         ]
       }
@@ -218,11 +217,10 @@
       },
       "timeskip": {
         "captions": [
-          {"get": 105.3, "text": "A manual course correction, steered by keeping Earth's day/night line steady in the window."},
+          {"get": 105.307778, "text": "A 14-second course correction at 105:18:28,\nsteered by keeping Earth's day/night line steady in the window."},
           {
-            "get": 112.0,
-            "text": "Aquarius starts recharging Odyssey's reentry batteries.",
-            "fact_check": "TODO(fact-check): SPEC says day 5; the GET when charging started."
+            "get": 112.2,
+            "text": "At about 112:12, Aquarius starts recharging Odyssey's reentry batteries.\nIt takes about 15 hours."
           }
         ]
       }
@@ -263,7 +261,6 @@
   "reveals": {
     "service_module": {
       "effects": {"flags": {"sm_jettisoned": true}},
-      "fact_check": "TODO(fact-check): exact wording of Lovell's line (about GET 138:02), and the subtitle timing once e5_sm.mp3 is trimmed.",
       "shots": [
         {
           "kind": "photo",
@@ -274,10 +271,12 @@
         {
           "kind": "audio",
           "audio": "res://assets/audio/e5_sm.mp3",
-          "duration_s": 12.0,
+          "duration_s": 16.0,
           "caption": "One whole side of the spacecraft is missing.",
           "subtitles": [
-            {"at_s": 1.0, "hold_s": 6.0, "text": "Lovell: “There's one whole side of that spacecraft missing!”"}
+            {"at_s": 0.5, "hold_s": 5.0, "text": "Lovell: “And there's one whole side of that spacecraft missing.”"},
+            {"at_s": 5.5, "hold_s": 5.5, "text": "Lovell: “Right by the high gain antenna, the whole panel is blown out,\nalmost from the base to the engine.”"},
+            {"at_s": 11.2, "hold_s": 4.5, "text": "Haise: “Man, that's unbelievable!”"}
           ]
         }
       ]
@@ -288,28 +287,27 @@
       {
         "id": "lm_jettison",
         "title": "LM jettison",
-        "get_from_splashdown": -1.4,
+        "get_from_splashdown": -1.41,
         "audio": "res://assets/audio/e5_farewell.mp3",
-        "captions": ["Aquarius is released. “Farewell, Aquarius, and we thank you.”"],
-        "fact_check": "TODO(fact-check): who said the farewell line (likely CAPCOM Joe Kerwin)."
-      },
-      {
-        "id": "entry",
-        "title": "Entry",
-        "get_from_splashdown": -0.23,
-        "captions": ["Odyssey enters the atmosphere."]
+        "captions": ["Kerwin: “Farewell, Aquarius, and we thank you.”"]
       },
       {
         "id": "blackout",
         "title": "Blackout",
-        "get_from_splashdown": -0.21,
+        "get_from_splashdown": -0.261389,
         "screen_s": 20,
-        "captions": ["Radio blackout. Usually about four minutes; this one lasted about six."]
+        "captions": ["Radio blackout lasted about six minutes, roughly a minute and a half longer than expected."]
+      },
+      {
+        "id": "entry",
+        "title": "Entry",
+        "get_from_splashdown": -0.231944,
+        "captions": ["Odyssey enters the atmosphere."]
       },
       {
         "id": "contact",
         "title": "Contact",
-        "get_from_splashdown": -0.11,
+        "get_from_splashdown": -0.161389,
         "audio": "res://assets/audio/e5_splash.mp3",
         "images": ["res://assets/images/parachutes.jpg"],
         "captions": ["Contact restored.", "Three main parachutes open."]
@@ -321,8 +319,7 @@
         "images": ["res://assets/images/recovery.jpg"],
         "captions": ["Splashdown in the South Pacific."]
       }
-    ],
-    "fact_check": "TODO(fact-check): GET offsets for blackout start and contact (blackout about six minutes)."
+    ]
   },
   "captions": {
     "fever": "Haise is running a fever."

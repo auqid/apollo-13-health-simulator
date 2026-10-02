@@ -125,17 +125,19 @@ const EXPLOSION_STRESS_BPM: float = 25.0
 const EXPLOSION_STRESS_FADE_H: float = 2.0
 const BURN_STRESS_BPM: float = 10.0
 ## Engine burns between the explosion and splashdown: ignition GET (h + min/60 + s/3600) and duration.
-## PC+2 at 079:27:40 is confirmed. TODO(fact-check): the other ignition times and all durations.
+## Free-return 61:29:43.5 (34 s), PC+2 79:27:39.0 (263.8 s), manual course correction 105:18:28 (14 s),
+## final correction 137:39:51.5 (21.5 s).
 const BURNS: Array = [
-	{"name": "Free-return burn", "get": 61.0 + 29.0 / 60.0 + 43.0 / 3600.0, "duration_h": 34.0 / 3600.0},
-	{"name": "PC+2 burn", "get": 79.0 + 27.0 / 60.0 + 40.0 / 3600.0, "duration_h": 264.0 / 3600.0},
-	{"name": "Course correction 5", "get": 105.0 + 18.0 / 60.0 + 28.0 / 3600.0, "duration_h": 14.0 / 3600.0},
-	{"name": "Course correction 7", "get": 137.0 + 39.0 / 60.0 + 52.0 / 3600.0, "duration_h": 22.0 / 3600.0},
+	{"name": "Free-return burn", "get": 61.0 + 29.0 / 60.0 + 43.5 / 3600.0, "duration_h": 34.0 / 3600.0},
+	{"name": "PC+2 burn", "get": 79.0 + 27.0 / 60.0 + 39.0 / 3600.0, "duration_h": 263.8 / 3600.0},
+	{"name": "Manual course correction", "get": 105.0 + 18.0 / 60.0 + 28.0 / 3600.0, "duration_h": 14.0 / 3600.0},
+	{"name": "Final correction", "get": 137.0 + 39.0 / 60.0 + 51.5 / 3600.0, "duration_h": 21.5 / 3600.0},
 ]
 const REENTRY_STRESS_BPM: float = 15.0
 const HEAT_SHIELD_EXTRA_STRESS_BPM: float = 20.0
-## Entry interface (about GET 142:40:46) to splashdown (GET 142:54:41). TODO(fact-check)
-const REENTRY_BEFORE_SPLASHDOWN_H: float = 0.23
+## Entry interface 142:40:46, splashdown 142:54:41. The model splashdown stays at 142.9 h.
+## Reentry stress starts 13 min 55 s before splashdown, at entry interface.
+const REENTRY_BEFORE_SPLASHDOWN_H: float = 835.0 / 3600.0
 
 # --- Vitals noise: each channel drifts smoothly toward a new random target, one step per sim tick ---
 const NOISE_SEED: int = 19700413

@@ -3,7 +3,7 @@ extends RefCounted
 ## data/events.json. "better" says which direction beats what actually happened.
 ## Sources:
 ## - Lovell's account, Apollo Expeditions to the Moon (SP-350), ch. 13: https://history.nasa.gov/SP-350/ch-13-3.html
-## - Apollo 13 Flight Journal: https://www.nasa.gov/history/afj/ap13fj/
+## - Apollo 13 Flight Journal: https://www.apollojournals.org/afj/ap13fj/
 ## - Biomedical Results of Apollo (SP-368), for the 7.6 torr CO2 limit
 
 const BENCHMARKS: Dictionary = {

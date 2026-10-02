@@ -1,6 +1,6 @@
 # Apollo 13: Crew Health Simulation, game spec
 
-Times are Ground Elapsed Time (GET) in hours since launch. The explosion is at GET 55.9 and the historical splashdown at GET 142.9, 87 hours later.
+Times are Ground Elapsed Time (GET) in hours since launch. The explosion is at GET 55:54 (55.9 h in the model) and splashdown at GET 142:54:41 (142.9 h in the model), 87 hours later.
 
 All model numbers below are **game approximations** tuned to point in the right direction and land near the 1970 benchmarks. Only the values in the Scorecard section's history column are historical.
 
@@ -35,23 +35,25 @@ Each option carries an `effects` object in `events.json`. The option marked hist
   - **A. Save power** (historical). Good: more battery for the trip home. Cost: the cabin gets close to freezing. Cabin temperature heads toward 3 °C. Power margin is unchanged.
   - **B. Keep a heater on.** Good: a warmer crew that sleeps better. Cost: less battery for the trip home. Cabin temperature bottoms out around 10 °C, and the fatigue rate drops 25%. Power margin −30.
 - **Timeskip to GET 79.0.** Captions:
-  - About GET 61.5: a short engine burn puts them back on a path that loops around the Moon and home.
-  - About GET 77: behind the Moon, radio contact is lost. Play 4 seconds of silence. They are now farther from Earth than any humans before them. A distance record that stood until Artemis II in 2026.
+  - At 61:29:43.5: a 34-second burn puts them back on a path that loops around the Moon and home.
+  - At about 77:08: behind the Moon, radio contact is lost for about 25 minutes. Play 4 seconds of silence.
+  - On the far-side pass, with no GET in the caption: they are farther from Earth than any humans before them. A distance record that stood until Artemis II in 2026.
+  - Contact returns at about 77:33. That line is in the E2 cutscene, where there is time to read it.
 
 ### E2: The return burn (GET 79.0)
-- **Cutscene:** in this order: the far side pass, radio contact restored, then the PC+2 burn at GET 079:27:40. Use real audio from around the PC+2 burn.
+- **Cutscene:** in this order: the far side pass, radio contact restored at about 77:33, then the PC+2 burn at GET 079:27:39.0 (263.8 s). Use real audio from around the PC+2 burn.
 - **Poll:** "We've come around the Moon. How fast do we go home?"
   - **A. Normal speed** (historical). Good: the heat shield stays protected. Cost: a longer trip in the cold lifeboat. Splashdown at GET 142.9.
   - **B. Fastest way home.** Good: home about a day sooner. Cost: we drop the damaged back half of the ship, leaving the heat shield exposed. Splashdown about 24 hours earlier (GET 119). This option was considered in 1970 and rejected, because the Service Module protected the heat shield from the cold of space. Set `heatShieldRisk = true`: reentry stress +20 bpm on top of the normal spike, and the scorecard shows the heat shield exposure. The Service Module photo reveal moves to this point.
 - **Timeskip to GET 88.0.** Caption: "CO2 is climbing. The LM's scrubbers were sized for two people."
 
 ### E3: The CO2 crisis (GET 88.0, CO2 at about 8 mmHg, alarm on)
-- **Cutscene:** the CO2 caution light, CAPCOM reading up the adapter procedure (real audio from about GET 90), and the NASA photo of the finished adapter.
+- **Cutscene:** the CO2 caution light, Joe Kerwin reading up the adapter procedure from about 90:22, and the NASA photo of the finished adapter. Parts: two lithium hydroxide canisters, gray tape, bags from two cooling garments, an LM cue card, suit hoses and a sock.
 - **Poll:** "CO2 is building up. Houston's fix isn't fully tested yet."
-  - **A. Wait for Houston** (historical). Good: a tested design that seals well. Cost: CO2 climbs higher while we wait. CO2 peaks at about 15 mmHg around GET 91.5, then falls to about 1.5 within 2 hours.
-  - **B. Build it now.** Good: CO2 stops rising sooner. Cost: a tired crew and a leaky seal. CO2 peaks at about 10 mmHg around GET 89.5, then settles at about 2.5 because the improvised seal leaks a little. Crew fatigue +0.15.
-- **Optional mini-game** (only if ahead of schedule): the player drags 5 items (canister, bag, cardboard cover, hose, tape) onto the adapter in order. CO2 keeps rising while they work.
-- **Timeskip to GET 96.0.** Caption: Haise reports that their do-it-yourself canister change is complete.
+  - **A. Wait for Houston** (historical). Good: a tested design that seals well. Cost: CO2 climbs higher while we wait. CO2 peaks at about 15 mmHg, then falls to about 1.5 within 2 hours. Do not show a GET for the CO2 peak on screen.
+  - **B. Build it now.** Good: CO2 stops rising sooner. Cost: a tired crew and a leaky seal. CO2 peaks at about 10 mmHg, then settles at about 2.5 because the improvised seal leaks a little. Crew fatigue +0.15. Do not show a GET for the CO2 peak on screen.
+- **Optional mini-game** (only if ahead of schedule): the player drags the real parts onto the adapter (two lithium hydroxide canisters, gray tape, bags from two cooling garments, an LM cue card, suit hoses and a sock). CO2 keeps rising while they work.
+- **Timeskip to GET 96.0.** At about 91:30, Haise: "Our do-it-yourself lithium hydroxide canister change is complete." Do not show a GET for the CO2 peak.
 
 ### E4: The cold coast (GET 96.0)
 - **Cutscene:** a dark cabin with breath fog and condensation. Caption: water isn't just for drinking; the LM needs it to cool its electronics.
@@ -59,19 +61,19 @@ Each option carries an `effects` object in `events.json`. The option marked hist
   - **A. Very little** (historical). Good: more water to cool the electronics. Cost: dehydration and risk of infection. About 0.18 L (6 oz) per person per day. Hydration falls, and Haise develops a fever from about GET 115. Ending water about 9%.
   - **B. A bit more.** Good: a healthier crew. Cost: less spare water. About 0.5 L per person per day. No fever. Ending water about 7%.
 - **Timeskip to splashdown −5 h** (GET 137.9 historical, or 114 with E2-B). Captions:
-  - About GET 105: a manual course correction, steered by keeping Earth's day/night line steady in the window.
-  - Day 5: *Aquarius* starts recharging *Odyssey*'s reentry batteries.
+  - At 105:18:28: a 14-second manual course correction, steered by keeping Earth's day/night line steady in the window.
+  - At about 112:12: *Aquarius* starts recharging *Odyssey*'s reentry batteries. Charging takes about 15 hours.
 
 ### E5: Wake up *Odyssey* (splashdown −5 h)
-- **Cutscene:** if the Service Module is still attached, jettison it now. Show the NASA photo of the damaged Service Module with the crew's real audio describing the missing panel.
+- **Cutscene:** if the Service Module is still attached, jettison it now (about 138:02). Show the NASA photo of the damaged Service Module with the crew's audio. Lovell: "And there's one whole side of that spacecraft missing." Then: "Right by the high gain antenna, the whole panel is blown out, almost from the base to the engine." Optional, at 138:09:09, Haise: "Man, that's unbelievable!"
 - **Poll:** "The landing capsule is frozen and wet inside. When do we switch it on?"
   - **A. As late as possible** (historical). Good: more battery for landing. Cost: freezing, dripping final hours. The cabin stays cold, and the condensation overlay is on. Power margin is unchanged.
   - **B. Early, to warm up.** Good: a warmer, drier crew. Cost: less battery for landing. Cabin temperature +5 °C for the final hours and less condensation. Power margin −20.
 - **Automatic reentry sequence** (no more polls):
-  1. LM jettison at splashdown −1.4 h. Real "farewell, *Aquarius*" audio.
-  2. Reentry: stress +15 bpm (+35 with `heatShieldRisk`).
-  3. Blackout: the screen goes nearly black, leaving only the heartbeat audio and the mission clock, compressed to about 20 s. Caption: "Radio blackout. Usually about four minutes; this one lasted about six."
-  4. Contact restored, parachutes, then splashdown audio.
+  1. LM jettison at 141:30:05. CAPCOM Joe Kerwin: "Farewell, Aquarius, and we thank you."
+  2. Blackout from 142:39 to 142:45. The screen goes nearly black, leaving only the heartbeat audio and the mission clock, compressed to about 20 s. Caption: "Radio blackout lasted about six minutes, roughly a minute and a half longer than expected."
+  3. Entry interface at 142:40:46. Stress +15 bpm (+35 with `heatShieldRisk`).
+  4. Contact restored at 142:45, parachutes, then splashdown at 142:54:41.
 - **Scorecard.**
 
 ---
@@ -97,7 +99,7 @@ cabinTempC 21, co2mmHg 1.0, pressurePsi 4.8, waterPct 100, powerMargin 100. Crew
 - **CO2:**
   - GET 56–80: rises linearly from 1.0 to 2.0.
   - GET 80–88: rises from 2.0 to 8.0. The alarm turns on above 7.6.
-  - After E3, follow the chosen option's curve: rise to the peak, then fall exponentially (time constant 0.6 h) to the settle value. Values: wait → peak 15 at 91.5, settle 1.5. Now → peak 10 at 89.5, settle 2.5.
+  - After E3, follow the chosen option's curve: rise to the peak, then fall exponentially (time constant 0.6 h) to the settle value. Values: wait → peak 15 at 91.5, settle 1.5. Now → peak 10 at 89.5, settle 2.5. Those peak times stay in the model. Do not show a GET for the CO2 peak on screen.
 - **Pressure:** 4.8 ± 0.03 noise. Flat on purpose.
 - **Water:** declines linearly from 100% at the explosion to the ending value at splashdown. Strict ends at 9% and moderate at 7%. With E2-B, compute the consumption rate from the standard duration so the shorter trip ends higher.
 - **Power margin:** a game index where history = 100. Apply option deltas; E2-B adds +15 (shorter trip). Clamp to 40 at minimum so every path still gets home.
@@ -116,7 +118,16 @@ Base heart rates: Lovell 68, Swigert 72, Haise 70.
 
 **Haise's infection:** if hydration < 0.7 at GET 115, his body temperature ramps from 37.0 to 38.3 between GET 115 and 125 and stays there. A short caption appears the first time it crosses 38.0: "Haise is running a fever."
 
-**Stress events:** explosion +25 (2 h decay), each burn +10 for the burn's duration, reentry +15 (+20 more with heatShieldRisk).
+**Stress events:** explosion +25 (2 h decay), each burn +10 for the burn's duration, reentry +15 (+20 more with heatShieldRisk). Reentry stress starts at entry interface, 142:40:46.
+
+Burns, ignition GET and duration:
+
+| Burn | Ignition | Duration |
+|---|---|---|
+| Free-return | 61:29:43.5 | 34 s |
+| PC+2 | 79:27:39.0 | 263.8 s |
+| Manual course correction | 105:18:28 | 14 s |
+| Final correction | 137:39:51.5 | 21.5 s |
 
 **Weight loss (crew total, for the scorecard):** 0.164 kg/h with strict rationing and 0.109 kg/h with moderate rationing, multiplied by the hours from explosion to splashdown.
 
@@ -172,7 +183,7 @@ Mark each row as better, worse or same. End on a single line: "The real crew mad
 
 Benchmark sources:
 - Lovell's account, *Apollo Expeditions to the Moon* (SP-350), ch. 13: https://history.nasa.gov/SP-350/ch-13-3.html
-- Apollo 13 Flight Journal: https://www.nasa.gov/history/afj/ap13fj/
+- Apollo 13 Flight Journal: https://www.apollojournals.org/afj/ap13fj/
 - *Biomedical Results of Apollo* (SP-368), for the 7.6 torr CO2 limit
 
 ---
@@ -217,17 +228,17 @@ All NASA mission audio, transcripts and photos are public domain. Do not use aud
 
 Sources:
 - Apollo 13 in Real Time (full mission audio, searchable by GET): https://apolloinrealtime.org/13/
-- Apollo 13 Flight Journal (transcripts with GET): https://www.nasa.gov/history/afj/ap13fj/
+- Apollo 13 Flight Journal (transcripts with GET): https://www.apollojournals.org/afj/ap13fj/
 - NASA Image and Video Library: https://images.nasa.gov
 
 | File | Content |
 |---|---|
 | `audio/e1_problem.mp3` | The "we've had a problem" exchange, plus a few seconds of reports about venting |
 | `audio/e2_burn.mp3` | Around the PC+2 burn |
-| `audio/e3_procedure.mp3` | CAPCOM reading up the adapter procedure (about GET 90) |
-| `audio/e3_complete.mp3` | Crew reporting the adapter done |
-| `audio/e5_sm.mp3` | Crew describing the Service Module damage after jettison |
-| `audio/e5_farewell.mp3` | LM jettison farewell |
+| `audio/e3_procedure.mp3` | Joe Kerwin reading up the adapter procedure (from about 90:22) |
+| `audio/e3_complete.mp3` | Haise at about 91:30, reporting the canister change complete |
+| `audio/e5_sm.mp3` | Lovell and Haise describing the Service Module damage (about 138:02) |
+| `audio/e5_farewell.mp3` | Joe Kerwin at 141:30:05: "Farewell, Aquarius, and we thank you." |
 | `audio/e5_splash.mp3` | Contact after blackout, parachutes, splashdown |
 | `images/` | Earth from the LM, the Moon's far side, the CO2 adapter, the dark cabin, the damaged Service Module, parachutes, recovery |
 
