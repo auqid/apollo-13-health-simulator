@@ -31,9 +31,9 @@ Each option carries an `effects` object in `events.json`. The option marked hist
 
 ### E1: Explosion and lifeboat (GET 55:54)
 - **Cutscene:** a bang, the master alarm, then the real "Houston, we've had a problem" exchange. Captions: oxygen is venting, *Odyssey* is dying, and the crew moves into *Aquarius*. Stress spike: +25 bpm, decaying over 2 hours.
-- **Poll:** "*Aquarius* was built to keep two people alive for two days. Now it has to keep three alive for four. What do we do with the heat?"
-  - **A. Shut everything down** (historical). Cabin temperature heads toward 3 °C. Power margin is unchanged.
-  - **B. Keep one heater running.** Cabin temperature bottoms out around 10 °C, and the fatigue rate drops 25% (better sleep). Power margin −30.
+- **Poll:** "The lifeboat is short on power. Do we keep the crew warm?" The card does not say which option is historical.
+  - **A. Save power** (historical). Good: more battery for the trip home. Cost: the cabin gets close to freezing. Cabin temperature heads toward 3 °C. Power margin is unchanged.
+  - **B. Keep a heater on.** Good: a warmer crew that sleeps better. Cost: less battery for the trip home. Cabin temperature bottoms out around 10 °C, and the fatigue rate drops 25%. Power margin −30.
 - **Timeskip to GET 79.0.** Captions:
   - About GET 61.5: a short engine burn puts them back on a path that loops around the Moon and home.
   - About GET 77: behind the Moon, radio contact is lost. Play 4 seconds of silence. They are now farther from Earth than any humans before them.
@@ -41,32 +41,32 @@ Each option carries an `effects` object in `events.json`. The option marked hist
 ### E2: The return burn (GET 79.0)
 - **Cutscene:** in this order: the far side pass, radio contact restored, then the PC+2 burn at GET 079:27:40. Use real audio from around the PC+2 burn.
 - **Poll:** "We've come around the Moon. How fast do we go home?"
-  - **A. Standard speed-up burn** (historical). Splashdown at GET 142.9.
-  - **B. Drop the Service Module and burn harder.** Splashdown about 24 hours earlier (GET 119). This option was considered in 1970 and rejected, because the Service Module protected the heat shield from the cold of space. Set `heatShieldRisk = true`: reentry stress +20 bpm on top of the normal spike, and the scorecard shows the heat shield exposure. The Service Module photo reveal moves to this point.
+  - **A. Normal speed** (historical). Good: the heat shield stays protected. Cost: a longer trip in the cold lifeboat. Splashdown at GET 142.9.
+  - **B. Fastest way home.** Good: home about a day sooner. Cost: we drop the damaged back half of the ship, leaving the heat shield exposed. Splashdown about 24 hours earlier (GET 119). This option was considered in 1970 and rejected, because the Service Module protected the heat shield from the cold of space. Set `heatShieldRisk = true`: reentry stress +20 bpm on top of the normal spike, and the scorecard shows the heat shield exposure. The Service Module photo reveal moves to this point.
 - **Timeskip to GET 88.0.** Caption: "CO2 is climbing. The LM's scrubbers were sized for two people."
 
 ### E3: The CO2 crisis (GET 88.0, CO2 at about 8 mmHg, alarm on)
 - **Cutscene:** the CO2 caution light, CAPCOM reading up the adapter procedure (real audio from about GET 90), and the NASA photo of the finished adapter.
-- **Poll:** "The ground team's adapter isn't fully tested yet. Do we build now or wait?"
-  - **A. Wait for the tested procedure** (historical). CO2 peaks at about 15 mmHg around GET 91.5, then falls to about 1.5 within 2 hours.
-  - **B. Build our own version now.** CO2 peaks at about 10 mmHg around GET 89.5, then settles at about 2.5 because the improvised seal leaks a little. Crew fatigue +0.15.
+- **Poll:** "CO2 is building up. Houston's fix isn't fully tested yet."
+  - **A. Wait for Houston** (historical). Good: a tested design that seals well. Cost: CO2 climbs higher while we wait. CO2 peaks at about 15 mmHg around GET 91.5, then falls to about 1.5 within 2 hours.
+  - **B. Build it now.** Good: CO2 stops rising sooner. Cost: a tired crew and a leaky seal. CO2 peaks at about 10 mmHg around GET 89.5, then settles at about 2.5 because the improvised seal leaks a little. Crew fatigue +0.15.
 - **Optional mini-game** (only if ahead of schedule): the player drags 5 items (canister, bag, cardboard cover, hose, tape) onto the adapter in order. CO2 keeps rising while they work.
 - **Timeskip to GET 96.0.** Caption: Haise reports that their do-it-yourself canister change is complete.
 
 ### E4: The cold coast (GET 96.0)
 - **Cutscene:** a dark cabin with breath fog and condensation. Caption: water isn't just for drinking; the LM needs it to cool its electronics.
-- **Poll:** "How much water do the crew drink?"
-  - **A. Strict ration** (historical). About 0.18 L (6 oz) per person per day. Hydration falls, and Haise develops a fever from about GET 115. Ending water about 9%.
-  - **B. Moderate ration.** About 0.5 L per person per day. No fever. Ending water about 7%.
+- **Poll:** "Water also cools the electronics. How much should the crew drink?"
+  - **A. Very little** (historical). Good: more water to cool the electronics. Cost: dehydration and risk of infection. About 0.18 L (6 oz) per person per day. Hydration falls, and Haise develops a fever from about GET 115. Ending water about 9%.
+  - **B. A bit more.** Good: a healthier crew. Cost: less spare water. About 0.5 L per person per day. No fever. Ending water about 7%.
 - **Timeskip to splashdown −5 h** (GET 137.9 historical, or 114 with E2-B). Captions:
   - About GET 105: a manual course correction, steered by keeping Earth's day/night line steady in the window.
   - Day 5: *Aquarius* starts recharging *Odyssey*'s reentry batteries.
 
 ### E5: Wake up *Odyssey* (splashdown −5 h)
 - **Cutscene:** if the Service Module is still attached, jettison it now. Show the NASA photo of the damaged Service Module with the crew's real audio describing the missing panel.
-- **Poll:** "*Odyssey* is frozen and wet inside. When do we power it up?"
-  - **A. As late as possible** (historical). The cabin stays cold, and the condensation overlay is on. Power margin is unchanged.
-  - **B. Early, to warm and dry the cabin.** Cabin temperature +5 °C for the final hours and less condensation. Power margin −20.
+- **Poll:** "The landing capsule is frozen and wet inside. When do we switch it on?"
+  - **A. As late as possible** (historical). Good: more battery for landing. Cost: freezing, dripping final hours. The cabin stays cold, and the condensation overlay is on. Power margin is unchanged.
+  - **B. Early, to warm up.** Good: a warmer, drier crew. Cost: less battery for landing. Cabin temperature +5 °C for the final hours and less condensation. Power margin −20.
 - **Automatic reentry sequence** (no more polls):
   1. LM jettison at splashdown −1.4 h. Real "farewell, *Aquarius*" audio.
   2. Reentry: stress +15 bpm (+35 with `heatShieldRisk`).

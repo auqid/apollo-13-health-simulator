@@ -25,19 +25,21 @@
         "fact_check": "TODO(fact-check): exact wording of both quotes (about GET 55:55)."
       },
       "poll": {
-        "question": "Aquarius was built to keep two people alive for two days. Now it has to keep three alive for four. What do we do with the heat?",
+        "question": "The lifeboat is short on power. Do we keep the crew warm?",
         "options": [
           {
             "key": "a",
-            "label": "Shut everything down",
-            "hint": "The cabin heads toward 3 °C. Power margin unchanged.",
+            "label": "Save power",
+            "good": "more battery for the trip home.",
+            "cost": "the cabin gets close to freezing.",
             "historical": true,
             "effects": {"flags": {"heating": "off"}}
           },
           {
             "key": "b",
-            "label": "Keep one heater running",
-            "hint": "The cabin bottoms out near 10 °C and the crew sleeps better. Power margin −30.",
+            "label": "Keep a heater on",
+            "good": "a warmer crew that sleeps better.",
+            "cost": "less battery for the trip home.",
             "historical": false,
             "effects": {"flags": {"heating": "one"}, "power_margin": -30}
           }
@@ -72,15 +74,17 @@
         "options": [
           {
             "key": "a",
-            "label": "Standard speed-up burn",
-            "hint": "Splashdown at GET 142:54.",
+            "label": "Normal speed",
+            "good": "the heat shield stays protected.",
+            "cost": "a longer trip in the cold lifeboat.",
             "historical": true,
             "effects": {"flags": {"return_mode": "standard"}}
           },
           {
             "key": "b",
-            "label": "Drop the Service Module and burn harder",
-            "hint": "Home about 24 hours sooner, but the heat shield is left exposed to the cold.",
+            "label": "Fastest way home",
+            "good": "home about a day sooner.",
+            "cost": "we drop the damaged back half of the ship, leaving the heat shield exposed.",
             "historical": false,
             "note": "Considered in 1970 and rejected, because the Service Module protected the heat shield from the cold of space.",
             "reveal": "service_module",
@@ -111,19 +115,21 @@
         "fact_check": "TODO(fact-check): when the adapter procedure was read up (SPEC says about GET 90) and the parts list."
       },
       "poll": {
-        "question": "The ground team's adapter isn't fully tested yet. Do we build now or wait?",
+        "question": "CO2 is building up. Houston's fix isn't fully tested yet.",
         "options": [
           {
             "key": "a",
-            "label": "Wait for the tested procedure",
-            "hint": "CO2 climbs to about 15 mmHg first, then falls to a safe level.",
+            "label": "Wait for Houston",
+            "good": "a tested design that seals well.",
+            "cost": "CO2 climbs higher while we wait.",
             "historical": true,
             "effects": {"flags": {"adapter": "wait"}}
           },
           {
             "key": "b",
-            "label": "Build our own version now",
-            "hint": "CO2 peaks near 10 mmHg, but a leaky seal keeps it a little higher. The crew tires faster.",
+            "label": "Build it now",
+            "good": "CO2 stops rising sooner.",
+            "cost": "a tired crew and a leaky seal.",
             "historical": false,
             "effects": {"flags": {"adapter": "now"}, "fatigue": 0.15}
           }
@@ -157,19 +163,21 @@
         ]
       },
       "poll": {
-        "question": "How much water do the crew drink?",
+        "question": "Water also cools the electronics. How much should the crew drink?",
         "options": [
           {
             "key": "a",
-            "label": "Strict ration",
-            "hint": "About 0.18 L (6 oz) per person a day. Saves water, but the crew dehydrates.",
+            "label": "Very little",
+            "good": "more water to cool the electronics.",
+            "cost": "dehydration and risk of infection.",
             "historical": true,
             "effects": {"flags": {"ration": "strict"}}
           },
           {
             "key": "b",
-            "label": "Moderate ration",
-            "hint": "About 0.5 L per person a day. Better for the crew, with less water left at the end.",
+            "label": "A bit more",
+            "good": "a healthier crew.",
+            "cost": "less spare water.",
             "historical": false,
             "effects": {"flags": {"ration": "moderate"}}
           }
@@ -197,19 +205,21 @@
         "captions": []
       },
       "poll": {
-        "question": "Odyssey is frozen and wet inside. When do we power it up?",
+        "question": "The landing capsule is frozen and wet inside. When do we switch it on?",
         "options": [
           {
             "key": "a",
             "label": "As late as possible",
-            "hint": "Saves power. The cabin stays cold and wet.",
+            "good": "more battery for landing.",
+            "cost": "freezing, dripping final hours.",
             "historical": true,
             "effects": {"flags": {"power_up": "late"}}
           },
           {
             "key": "b",
-            "label": "Early, to warm and dry the cabin",
-            "hint": "About 5 °C warmer and drier for the final hours. Power margin −20.",
+            "label": "Early, to warm up",
+            "good": "a warmer, drier crew.",
+            "cost": "less battery for landing.",
             "historical": false,
             "effects": {"flags": {"power_up": "early"}, "power_margin": -20}
           }

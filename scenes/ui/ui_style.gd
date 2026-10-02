@@ -33,6 +33,7 @@ const SIZE_ENV_VALUE := 28
 const SIZE_VITAL := 32
 const SIZE_CAPTION := 32
 const SIZE_POLL := 36
+const SIZE_POLL_LETTER := 72
 const SIZE_QUESTION := 40
 const SIZE_CARD_TITLE := 64
 const SIZE_CLOCK := 46

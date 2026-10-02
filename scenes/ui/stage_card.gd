@@ -6,13 +6,14 @@ const UiStyle := preload("res://scenes/ui/ui_style.gd")
 
 const GROUP := "stage_card"
 const CONTINUE_HINT := "Press Space to continue"
-const POLL_HINT := "Press A or B"
+const POLL_HINT := "Vote A or B in the chat"
+const POLL_COLUMN_WIDTH := 1500
 
 var _dim: ColorRect
 var _column: VBoxContainer
 var _title: Label
 var _body: Label
-var _options: VBoxContainer
+var _options: HBoxContainer
 var _hint: Label
 var _option_rows: Dictionary = {}
 
@@ -36,6 +37,7 @@ func show_cutscene(title: String, get_text: String) -> void:
 
 func show_poll(question: String, options: Array) -> void:
 	_clear_options()
+	_set_column_width(POLL_COLUMN_WIDTH)
 	_title.add_theme_font_size_override("font_size", UiStyle.SIZE_QUESTION)
 	_title.text = question
 	_body.visible = false
@@ -73,6 +75,7 @@ func hide_card() -> void:
 
 func _show_text(title: String, body: String, hint: String) -> void:
 	_clear_options()
+	_set_column_width(UiStyle.CARD_COLUMN_WIDTH)
 	_options.visible = false
 	_title.add_theme_font_size_override("font_size", UiStyle.SIZE_CARD_TITLE)
 	_title.text = title
@@ -103,7 +106,7 @@ func _build() -> void:
 	_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_body.custom_minimum_size.x = UiStyle.CARD_COLUMN_WIDTH
 	_column.add_child(_body)
-	_options = VBoxContainer.new()
+	_options = HBoxContainer.new()
 	_options.add_theme_constant_override("separation", UiStyle.SECTION_GAP)
 	_options.visible = false
 	_column.add_child(_options)
@@ -123,19 +126,32 @@ func _option_row(option: Dictionary) -> Control:
 	var key: String = option["key"]
 	var row := PanelContainer.new()
 	row.add_theme_stylebox_override("panel", _option_style(false))
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var text := VBoxContainer.new()
 	text.add_theme_constant_override("separation", UiStyle.ROW_GAP)
 	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var line := UiStyle.label("%s.  %s" % [key.to_upper(), option["label"]], UiStyle.FONT_HUD, UiStyle.SIZE_POLL)
-	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var hint := UiStyle.label(option["hint"], UiStyle.FONT_HUD_LIGHT, UiStyle.SIZE_BODY, UiStyle.TEXT_DIM)
-	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	text.add_child(line)
-	text.add_child(hint)
+	text.add_child(UiStyle.label(key.to_upper(), UiStyle.FONT_TITLE, UiStyle.SIZE_POLL_LETTER, UiStyle.SENSOR_TEAL))
+	var title := UiStyle.label(option["label"], UiStyle.FONT_HUD, UiStyle.SIZE_POLL)
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text.add_child(title)
+	text.add_child(_tradeoff("Good: " + str(option["good"]), UiStyle.SENSOR_TEAL))
+	text.add_child(_tradeoff("Cost: " + str(option["cost"]), UiStyle.CAUTION_AMBER))
 	row.add_child(text)
 	_option_rows[key] = row
 	return row
+
+
+func _tradeoff(line: String, color: Color) -> Label:
+	var label := UiStyle.label(line, UiStyle.FONT_HUD_LIGHT, UiStyle.SIZE_BODY, color)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	return label
+
+
+func _set_column_width(width: int) -> void:
+	_column.custom_minimum_size.x = width
+	_title.custom_minimum_size.x = width
 
 
 func _option_style(selected: bool) -> StyleBoxFlat:

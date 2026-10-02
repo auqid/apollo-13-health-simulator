@@ -218,7 +218,9 @@ func test_every_poll_has_two_valid_options() -> void:
 		for option: Dictionary in options:
 			var where: String = "%s option %s" % [event["id"], option.get("key", "?")]
 			_check(not str(option.get("label", "")).is_empty(), where + " has a label")
-			_check(not str(option.get("hint", "")).is_empty(), where + " has a hint")
+			_check(not str(option.get("good", "")).is_empty(), where + " has a good line")
+			_check(not str(option.get("cost", "")).is_empty(), where + " has a cost line")
+			_check(not str(option.get("label", "")).contains("historical"), where + " does not say it is historical")
 			if option.get("historical", false):
 				historical_count += 1
 				_check(option["key"] == "a", where + " is historical, so it should be option a")
