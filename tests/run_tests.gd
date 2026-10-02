@@ -12,6 +12,7 @@ const GameScript := preload("res://game/game.gd")
 const FxMapping := preload("res://fx/fx_mapping.gd")
 const Effects := preload("res://fx/effects.gd")
 const CabinScene := preload("res://scenes/cabin/cabin.tscn")
+const AudioMix := preload("res://audio/audio_mix.gd")
 
 const EFFECT_KEYS: Array[String] = ["flags", "power_margin", "fatigue"]
 const TEXT_KEYS: Array[String] = ["text", "question", "label", "hint", "note", "title", "closing", "history"]
@@ -860,3 +861,61 @@ func test_forced_modes_show_one_driver() -> void:
 	_near(boom["master_lamp"], 1.0, 1e-9, "and lights the master alarm")
 	_near(boom["blur_px"], 0.0, 1e-9, "without blurring the cabin")
 	fx.free()
+
+
+# --- Audio ---
+
+func test_heartbeat_is_quiet_when_calm_and_clear_above_90() -> void:
+	var calm: float = AudioMix.heartbeat_gain(70.0)
+	var rising: float = AudioMix.heartbeat_gain(81.0)
+	var loud: float = AudioMix.heartbeat_gain(90.0)
+	var faster: float = AudioMix.heartbeat_gain(120.0)
+	_check(calm < 0.08, "a calm heart rate stays quiet, got %.3f" % calm)
+	_check(loud > calm * 4.0, "90 bpm is several times louder than calm")
+	_check(loud > 0.3, "90 bpm is clearly audible, got %.3f" % loud)
+	_near(faster, loud, 1e-9, "above 90 bpm the heartbeat stays at that level")
+	_check(rising > calm and rising < loud, "it rises between calm and 90")
+	var peak: float = 0.0
+	var t_s: float = 0.0
+	while t_s < 0.4:
+		peak = maxf(peak, absf(AudioMix.heartbeat_wave(t_s)))
+		t_s += 0.001
+	_check(peak > 0.5 and peak <= 1.0, "a beat has a lub and a dub, peak %.2f" % peak)
+	_near(AudioMix.heartbeat_wave(0.3), 0.0, 1e-6, "and then silence until the next beat")
+
+
+func test_breathing_follows_one_cycle() -> void:
+	_near(AudioMix.breath_envelope(0.0), 0.0, 1e-6, "a breath starts quiet")
+	_check(AudioMix.breath_envelope(0.2) > 0.9, "the inhale peaks")
+	_check(AudioMix.breath_envelope(0.7) > 0.5, "the exhale is there")
+	_near(AudioMix.breath_envelope(1.0), 0.0, 0.05, "and the cycle ends quiet")
+
+
+func test_alarm_can_be_silenced_until_the_cause_clears() -> void:
+	var sounding: Dictionary = AudioMix.next_alarm(true, false)
+	_check(sounding["playing"] and sounding["silenced"] == false, "an alarm sounds when it's wanted")
+	var hushed: Dictionary = AudioMix.next_alarm(true, true)
+	_check(not hushed["playing"] and hushed["silenced"], "S keeps this bout silent")
+	var cleared: Dictionary = AudioMix.next_alarm(false, true)
+	_check(not cleared["playing"] and not cleared["silenced"], "once the cause goes, the next alarm can sound")
+	var again: Dictionary = AudioMix.next_alarm(true, cleared["silenced"])
+	_check(again["playing"], "and it does")
+	var loudest: float = 0.0
+	var t_s: float = 0.0
+	while t_s < Tuning.AUDIO_ALARM_STEP_S * 2.0:
+		loudest = maxf(loudest, absf(AudioMix.alarm_wave(t_s)))
+		t_s += 0.001
+	_check(loudest < 0.25, "the alarm stays well below full scale, peak %.3f" % loudest)
+	_check(loudest > 0.08, "and is still loud enough to notice")
+
+
+func test_voice_ducks_bio_and_alarm_then_releases() -> void:
+	var duck: float = 0.0
+	duck = AudioMix.approach_duck(duck, 0.2, 0.2)
+	_check(duck > 0.9, "a loud Voice bus ducks within a fraction of a second, got %.2f" % duck)
+	duck = AudioMix.approach_duck(duck, 0.0, 0.05)
+	_check(duck > 0.7, "it holds the duck briefly after Voice stops")
+	duck = AudioMix.approach_duck(duck, 0.0, 2.0)
+	_check(duck < 0.05, "then Bio and Alarm come back")
+	for bus_name in AudioMix.DUCKED_BUSES:
+		_check(bus_name != AudioMix.BUS_VOICE, "Voice itself is not ducked")

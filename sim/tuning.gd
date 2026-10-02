@@ -244,3 +244,33 @@ const FLOAT_DRIFT_PERIOD_S_MAX: float = 34.0
 const FLOAT_SPIN_DEG_PER_S_MIN: float = 4.0
 const FLOAT_SPIN_DEG_PER_S_MAX: float = 11.0
 const FLOAT_SEED: int = 1970
+
+# --- Audio (real seconds). Heartbeat, breathing and the alarm are synthesized. ---
+const AUDIO_MIX_RATE: int = 22050
+const AUDIO_BUFFER_S: float = 0.2
+## Heartbeat loudness: quiet at a calm rate, full once the rate reaches the loud threshold.
+const AUDIO_HEART_QUIET_BPM: float = 72.0
+const AUDIO_HEART_LOUD_BPM: float = 90.0
+const AUDIO_HEART_GAIN_CALM: float = 0.05
+const AUDIO_HEART_GAIN_LOUD: float = 0.42
+const AUDIO_HEART_LUB_HZ: float = 46.0
+const AUDIO_HEART_DUB_HZ: float = 38.0
+const AUDIO_HEART_DUB_AT_S: float = 0.11
+const AUDIO_HEART_LUB_WIDTH_S: float = 0.04
+const AUDIO_HEART_DUB_WIDTH_S: float = 0.032
+const AUDIO_BREATH_GAIN: float = 0.1
+const AUDIO_BREATH_INHALE: float = 0.42
+## Master alarm: two mid tones, soft sines, kept well below full scale.
+const AUDIO_ALARM_GAIN: float = 0.14
+const AUDIO_ALARM_LOW_HZ: float = 480.0
+const AUDIO_ALARM_HIGH_HZ: float = 620.0
+const AUDIO_ALARM_STEP_S: float = 0.36
+## While the Voice bus is this loud, Bio and Alarm drop by AUDIO_DUCK_DB.
+const AUDIO_VOICE_PEAK: float = 0.02
+const AUDIO_DUCK_DB: float = -18.0
+const AUDIO_DUCK_ATTACK_S: float = 0.04
+const AUDIO_DUCK_RELEASE_S: float = 0.4
+const AUDIO_VOLUME_SILENT_DB: float = -80.0
+const AUDIO_TEST_VOICE_S: float = 2.0
+const AUDIO_TEST_VOICE_HZ: float = 196.0
+const AUDIO_TEST_VOICE_GAIN: float = 0.22

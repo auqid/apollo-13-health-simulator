@@ -95,6 +95,11 @@ func play_explosion_dim() -> void:
 
 
 ## One line for the debug panel.
+## True while the red master alarm lamps are lit, during the explosion dim.
+func master_alarm_lit() -> bool:
+	return _master_lamp > 0.35
+
+
 func summary() -> String:
 	return "Vignette %.2f   Blur %.1f px   Wobble %.1f px\nShake %.3f°   Fog %.0f%%   Tint %.0f%%   Condensation %.0f%%\nCO2 lamp %.0f%%   Master alarm %.0f%%   Light %.0f%%   Blink %.0f%%" % [
 		_vignette, _blur_px, _wobble_px,

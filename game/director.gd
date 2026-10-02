@@ -46,6 +46,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		hud_visibility_changed.emit(hud_visible)
 	elif event.is_action_pressed("toggle_fullscreen"):
 		_toggle_fullscreen()
+	elif event.is_action_pressed("toggle_mute"):
+		_toggle_mute()
+	elif event.is_action_pressed("silence_alarm"):
+		_silence_alarm()
 	elif event.is_action_pressed("restart"):
 		_restart()
 	else:
@@ -83,6 +87,26 @@ func _restart() -> void:
 		return
 	_restart_armed_until_ms = now_ms + roundi(Tuning.RESTART_CONFIRM_S * 1000.0)
 	notice_requested.emit(RESTART_NOTICE, Tuning.RESTART_CONFIRM_S)
+
+
+func _bio() -> Node:
+	return get_tree().get_first_node_in_group("bio_audio")
+
+
+func _toggle_mute() -> void:
+	var bio := _bio()
+	if bio == null:
+		return
+	var is_muted: bool = bio.toggle_mute()
+	notice_requested.emit("Muted." if is_muted else "Sound on.", Tuning.CAPTION_HOLD_S)
+
+
+func _silence_alarm() -> void:
+	var bio := _bio()
+	if bio == null:
+		return
+	var stopped: bool = bio.silence_alarm()
+	notice_requested.emit("Alarm silenced." if stopped else "No alarm.", Tuning.CAPTION_HOLD_S)
 
 
 func _toggle_fullscreen() -> void:

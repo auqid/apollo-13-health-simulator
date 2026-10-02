@@ -9,6 +9,8 @@ const Tuning := preload("res://sim/tuning.gd")
 const UiStyle := preload("res://scenes/ui/ui_style.gd")
 const Cabin := preload("res://scenes/cabin/cabin.gd")
 const Effects := preload("res://fx/effects.gd")
+const BioAudio := preload("res://audio/bio_audio.gd")
+const AudioMix := preload("res://audio/audio_mix.gd")
 
 ## Values the panel can hold, with the range each number box offers.
 const ENV_FIELDS: Array[Dictionary] = [
@@ -44,6 +46,7 @@ var _readout: Label
 var _effect_buttons: Dictionary = {}
 var _effect_strength: HSlider
 var _effect_summary: Label
+var _sound_summary: Label
 
 
 func _ready() -> void:
@@ -100,6 +103,7 @@ func _build() -> void:
 	_build_clock(column)
 	_build_view(column)
 	_build_effects(column)
+	_build_sound(column)
 	_build_jumps(column)
 	_build_choices(column)
 	_build_holds(column)
@@ -173,16 +177,60 @@ func _build_effects(column: VBoxContainer) -> void:
 	_mark_effect_mode(Effects.MODE_LIVE)
 
 
+func _build_sound(column: VBoxContainer) -> void:
+	column.add_child(_heading("Sound"))
+	for bus_name in AudioMix.BUSES:
+		var line := HBoxContainer.new()
+		var name_label := _text(bus_name)
+		name_label.custom_minimum_size.x = 72
+		line.add_child(name_label)
+		var slider := HSlider.new()
+		slider.min_value = 0.0
+		slider.max_value = 100.0
+		slider.step = 1.0
+		slider.value = 100.0
+		slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		slider.focus_mode = Control.FOCUS_NONE
+		slider.value_changed.connect(_on_bus_volume.bind(bus_name))
+		line.add_child(slider)
+		column.add_child(line)
+	var buttons := HBoxContainer.new()
+	buttons.add_child(_button("Play test voice", _on_test_voice))
+	column.add_child(buttons)
+	_sound_summary = _text("")
+	_sound_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(_sound_summary)
+
+
 func _process(_delta: float) -> void:
 	if not visible or _effect_summary == null:
 		return
 	var effects: Effects = _effects()
 	if effects != null:
 		_effect_summary.text = effects.summary()
+	var bio: BioAudio = _bio()
+	if bio != null and _sound_summary != null:
+		_sound_summary.text = bio.summary()
 
 
 func _effects() -> Effects:
 	return get_tree().get_first_node_in_group(Effects.GROUP)
+
+
+func _bio() -> BioAudio:
+	return get_tree().get_first_node_in_group(BioAudio.GROUP)
+
+
+func _on_bus_volume(percent: float, bus_name: String) -> void:
+	var bio: BioAudio = _bio()
+	if bio != null:
+		bio.set_bus_linear(bus_name, percent / 100.0)
+
+
+func _on_test_voice() -> void:
+	var bio: BioAudio = _bio()
+	if bio != null:
+		bio.play_test_voice()
 
 
 func _on_effect_mode(mode_name: String) -> void:
