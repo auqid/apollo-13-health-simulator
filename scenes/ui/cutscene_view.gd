@@ -7,10 +7,11 @@ extends CanvasLayer
 const UiStyle := preload("res://scenes/ui/ui_style.gd")
 const Tuning := preload("res://sim/tuning.gd")
 const SimState := preload("res://sim/sim_state.gd")
+const FacePhoto := preload("res://scenes/ui/face_photo.gd")
 
 const GROUP := "cutscene_view"
 ## "Name: words" at the start of a subtitle line, like "Lovell:" or "Photographic helicopter:".
-## The name is drawn dimmer than the words.
+## The name is drawn dimmer than the words, and their photo, if "people" has one, sits beside it.
 const SPEAKER_PATTERN := "^([A-Z][A-Za-z]+(?: [a-z]+)*): "
 
 var _clip: Control
@@ -24,6 +25,8 @@ var _clock: Label
 var _caption_area: MarginContainer
 var _caption_box: PanelContainer
 var _caption: RichTextLabel
+## Photos beside a subtitle: the first speaker on the left, a second one on the right.
+var _speaker_faces: Array[FacePhoto] = []
 var _caption_text: String = ""
 ## Seconds until the caption fades by itself; 0 keeps it until it is replaced or cleared.
 var _caption_left_s: float = 0.0
@@ -208,6 +211,44 @@ func _set_caption_text(text: String) -> void:
 		UiStyle.CAPTION_MAX_WIDTH, UiStyle.SIZE_SUBTITLE)
 	_caption.custom_minimum_size.x = minf(ceilf(measured.x) + UiStyle.CAPTION_WRAP_SLACK, UiStyle.CAPTION_MAX_WIDTH)
 	_caption.text = "[center]%s[/center]" % _bbcode(text)
+	_show_speaker_faces(text)
+
+
+## The people speaking in a caption, in order and each once: "Lovell: …\nBrand: …" gives both.
+static func speakers(text: String) -> PackedStringArray:
+	var pattern := RegEx.create_from_string(SPEAKER_PATTERN)
+	var names: PackedStringArray = []
+	for line: String in text.split("\n"):
+		var found: RegExMatch = pattern.search(line)
+		if found != null and found.get_string(1) not in names:
+			names.append(found.get_string(1))
+	return names
+
+
+## Which speaker photos are showing, left to right, for the tests.
+func speaker_faces_shown() -> int:
+	return _speaker_faces.filter(func(face: FacePhoto) -> bool: return face.visible).size()
+
+
+## A crew member's photo shows how they are right now; Mission Control's stay as they are.
+func _show_speaker_faces(text: String) -> void:
+	var host := get_node_or_null("/root/Game")
+	var people: Dictionary = {}
+	var state: SimState = null
+	if host != null:
+		people = host.get("events").get("people", {}) if host.get("events") is Dictionary else {}
+		state = host.get("state")
+	var names: PackedStringArray = speakers(text)
+	for i in _speaker_faces.size():
+		var face: FacePhoto = _speaker_faces[i]
+		face.visible = i < names.size() and face.show_person(people, names[i])
+		if not face.visible:
+			continue
+		var crew_id: Variant = SimState.CREW_NAMES.find_key(names[i])
+		if crew_id != null and state != null:
+			face.react(state.crew[crew_id], state.env)
+		else:
+			face.calm()
 
 
 ## Escapes the text and colours the speaker's name at the start of each line.
@@ -301,7 +342,18 @@ func _build() -> void:
 	_caption.add_theme_color_override("default_color", UiStyle.PLACARD_WHITE)
 	_caption.add_theme_constant_override("outline_size", UiStyle.CAPTION_OUTLINE_SIZE)
 	_caption.add_theme_color_override("font_outline_color", UiStyle.CAPTION_OUTLINE)
-	_caption_box.add_child(_caption)
+	_caption.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var speech := HBoxContainer.new()
+	speech.add_theme_constant_override("separation", UiStyle.CAPTION_FACE_GAP)
+	speech.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for side in 2:
+		var face := FacePhoto.new(UiStyle.CAPTION_FACE_SIZE)
+		face.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		_speaker_faces.append(face)
+	speech.add_child(_speaker_faces[0])
+	speech.add_child(_caption)
+	speech.add_child(_speaker_faces[1])
+	_caption_box.add_child(speech)
 	center.add_child(_caption_box)
 	_caption_area.add_child(center)
 	add_child(_caption_area)

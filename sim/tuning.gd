@@ -202,6 +202,23 @@ const TIMESKIP_SLOW_H_PER_S: float = 0.012
 # --- Display scales ---
 const HUD_CO2_BAR_MAX_MMHG: float = 20.0
 
+# --- The crew on screen (scenes/ui/crew_look.gd): status words and how their photos react ---
+## "Cold" below this cabin temperature; "shivering" below FX_SHAKE_BELOW_C.
+const CREW_COLD_BELOW_C: float = 12.0
+const CREW_TIRED_FATIGUE: float = 0.6
+const CREW_EXHAUSTED_FATIGUE: float = 0.8
+const CREW_THIRSTY_HYDRATION: float = 0.7
+## With nothing else wrong, "heart racing" from this rate (just after the explosion).
+const CREW_HEART_RACING_BPM: float = 95.0
+## The status line names at most this many things, most serious first.
+const CREW_STATUS_WORDS: int = 2
+## The fever flush starts at this body temperature and is full at FEVER_PEAK_C.
+const CREW_FLUSH_FROM_C: float = 37.2
+## Photos start to look worn out from this fatigue and are fully drained at 1.
+const CREW_TIRED_FROM: float = 0.45
+## Each photo swells very slightly with every breath, at that crew member's breathing rate.
+const CREW_BREATH_SCALE: float = 0.02
+
 # --- Cabin light level (SPEC.md section 4): floor + span x (power margin / 100) ---
 const LIGHT_LEVEL_FLOOR: float = 0.35
 const LIGHT_LEVEL_SPAN: float = 0.65

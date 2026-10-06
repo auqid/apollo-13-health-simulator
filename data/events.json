@@ -412,6 +412,11 @@
   "captions": {
     "fever": "Haise is running a fever."
   },
+  "people": {
+    "Lovell": {"face": "res://assets/images/face_lovell.jpg", "role": "Commander"},
+    "Swigert": {"face": "res://assets/images/face_swigert.jpg", "role": "Command Module pilot"},
+    "Haise": {"face": "res://assets/images/face_haise.jpg", "role": "Lunar Module pilot"}
+  },
   "scorecard": {
     "title": "Every path brings them home. How much margin did you leave them?",
     "you_column": "You",

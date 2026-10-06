@@ -166,7 +166,10 @@ Burns, ignition GET and duration:
 Keep the 3D view as the main thing on screen. The HUD is a compact side panel.
 
 - **Top left:** mission clock (GET hhh:mm:ss) and time since the explosion.
-- **Right panel:** three crew rows (name, HR, SpO2, breathing rate, body temperature). The focused crew member is highlighted, and the heartbeat follows them.
+- **Right panel:** three crew rows (photo, name, HR, SpO2, breathing rate, body temperature). The focused crew member is highlighted, and the heartbeat follows them.
+- **Crew photos:** each row shows that astronaut's face, cropped from the NASA crew portrait, so the room watches people as well as numbers. The photo reacts to the state, slowly and without flashing: colour drains toward blue as the cabin cools, it trembles a pixel or two below 10 °C (with the cabin camera's shiver), Haise's face flushes as his fever rises, and it greys and dims as fatigue builds. It swells very slightly with each breath, at that astronaut's breathing rate, and a small heart beside the heart rate beats at that rate.
+- **Crew status:** a line under each name gives up to two plain words, most serious first: fever, breathing hard (CO2 over the safe limit), shivering or cold, exhausted or tired, thirsty; otherwise heart racing or steady. Fever and breathing hard are shown in amber. The numbers stay in the columns, so the words stay short.
+- **Speakers' photos:** a subtitle that starts with a speaker's name ("Lovell: …") shows their photo beside the line, from `people` in `data/events.json`. In a two-person exchange, the first speaker is on the left and the second on the right. A crew member's photo shows how they are at that moment; Mission Control's photos stay as they are.
 - **Bottom of panel:** cabin temperature, CO2 (a bar with the 7.6 mmHg safe-limit marker), cabin pressure, water %, power margin.
 - **Panel label:** "Modern sensors on a 1970 crew." SpO2 monitoring didn't exist on Apollo, so this nods to what our team builds.
 

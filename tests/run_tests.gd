@@ -17,6 +17,8 @@ const AudioMix := preload("res://audio/audio_mix.gd")
 const MapPath := preload("res://scenes/space/map_path.gd")
 const Exterior := preload("res://scenes/space/exterior.gd")
 const UiStyle := preload("res://scenes/ui/ui_style.gd")
+const CrewLook := preload("res://scenes/ui/crew_look.gd")
+const CutsceneView := preload("res://scenes/ui/cutscene_view.gd")
 
 const EFFECT_KEYS: Array[String] = ["flags", "power_margin", "fatigue"]
 const TEXT_KEYS: Array[String] = ["text", "question", "label", "hint", "note", "title", "closing", "history", "caption",
@@ -29,6 +31,7 @@ const SESSION_TESTS: Array[String] = [
 	"test_a_vote_reveals_the_1970_call",
 	"test_subtitles_follow_the_mission_audio",
 	"test_pause_holds_everything_until_resumed",
+	"test_subtitles_show_the_speakers_photos",
 ]
 ## Frame step for tests that play the session in real time.
 const FRAME_S: float = 1.0 / 60.0
@@ -184,7 +187,7 @@ func _collect_asset_paths(node: Variant, out: Array[String]) -> void:
 	if node is Dictionary:
 		for key: String in node:
 			var value: Variant = node[key]
-			if (key == "audio" or key == "image" or key == "photo") and value is String and not value.is_empty():
+			if key in ["audio", "image", "photo", "face"] and value is String and not value.is_empty():
 				out.append(value)
 			elif key == "images" and value is Array:
 				for path: Variant in value:
@@ -444,6 +447,82 @@ func test_asset_paths_point_into_assets() -> void:
 		_check(path.begins_with("res://assets/audio/") or path.begins_with("res://assets/images/"),
 			"asset path is under assets/: %s" % path)
 		_check(ResourceLoader.exists(path), "asset is in the project: %s" % path)
+
+
+func test_everyone_on_screen_has_a_photo() -> void:
+	var people: Dictionary = _load_events().get("people", {})
+	for crew_id in SimState.CREW_IDS:
+		_check(people.has(SimState.CREW_NAMES[crew_id]), "%s is in people" % SimState.CREW_NAMES[crew_id])
+	for person: String in people:
+		var path: String = str(people[person].get("face", ""))
+		_check(ResourceLoader.exists(path), "%s's photo is in the project: %s" % [person, path])
+		_check(not str(people[person].get("role", "")).is_empty(), "%s has a role" % person)
+	# Speakers are found at the start of each subtitle line, each once, in order.
+	_check(CutsceneView.speakers("Lovell: “One hundred per cent.”\nBrand: “Roger.”") == PackedStringArray(["Lovell", "Brand"]),
+		"both speakers of an exchange, in order")
+	_check(CutsceneView.speakers("Lovell: “One.”\nLovell: “Two.”") == PackedStringArray(["Lovell"]), "a speaker shows once")
+	_check(CutsceneView.speakers("Haise is running a fever.").is_empty(), "a story caption has no speaker")
+	# Every crew member who speaks in a subtitle has a photo to show beside the line.
+	var clips: Dictionary = {}
+	_collect_subtitled(_load_events(), clips)
+	for path: String in clips:
+		for cue: Dictionary in clips[path]:
+			for person: String in CutsceneView.speakers(str(cue["text"])):
+				if SimState.CREW_NAMES.values().has(person):
+					_check(people.has(person), "%s, speaking in %s, has a photo" % [person, path.get_file()])
+
+
+# --- Crew look tests ---
+
+func test_crew_status_reads_plainly() -> void:
+	var env := SimState.Env.new()
+	var member := SimState.CrewMember.new()
+	member.hr = Tuning.CREW_HEART_RACING_BPM - 10.0
+	_check(CrewLook.status(member, env) == "Steady", "a calm crew member is steady")
+	_check(not CrewLook.is_warning(member, env), "steady is not a warning")
+	member.hr = Tuning.CREW_HEART_RACING_BPM
+	_check(CrewLook.status(member, env) == "Heart racing", "a fast heart shows when nothing else does")
+	env.cabin_temp_c = Tuning.CREW_COLD_BELOW_C - 0.5
+	_check(CrewLook.status(member, env) == "Cold", "a cool cabin makes them cold")
+	env.cabin_temp_c = Tuning.FX_SHAKE_BELOW_C - 0.5
+	_check(CrewLook.status(member, env) == "Shivering", "below the shivering line they shiver")
+	member.fatigue = Tuning.CREW_TIRED_FATIGUE
+	_check(CrewLook.status(member, env) == "Shivering, tired", "two words, most serious first")
+	member.fatigue = Tuning.CREW_EXHAUSTED_FATIGUE
+	_check(CrewLook.status(member, env) == "Shivering, exhausted", "worn out further is exhausted")
+	_check(not CrewLook.is_warning(member, env), "cold and tired are shown, but not as warnings")
+	member.body_temp_c = Tuning.FEVER_CAPTION_C
+	_check(CrewLook.status(member, env) == "Fever, shivering", "a fever comes first")
+	_check(CrewLook.is_warning(member, env), "a fever is a warning")
+	env.co2_mmhg = Tuning.CO2_ALARM_MMHG + 1.0
+	_check(CrewLook.status(member, env) == "Fever, breathing hard", "high CO2 comes before the cold")
+	member.body_temp_c = Tuning.BODY_TEMP_C
+	_check(CrewLook.is_warning(member, env), "high CO2 is a warning")
+	member.hydration = Tuning.CREW_THIRSTY_HYDRATION - 0.1
+	env.co2_mmhg = Tuning.CO2_START_MMHG
+	env.cabin_temp_c = Tuning.CABIN_START_C
+	member.fatigue = Tuning.FATIGUE_START
+	_check(CrewLook.status(member, env) == "Thirsty", "short of water they are thirsty")
+	_check(Tuning.CREW_STATUS_WORDS >= 1, "the status shows at least one word")
+
+
+func test_crew_photos_show_cold_fever_and_tiredness() -> void:
+	var env := SimState.Env.new()
+	var member := SimState.CrewMember.new()
+	_check(CrewLook.cold(env) == 0.0 and CrewLook.shiver(env) == 0.0, "a warm cabin leaves the photo as it is")
+	_check(CrewLook.flush(member) == 0.0, "a normal temperature shows no flush")
+	_check(CrewLook.tired(member) == 0.0, "a rested crew member does not look worn out")
+	var last_cold: float = 0.0
+	for cabin_c: float in [15.0, 10.0, 6.0, Tuning.FX_TINT_FULL_C]:
+		env.cabin_temp_c = cabin_c
+		_check(CrewLook.cold(env) >= last_cold, "colder looks colder (%.1f °C)" % cabin_c)
+		last_cold = CrewLook.cold(env)
+	_near(CrewLook.cold(env), 1.0, 0.001, "full cold tint at the coldest")
+	_check(CrewLook.shiver(env) > 0.0 and CrewLook.shiver(env) <= 1.0, "they tremble in the cold")
+	member.body_temp_c = Tuning.FEVER_PEAK_C
+	_near(CrewLook.flush(member), 1.0, 0.001, "full flush at the peak of the fever")
+	member.fatigue = 1.0
+	_near(CrewLook.tired(member), 1.0, 0.001, "fully worn out at the most fatigue")
 
 
 # --- Tuning and history tests ---
@@ -1207,6 +1286,29 @@ func test_pause_holds_everything_until_resumed() -> void:
 	session.call("set_paused", true)
 	session.call("restart_now")
 	_check(not paused and session.get("phase") == "intro", "restarting while paused starts the intro running")
+
+
+## The photos beside a subtitle follow its speakers, from people in events.json.
+func test_subtitles_show_the_speakers_photos() -> void:
+	var played: Node = root.get_node_or_null("Game")
+	if played == null:
+		_check(false, "the Game autoload is loaded")
+		return
+	var view: CanvasLayer = CutsceneView.new()
+	root.add_child(view)
+	var shown: Dictionary = {
+		"Lovell: “Houston, we've had a problem.”": 1,
+		"Lovell: “Okay.”\nSwigert: “Roger.”": 2,
+		"Haise is running a fever.": 0,
+		"Photographic helicopter: “Splashdown.”": 0,
+	}
+	for text: String in shown:
+		view.call("show_caption", text)
+		var fade: Tween = view.get("_caption_tween")
+		fade.custom_step(UiStyle.CAPTION_FADE_S * 4.0)
+		_check(view.call("speaker_faces_shown") == shown[text], "%d photos beside '%s'" % [shown[text], text])
+	root.remove_child(view)
+	view.free()
 
 
 ## Clip path -> its subtitles, for every shot, timeskip caption or reentry step that has both.

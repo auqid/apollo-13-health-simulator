@@ -7,6 +7,9 @@ const SimModel := preload("res://sim/sim_model.gd")
 const Tuning := preload("res://sim/tuning.gd")
 const UiStyle := preload("res://scenes/ui/ui_style.gd")
 const Co2Bar := preload("res://scenes/ui/co2_bar.gd")
+const CrewLook := preload("res://scenes/ui/crew_look.gd")
+const HeartIcon := preload("res://scenes/ui/heart_icon.gd")
+const FacePhoto := preload("res://scenes/ui/face_photo.gd")
 
 const PANEL_LABEL := "Modern sensors on a 1970 crew."
 ## Crew vitals columns: state field, header, unit.
@@ -34,7 +37,7 @@ var _spot_trend: Label
 var _spot_last: float = NAN
 ## Spotlight key -> the sensor panel row it lights up.
 var _env_rows: Dictionary = {}
-## crew id -> {"row": PanelContainer, "name": Label, <vital field>: Label}
+## crew id -> {"row", "name", "status", "face", "heart", <vital field>: Label}
 var _rows: Dictionary = {}
 var _cabin_temp: Label
 var _co2: Label
@@ -206,7 +209,7 @@ func _header_row(key: String, color: Color) -> Control:
 	line.add_theme_constant_override("separation", 0)
 	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var spacer := Control.new()
-	spacer.custom_minimum_size.x = UiStyle.NAME_COLUMN_WIDTH
+	spacer.custom_minimum_size.x = UiStyle.FACE_SIZE.x + UiStyle.ROW_PADDING + UiStyle.CREW_NAME_WIDTH
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	line.add_child(spacer)
@@ -219,25 +222,60 @@ func _header_row(key: String, color: Color) -> Control:
 	return margin
 
 
+## One crew member: their photo (reacting to how they are), name and a short status, then vitals.
 func _crew_row(crew_id: String) -> Control:
 	var row := PanelContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var line := HBoxContainer.new()
 	line.add_theme_constant_override("separation", 0)
 	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var face := FacePhoto.new(UiStyle.FACE_SIZE)
+	face.show_person(Game.events.get("people", {}), SimState.CREW_NAMES[crew_id])
+	line.add_child(face)
+	var gap := Control.new()
+	gap.custom_minimum_size.x = UiStyle.ROW_PADDING
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	line.add_child(gap)
+	# Name and vitals on one line, and under them a status that can use the whole width.
+	var who := VBoxContainer.new()
+	who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	who.alignment = BoxContainer.ALIGNMENT_CENTER
+	who.add_theme_constant_override("separation", 0)
+	who.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 0)
+	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var name_label := UiStyle.label(SimState.CREW_NAMES[crew_id], UiStyle.FONT_HUD, UiStyle.SIZE_NAME, UiStyle.TEXT_DIM)
-	name_label.custom_minimum_size.x = UiStyle.NAME_COLUMN_WIDTH
+	name_label.custom_minimum_size.x = UiStyle.CREW_NAME_WIDTH
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	name_label.size_flags_vertical = Control.SIZE_FILL
-	line.add_child(name_label)
-	var cells: Dictionary = {"row": row, "name": name_label}
+	name_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	top.add_child(name_label)
+	who.add_child(top)
+	var status := UiStyle.label("", UiStyle.FONT_HUD_LIGHT, UiStyle.SIZE_LABEL, UiStyle.TEXT_DIM)
+	status.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	who.add_child(status)
+	line.add_child(who)
+	var cells: Dictionary = {"row": row, "name": name_label, "status": status, "face": face}
 	for column: Dictionary in VITAL_COLUMNS:
 		var value := UiStyle.label("", UiStyle.FONT_HUD_STRONG, UiStyle.SIZE_VITAL, UiStyle.PLACARD_WHITE, true)
-		value.custom_minimum_size.x = UiStyle.VITAL_COLUMN_WIDTH
 		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		line.add_child(value)
 		cells[column["field"]] = value
+		if column["field"] != "hr":
+			value.custom_minimum_size.x = UiStyle.VITAL_COLUMN_WIDTH
+			top.add_child(value)
+			continue
+		# Heart rate: a heart beating at that rate, then the number.
+		var cell := HBoxContainer.new()
+		cell.custom_minimum_size.x = UiStyle.VITAL_COLUMN_WIDTH
+		cell.alignment = BoxContainer.ALIGNMENT_END
+		cell.add_theme_constant_override("separation", UiStyle.HEART_ICON_GAP)
+		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var heart := HeartIcon.new()
+		heart.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		cell.add_child(heart)
+		cell.add_child(value)
+		top.add_child(cell)
+		cells["heart"] = heart
 	row.add_child(line)
 	_rows[crew_id] = cells
 	return row
@@ -319,6 +357,12 @@ func _on_state_changed(state: SimState) -> void:
 		cells["rr"].text = "%d" % roundi(member.rr)
 		cells["body_temp_c"].text = "%.1f" % member.body_temp_c
 		_set_caution(cells["body_temp_c"], member.body_temp_c >= Tuning.FEVER_CAPTION_C)
+		cells["status"].text = CrewLook.status(member, state.env)
+		var warning: bool = CrewLook.is_warning(member, state.env)
+		cells["status"].add_theme_color_override("font_color", UiStyle.CAUTION_AMBER if warning else UiStyle.TEXT_DIM)
+		cells["face"].react(member, state.env)
+		cells["heart"].bpm = member.hr
+		cells["heart"].color = UiStyle.CAUTION_AMBER if member.hr >= Tuning.CREW_HEART_RACING_BPM else UiStyle.SENSOR_TEAL
 	_cabin_temp.text = "%.1f °C" % state.env.cabin_temp_c
 	_co2.text = "%.1f mmHg" % state.env.co2_mmhg
 	_set_caution(_co2, SimModel.co2_alarm(state))
