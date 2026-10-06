@@ -43,6 +43,16 @@ const SPLASH_DIP := -1.7
 ## When Odyssey meets the water in the splash shot.
 const SPLASH_T := 0.12
 ## The ring of foam spreading from the splash, in metres across.
+## After splashdown the crew lets the mains go. They slump downwind over this share of the shot,
+## lose their splay, and lie flat on the sea side by side, a little crumpled.
+const CHUTE_FALL_T := 0.45
+const CHUTE_DOWNWIND := Vector3(-0.95, 0.0, -0.3)
+const CHUTE_DRIFT_M := 22.0
+const CHUTE_SPREAD_M := 9.0
+const CHUTE_SINK_M := 1.9
+const CHUTE_SLACK := 0.35
+const CHUTE_FLAT := 0.06
+const CHUTE_LYING_SCALE := 0.6
 const FOAM_START_M := 6.0
 const FOAM_END_M := 22.0
 ## A big sea that fades into haze, with a fine enough grid near the camera for the swell.
@@ -110,7 +120,9 @@ var _wake: PuffCloud
 var _bow_glow: MeshInstance3D
 var _chutes: Node3D
 var _mains: Array[Node3D] = []
+var _main_leans: Array[Basis] = []
 var _drogues: Array[Node3D] = []
+var _riser: MeshInstance3D
 var _clouds: PuffCloud
 var _ocean: MeshInstance3D
 var _spray: PuffCloud
@@ -492,7 +504,7 @@ func _apply_parachutes(t: float) -> void:
 	var height: float = descent_height(t)
 	_entry.position = Vector3(0.0, height, 0.0)
 	_place_hanging_capsule(t)
-	_chutes.visible = true
+	_hang_chutes()
 	for rig: Node3D in _drogues:
 		rig.visible = open.x > 0.02
 		rig.scale = Vector3(maxf(open.x, 0.02), lerpf(0.45, 1.0, open.x), maxf(open.x, 0.02))
@@ -513,18 +525,40 @@ func _apply_splash(t: float) -> void:
 		height = lerpf(SPLASH_DIP, FLOAT_HEIGHT, settle) + sin(since * TAU * 2.2) * 0.14 * settle
 	_entry.position = Vector3(0.0, height, 0.0)
 	_place_hanging_capsule(t)
-	# The mains are let go as Odyssey hits the water.
-	_chutes.visible = t < SPLASH_T
-	for rig: Node3D in _mains:
-		rig.visible = true
-		rig.scale = Vector3.ONE
+	_hang_chutes()
 	for rig: Node3D in _drogues:
 		rig.visible = false
+	# The mains are let go as Odyssey hits the water: they slump downwind and lie on the sea.
+	var fall: float = smoothstep(SPLASH_T, SPLASH_T + CHUTE_FALL_T, t)
+	var lying: Vector3 = CHUTE_DOWNWIND.normalized() * CHUTE_DRIFT_M - Vector3(0.0, height + CHUTE_SINK_M, 0.0)
+	_chutes.position = _chutes.position.lerp(lying, fall)
+	_riser.visible = fall <= 0.0
+	# Falling, the lines go slack and the canopies crumple; on the water they flatten out.
+	var slack: float = smoothstep(0.0, 0.5, fall)
+	var flat: float = smoothstep(0.55, 1.0, fall)
+	for i in _mains.size():
+		var rig: Node3D = _mains[i]
+		var around: float = TAU * float(i) / float(_mains.size())
+		var spread: float = lerpf(1.0, CHUTE_LYING_SCALE, slack)
+		rig.visible = true
+		rig.basis = _main_leans[i].slerp(Basis.IDENTITY, flat)
+		rig.scale = Vector3(spread, lerpf(lerpf(1.0, CHUTE_SLACK, slack), CHUTE_FLAT, flat), spread)
+		rig.position = Vector3(cos(around), 0.0, sin(around)) * CHUTE_SPREAD_M * fall
 	_spray.set_time(t)
 	var ring: float = smoothstep(SPLASH_T, 0.95, t)
 	_foam.visible = t >= SPLASH_T
 	_foam.scale = Vector3.ONE * lerpf(FOAM_START_M, FOAM_END_M, ring)
 	_foam_material.albedo_color = Color(1.0, 1.0, 1.0, 0.8 * (1.0 - ring))
+
+
+## The parachutes as they hang above the capsule, splayed, on the riser.
+func _hang_chutes() -> void:
+	_chutes.visible = true
+	_chutes.position = Vector3(0.0, CAPSULE_TOP + RISER, 0.0)
+	_riser.visible = true
+	for i in _mains.size():
+		_mains[i].position = Vector3.ZERO
+		_mains[i].basis = _main_leans[i]
 
 
 ## The capsule hangs under its risers, swinging gently; afloat it rocks upright.
@@ -774,14 +808,15 @@ func _build_parachutes() -> void:
 	_chutes.position = Vector3(0.0, CAPSULE_TOP + RISER, 0.0)
 	_entry.add_child(_chutes)
 	var riser_material := _line_material(Color(0.78, 0.76, 0.7))
-	var riser := MeshInstance3D.new()
-	riser.mesh = _lines(PackedVector3Array([Vector3.ZERO, Vector3(0.0, -RISER, 0.0)]))
-	riser.material_override = riser_material
-	riser.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_chutes.add_child(riser)
+	_riser = MeshInstance3D.new()
+	_riser.mesh = _lines(PackedVector3Array([Vector3.ZERO, Vector3(0.0, -RISER, 0.0)]))
+	_riser.material_override = riser_material
+	_riser.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_chutes.add_child(_riser)
 	var stripes := _canopy_material()
 	for slot in 3:
 		var lean := Basis(Vector3.UP, TAU * float(slot) / 3.0) * Basis(Vector3.RIGHT, MAIN_SPLAY)
+		_main_leans.append(lean)
 		_mains.append(_canopy(MAIN_RADIUS, MAIN_LINES, stripes, riser_material, lean))
 	for side: float in [-1.0, 1.0]:
 		_drogues.append(_canopy(DROGUE_RADIUS, DROGUE_LINES, stripes, riser_material, Basis(Vector3.FORWARD, side * 0.16)))
