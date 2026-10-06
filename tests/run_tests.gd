@@ -1065,6 +1065,18 @@ func test_cold_effects_follow_the_spec() -> void:
 	_check(FxMapping.tint(6.0) > FxMapping.tint(9.0), "tint grows as the cabin cools")
 
 
+## The CO2 mail box hangs in the cabin from when the chosen adapter starts working.
+func test_mailbox_appears_when_the_adapter_works() -> void:
+	for adapter: String in Tuning.CO2_CURVE_BY_ADAPTER:
+		var working: float = Tuning.CO2_CURVE_BY_ADAPTER[adapter]["peak_get"]
+		_check(not FxMapping.mailbox_up(adapter, working - 0.05), "%s: no mail box before it is built" % adapter)
+		_check(FxMapping.mailbox_up(adapter, working), "%s: the mail box hangs there once it works" % adapter)
+	_check(FxMapping.mailbox_up("now", Tuning.CO2_CURVE_BY_ADAPTER["now"]["peak_get"])
+		and not FxMapping.mailbox_up("wait", Tuning.CO2_CURVE_BY_ADAPTER["now"]["peak_get"]),
+		"building it now puts it up before waiting for Houston would")
+	_check(not FxMapping.mailbox_up("wait", Tuning.EXPLOSION_GET), "none at the explosion")
+
+
 func test_condensation_follows_the_spec() -> void:
 	_near(FxMapping.condensation(7.0, 119.0, "late", false), 0.0, 1e-9, "not before GET 120")
 	_near(FxMapping.condensation(7.0, 121.0, "late", false), 1.0, 1e-9, "on below 8 °C after GET 120")

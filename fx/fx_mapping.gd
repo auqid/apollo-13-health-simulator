@@ -30,6 +30,12 @@ static func shake_rad(cabin_temp_c: float) -> float:
 	return clampf((Tuning.FX_SHAKE_BELOW_C - cabin_temp_c) / Tuning.FX_SHAKE_SPAN_C, 0.0, 1.0) * Tuning.FX_SHAKE_MAX_RAD
 
 
+## Whether the CO2 adapter is built and working: from the CO2 peak of the chosen adapter on.
+static func mailbox_up(adapter: String, at_get: float) -> bool:
+	var curve: Dictionary = Tuning.CO2_CURVE_BY_ADAPTER.get(adapter, {})
+	return not curve.is_empty() and at_get >= float(curve["peak_get"])
+
+
 ## Breath fog density: none from 12 °C up, full at 3 °C.
 static func fog(cabin_temp_c: float) -> float:
 	return clampf(inverse_lerp(Tuning.FX_FOG_BELOW_C, Tuning.FX_FOG_FULL_C, cabin_temp_c), 0.0, 1.0)

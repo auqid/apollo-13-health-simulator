@@ -254,6 +254,7 @@ The cabin is 1970 hardware; the HUD is today's sensors looking at it. The contra
 - At splashdown the crew releases the three mains: they go slack, drift downwind and lie flat on the sea behind the capsule, as in the recovery photos.
 
 ### Cabin build notes
+- Once the CO2 adapter is built (the CO2 peak of the chosen option, GET 91.5 on the 1970 path), the "mail box" hangs on the right wall beside the CO2 panel, in view of E3's camera: an Odyssey canister with its perforated face, gray tape across it, a plastic bag and the suit hose, as in NASA photo AS13-62-8929.
 - Use low-poly geometry: boxes and extrusions for the front panel, side panels and overhead.
 - Draw panel details as simple textures (gauge faces, rows of toggle switches) instead of modelling them.
 - Place a textured sphere outside the windows for Earth or the Moon.

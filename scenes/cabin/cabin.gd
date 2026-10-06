@@ -47,6 +47,21 @@ const BREAKER_PANEL_YAW_DEG := 12.0
 const ECS_PANEL_CENTER := Vector3(1.14, 1.27, 0.61)
 const CANISTER_POSITION := Vector3(0.98, 0.62, 0.64)
 const CANISTER_SIZE := Vector2(0.08, 0.26)
+## The CO2 "mail box" (NASA photo AS13-62-8929): one of Odyssey's square canisters with its
+## perforated face, taped into a plastic bag, with a suit hose running down from it. It hangs on
+## the right wall below the breakers, in view of the CO2 panel camera, once it is built.
+const MAILBOX_CENTER := Vector3(1.01, 1.1, 0.2)
+## Depth from the wall, height, width.
+const MAILBOX_SIZE := Vector3(0.22, 0.22, 0.24)
+const MAILBOX_GRILLE := 3
+const MAILBOX_CANISTER := Color("#A9ACA6")
+## The face is perforated metal: holes this far apart.
+const MAILBOX_GRILLE_METAL := Color("#8A8D88")
+const MAILBOX_PERFORATED := Color("#2E312E")
+const MAILBOX_HOLE_PITCH_M := 0.008
+const MAILBOX_TAPE := Color("#A7A9A3")
+const MAILBOX_BAG := Color(0.93, 0.95, 0.96, 0.32)
+const MAILBOX_HOSE := Color("#E4E2DA")
 const OVERHEAD_WINDOW := Rect2(-0.62, -0.62, 0.3, 0.24)
 const HATCH_CENTER := Vector3(0.05, 0.0, 0.25)
 const HATCH_DEPTH := 0.04
@@ -106,6 +121,7 @@ var _sun: DirectionalLight3D
 var _wall_material: StandardMaterial3D
 var _dark_material: StandardMaterial3D
 var _metal_material: StandardMaterial3D
+var _mailbox: Node3D
 
 
 func _ready() -> void:
@@ -121,6 +137,7 @@ func build() -> void:
 	_build_bulkhead()
 	_build_consoles()
 	_build_side_panels()
+	_build_mailbox()
 	_build_overhead()
 	_build_outside()
 	_build_lights()
@@ -168,6 +185,12 @@ func set_lamp(lamp: String, lit: bool) -> void:
 
 
 ## 0 is dark, 1 is fully lit; values in between let the effects fade a lamp.
+## Shows the CO2 adapter once the crew has built it.
+func set_mailbox(shown: bool) -> void:
+	if _mailbox != null:
+		_mailbox.visible = shown
+
+
 func set_lamp_level(lamp: String, level: float) -> void:
 	var material: StandardMaterial3D = _lamps.get(lamp)
 	if material != null:
@@ -336,6 +359,51 @@ func _build_side_panels() -> void:
 	canister.material_override = _metal_material
 	canister.position = CANISTER_POSITION
 	add_child(canister)
+
+
+func _build_mailbox() -> void:
+	_mailbox = Node3D.new()
+	_mailbox.position = MAILBOX_CENTER
+	_mailbox.visible = false
+	add_child(_mailbox)
+	var size: Vector3 = MAILBOX_SIZE
+	_mailbox_part(BoxMesh.new(), size, Vector3.ZERO, _plain_material(MAILBOX_CANISTER, 0.5))
+	# The perforated face, in squares, toward the cabin (-X).
+	var holes := _plain_material(Color.WHITE, 0.6)
+	var image := Image.create(8, 8, false, Image.FORMAT_RGB8)
+	image.fill(MAILBOX_GRILLE_METAL)
+	image.fill_rect(Rect2i(2, 2, 4, 4), MAILBOX_PERFORATED)
+	holes.albedo_texture = ImageTexture.create_from_image(image)
+	holes.uv1_triplanar = true
+	holes.uv1_scale = Vector3.ONE / MAILBOX_HOLE_PITCH_M
+	var cell: float = size.z / float(MAILBOX_GRILLE)
+	for row in MAILBOX_GRILLE:
+		for column in MAILBOX_GRILLE:
+			var at := Vector3(-size.x * 0.5 - 0.002, (float(row) - 1.0) * cell, (float(column) - 1.0) * cell)
+			_mailbox_part(BoxMesh.new(), Vector3(0.004, cell * 0.8, cell * 0.8), at, holes)
+	# Gray tape across the face, two strips each way, and the bag round the back half.
+	var tape := _plain_material(MAILBOX_TAPE, 0.65)
+	for offset: float in [-0.045, 0.045]:
+		_mailbox_part(BoxMesh.new(), Vector3(0.008, size.y + 0.01, 0.035), Vector3(-size.x * 0.5 - 0.004, 0.0, offset), tape)
+		_mailbox_part(BoxMesh.new(), Vector3(0.008, 0.035, size.z + 0.01), Vector3(-size.x * 0.5 - 0.006, offset, 0.0), tape)
+	var bag := _plain_material(MAILBOX_BAG, 0.25)
+	bag.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	bag.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_mailbox_part(BoxMesh.new(), Vector3(size.x * 0.6, size.y + 0.04, size.z + 0.04), Vector3(size.x * 0.22, 0.0, 0.0), bag)
+	# The suit hose down from the bottom of the bag.
+	var hose := MeshInstance3D.new()
+	hose.mesh = CabinMesh.tube(Vector3(0.02, -size.y * 0.5, 0.0), Vector3(0.0, -0.4, -0.02), Vector3(-0.22, -0.62, -0.14), 0.026, 14, 10)
+	hose.material_override = _plain_material(MAILBOX_HOSE, 0.75)
+	_mailbox.add_child(hose)
+
+
+func _mailbox_part(mesh: BoxMesh, size: Vector3, at: Vector3, material: Material) -> void:
+	mesh.size = size
+	var part := MeshInstance3D.new()
+	part.mesh = mesh
+	part.material_override = material
+	part.position = at
+	_mailbox.add_child(part)
 
 
 func _build_overhead() -> void:

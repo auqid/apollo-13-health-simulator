@@ -151,6 +151,8 @@ func _on_state_changed(state: SimState) -> void:
 	if mode == MODE_LIVE and (crossed or jumped_back):
 		play_explosion_dim()
 	_last_get = at_get
+	if cabin != null:
+		cabin.set_mailbox(FxMapping.mailbox_up(state.flags.adapter, at_get))
 
 
 # --- What each mode asks for ---
