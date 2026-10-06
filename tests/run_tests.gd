@@ -527,7 +527,7 @@ func test_crew_status_reads_plainly() -> void:
 func test_crew_photos_show_cold_fever_and_tiredness() -> void:
 	var env := SimState.Env.new()
 	var member := SimState.CrewMember.new()
-	_check(CrewLook.cold(env) == 0.0 and CrewLook.shiver(env) == 0.0, "a warm cabin leaves the photo as it is")
+	_check(CrewLook.cold(env) == 0.0, "a warm cabin leaves the photo as it is")
 	_check(CrewLook.flush(member) == 0.0, "a normal temperature shows no flush")
 	_check(CrewLook.tired(member) == 0.0, "a rested crew member does not look worn out")
 	var last_cold: float = 0.0
@@ -536,7 +536,6 @@ func test_crew_photos_show_cold_fever_and_tiredness() -> void:
 		_check(CrewLook.cold(env) >= last_cold, "colder looks colder (%.1f °C)" % cabin_c)
 		last_cold = CrewLook.cold(env)
 	_near(CrewLook.cold(env), 1.0, 0.001, "full cold tint at the coldest")
-	_check(CrewLook.shiver(env) > 0.0 and CrewLook.shiver(env) <= 1.0, "they tremble in the cold")
 	member.body_temp_c = Tuning.FEVER_PEAK_C
 	_near(CrewLook.flush(member), 1.0, 0.001, "full flush at the peak of the fever")
 	member.fatigue = 1.0

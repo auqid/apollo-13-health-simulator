@@ -1,7 +1,7 @@
 extends Control
 ## A person's photo in a small frame, from "people" in events.json. For the crew it shows how they
-## are (face.gdshader): cold, shivering, flushed with fever, worn out, and it swells very slightly
-## with each breath at their breathing rate. Mission Control photos stay as they are.
+## are (face.gdshader): cold, flushed with fever, worn out, and it swells very slightly with each
+## breath at their breathing rate. It never shakes. Mission Control photos stay as they are.
 
 const SimState := preload("res://sim/sim_state.gd")
 const Tuning := preload("res://sim/tuning.gd")
@@ -13,7 +13,6 @@ const FACE_SHADER := "res://scenes/ui/face.gdshader"
 var breaths_per_min: float = 0.0
 var _photo: TextureRect
 var _look: ShaderMaterial
-var _clock_s: float = 0.0
 var _breath_phase: float = 0.0
 
 
@@ -47,7 +46,6 @@ func show_person(people: Dictionary, person: String) -> bool:
 ## How a crew member is right now.
 func react(member: SimState.CrewMember, env: SimState.Env) -> void:
 	_look.set_shader_parameter("cold", CrewLook.cold(env))
-	_look.set_shader_parameter("shiver", CrewLook.shiver(env))
 	_look.set_shader_parameter("flush", CrewLook.flush(member))
 	_look.set_shader_parameter("tired", CrewLook.tired(member))
 	breaths_per_min = member.rr
@@ -55,7 +53,7 @@ func react(member: SimState.CrewMember, env: SimState.Env) -> void:
 
 ## The photo as it is, for someone in Mission Control.
 func calm() -> void:
-	for parameter: String in ["cold", "shiver", "flush", "tired"]:
+	for parameter: String in ["cold", "flush", "tired"]:
 		_look.set_shader_parameter(parameter, 0.0)
 	breaths_per_min = 0.0
 
@@ -63,8 +61,6 @@ func calm() -> void:
 func _process(delta: float) -> void:
 	if not visible:
 		return
-	_clock_s += delta
-	_look.set_shader_parameter("clock", _clock_s)
 	var breath: float = 0.0
 	if breaths_per_min > 0.0:
 		_breath_phase = fposmod(_breath_phase + TAU * breaths_per_min / 60.0 * delta, TAU)

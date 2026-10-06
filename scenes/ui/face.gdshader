@@ -1,25 +1,16 @@
-// A crew member's photo, reacting to how they are: drained toward blue in the cold, trembling
-// when shivering, flushed with fever, greyer and dimmer when worn out. Changes are gradual and
-// nothing flashes; the tremble moves the photo by a pixel or two.
+// A person's photo, reacting to how they are: drained toward blue in the cold, flushed with
+// fever, greyer and dimmer when worn out. Changes are gradual, and the photo never shakes or
+// flashes.
 shader_type canvas_item;
 
 uniform float cold : hint_range(0.0, 1.0) = 0.0;
-uniform float shiver : hint_range(0.0, 1.0) = 0.0;
 uniform float flush : hint_range(0.0, 1.0) = 0.0;
 uniform float tired : hint_range(0.0, 1.0) = 0.0;
 uniform vec3 cold_color : source_color = vec3(0.616, 0.722, 0.851);
 uniform vec3 flush_color : source_color = vec3(1.0, 0.45, 0.36);
-// How far shivering moves the photo, as a share of its size: about two pixels in the HUD.
-uniform float shiver_reach = 0.03;
-// Seconds of play, set by the HUD, so the tremble stops while the game is paused.
-uniform float clock = 0.0;
 
 void fragment() {
-	vec2 uv = UV;
-	if (shiver > 0.0) {
-		uv += vec2(sin(clock * 47.0), sin(clock * 39.0 + 1.3)) * shiver * shiver_reach;
-	}
-	vec4 photo = texture(TEXTURE, clamp(uv, vec2(0.0), vec2(1.0)));
+	vec4 photo = texture(TEXTURE, UV);
 	vec3 color = photo.rgb;
 	float luma = dot(color, vec3(0.299, 0.587, 0.114));
 	// Cold: the colour drains toward a cool blue.

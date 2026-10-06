@@ -1,6 +1,6 @@
 extends RefCounted
 ## How each crew member looks and feels on screen, worked out from the simulation: the short status
-## under their name, and how strongly their photo shows cold, shivering, fever and tiredness.
+## under their name, and how strongly their photo shows cold, fever and tiredness.
 ## Pure, so the tests can check it.
 
 const SimState := preload("res://sim/sim_state.gd")
@@ -40,11 +40,6 @@ static func is_warning(member: SimState.CrewMember, env: SimState.Env) -> bool:
 ## 0 to 1: how cold the photo looks, following the cabin's cold tint.
 static func cold(env: SimState.Env) -> float:
 	return clampf(FxMapping.tint(env.cabin_temp_c) / Tuning.FX_TINT_MAX, 0.0, 1.0)
-
-
-## 0 to 1: how hard the photo trembles, following the cabin camera's shivering.
-static func shiver(env: SimState.Env) -> float:
-	return clampf(FxMapping.shake_rad(env.cabin_temp_c) / Tuning.FX_SHAKE_MAX_RAD, 0.0, 1.0)
 
 
 ## 0 to 1: the fever flush, from a slight rise to the peak of Haise's fever.
