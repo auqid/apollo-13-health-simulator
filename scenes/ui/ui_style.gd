@@ -57,6 +57,9 @@ const ROW_GAP := 10
 const SECTION_GAP := 20
 ## Fits the name column, four vital columns and the row and panel padding.
 const CARD_COLUMN_WIDTH := 1080
+## The intro card: the crew photo (4:5) beside the text.
+const INTRO_PHOTO_SIZE := Vector2(360, 450)
+const INTRO_TEXT_WIDTH := 640
 const HUD_PANEL_WIDTH := 552
 const NAME_COLUMN_WIDTH := 96
 const VITAL_COLUMN_WIDTH := 96
@@ -96,6 +99,12 @@ const CAPTION_FADE_S := 0.3
 const LETTERBOX_HEIGHT := 128
 const LETTERBOX_SLIDE_S := 0.6
 const SIZE_CHAPTER := 28
+## Cutscene photos: a covering photo is this much bigger than the screen so the pan never shows
+## an edge; a contained one leaves this share of the screen, over a dim copy of itself.
+const PHOTO_COVER_SCALE := 1.06
+const PHOTO_CONTAIN_SCALE := 0.86
+const PHOTO_PAN_PX := 36.0
+const PHOTO_BACKDROP := Color(0.22, 0.22, 0.24)
 ## Presenter notices (paused, muted, alarm silenced) sit at the top, away from the captions.
 const SIZE_NOTICE := 24
 const NOTICE_TOP := 24

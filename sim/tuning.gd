@@ -161,6 +161,8 @@ const CUTSCENE_PHOTO_ZOOM: float = 1.08
 ## it opens. Slow fades, never a flash.
 const CUTSCENE_DIP_CLOSE_S: float = 0.3
 const CUTSCENE_DIP_OPEN_S: float = 0.45
+## Cabin shots in a cutscene ease the camera this far forward, so a long line of audio is not a still.
+const CUTSCENE_CABIN_DOLLY_M: float = 0.22
 ## How long the mission map stays up at the start of a timeskip, in real seconds.
 const MAP_HOLD_S: float = 4.0
 ## One loop of the exterior preview orbit.
@@ -169,8 +171,9 @@ const EXTERIOR_PREVIEW_S: float = 12.0
 const POLL_CHOICE_HOLD_S: float = 1.5
 ## Farewell line stays at least this long, so it can be read when the clip is missing.
 const REENTRY_FAREWELL_HOLD_S: float = 6.0
-## Recovery photo before the scorecard.
-const REENTRY_RECOVERY_HOLD_S: float = 6.0
+## How long each reentry photo stays up (Aquarius, Mission Control, splashdown, recovery) unless
+## events.json gives its own hold_s.
+const REENTRY_PHOTO_HOLD_S: float = 4.5
 ## Silent exterior of Odyssey, heat shield first, before the radio blackout.
 const REENTRY_PLASMA_S: float = 8.0
 ## Debug loop of the parachute descent. In the session it follows the clock from contact to splashdown.

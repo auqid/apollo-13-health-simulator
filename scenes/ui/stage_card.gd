@@ -20,6 +20,12 @@ var _dim: ColorRect
 var _column: VBoxContainer
 var _title: Label
 var _body: Label
+var _intro_row: HBoxContainer
+var _intro_photo_box: VBoxContainer
+var _intro_photo: TextureRect
+var _intro_photo_caption: Label
+var _intro_text: Label
+var _intro_how: Label
 var _options: HBoxContainer
 var _hint: Label
 var _option_rows: Dictionary = {}
@@ -37,14 +43,24 @@ func _ready() -> void:
 	visible = false
 
 
-func show_intro(text: String) -> void:
-	_show_text("Apollo 13", text, CONTINUE_HINT)
+## The opening card: the date and setting, how the audience plays, and the crew photo if there is one.
+func show_intro(text: String, how_to: String = "", photo: Texture2D = null, photo_caption: String = "") -> void:
+	_show_text("Apollo 13", "", CONTINUE_HINT)
+	_body.visible = false
+	_intro_row.visible = true
+	_intro_text.text = text
+	_intro_how.text = how_to
+	_intro_how.visible = not how_to.is_empty()
+	_intro_photo.texture = photo
+	_intro_photo_box.visible = photo != null
+	_intro_photo_caption.text = photo_caption
 	_appear()
 
 
 func show_poll(question: String, options: Array) -> void:
 	_clear_options()
 	_clear_score()
+	_intro_row.visible = false
 	_set_column_width(POLL_COLUMN_WIDTH)
 	_title.add_theme_font_size_override("font_size", UiStyle.SIZE_QUESTION)
 	_title.text = question
@@ -71,6 +87,7 @@ func highlight(option_key: String) -> void:
 func show_scorecard(title: String, choices: Array, rows: Array, closing: String) -> void:
 	_clear_options()
 	_clear_score()
+	_intro_row.visible = false
 	_set_column_width(SCORE_COLUMN_WIDTH)
 	_options.visible = false
 	_body.visible = false
@@ -149,6 +166,7 @@ func _show_text(title: String, body: String, hint: String) -> void:
 	_clear_score()
 	_set_column_width(UiStyle.CARD_COLUMN_WIDTH)
 	_options.visible = false
+	_intro_row.visible = false
 	_title.add_theme_font_size_override("font_size", UiStyle.SIZE_CARD_TITLE)
 	_title.text = title
 	_body.text = body
@@ -182,6 +200,7 @@ func _build() -> void:
 	_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_body.custom_minimum_size.x = UiStyle.CARD_COLUMN_WIDTH
 	_column.add_child(_body)
+	_build_intro_row()
 	_options = HBoxContainer.new()
 	_options.add_theme_constant_override("separation", UiStyle.SECTION_GAP)
 	_options.visible = false
@@ -200,6 +219,42 @@ func _build() -> void:
 	panel.add_child(_column)
 	center.add_child(panel)
 	_root.add_child(center)
+
+
+## The crew photo with their names, beside the intro text and how to play.
+func _build_intro_row() -> void:
+	_intro_row = HBoxContainer.new()
+	_intro_row.add_theme_constant_override("separation", UiStyle.SECTION_GAP * 2)
+	_intro_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_intro_row.visible = false
+	_intro_photo_box = VBoxContainer.new()
+	_intro_photo_box.add_theme_constant_override("separation", UiStyle.ROW_GAP)
+	_intro_photo_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_intro_photo = TextureRect.new()
+	_intro_photo.custom_minimum_size = UiStyle.INTRO_PHOTO_SIZE
+	_intro_photo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_intro_photo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_intro_photo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_intro_photo_box.add_child(_intro_photo)
+	_intro_photo_caption = UiStyle.label("", UiStyle.FONT_HUD_LIGHT, UiStyle.SIZE_LABEL, UiStyle.TEXT_DIM)
+	_intro_photo_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_intro_photo_caption.custom_minimum_size.x = UiStyle.INTRO_PHOTO_SIZE.x
+	_intro_photo_box.add_child(_intro_photo_caption)
+	_intro_row.add_child(_intro_photo_box)
+	var words := VBoxContainer.new()
+	words.add_theme_constant_override("separation", UiStyle.SECTION_GAP * 2)
+	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	words.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_intro_text = UiStyle.label("", UiStyle.FONT_CAPTION, UiStyle.SIZE_QUESTION)
+	_intro_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_intro_text.custom_minimum_size.x = UiStyle.INTRO_TEXT_WIDTH
+	words.add_child(_intro_text)
+	_intro_how = UiStyle.label("", UiStyle.FONT_CAPTION, UiStyle.SIZE_POLL, UiStyle.SENSOR_TEAL)
+	_intro_how.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_intro_how.custom_minimum_size.x = UiStyle.INTRO_TEXT_WIDTH
+	words.add_child(_intro_how)
+	_intro_row.add_child(words)
+	_column.add_child(_intro_row)
 
 
 func _option_row(option: Dictionary) -> Control:

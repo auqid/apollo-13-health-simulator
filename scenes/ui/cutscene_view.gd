@@ -12,6 +12,8 @@ const GROUP := "cutscene_view"
 ## "Name: words" at the start of a subtitle. The name is drawn dimmer than the words.
 const SPEAKER_PATTERN := "^([A-Z][A-Za-z]+): "
 
+var _clip: Control
+var _backdrop: TextureRect
 var _photo: TextureRect
 var _curtain: ColorRect
 var _top_bar: ColorRect
@@ -31,6 +33,8 @@ var _curtain_tween: Tween
 var _caption_tween: Tween
 var _from := Vector2.ZERO
 var _to := Vector2.ZERO
+## Where the photo sits before the pan, so its focus point is on screen.
+var _photo_home := Vector2.ZERO
 var _speaker := RegEx.create_from_string(SPEAKER_PATTERN)
 
 
@@ -51,24 +55,46 @@ func _process(delta: float) -> void:
 		_update_clock()
 
 
-func show_photo(texture: Texture2D, flip: bool) -> void:
+## Shows a photo with a slow pan. Covering the screen crops it, keeping focus (0 to 1 across and
+## down the photo) in view; contain shows all of it, over a dimmed copy that fills the screen.
+func show_photo(texture: Texture2D, flip: bool, contain: bool = false, focus := Vector2(0.5, 0.5)) -> void:
 	_photo.texture = texture
 	_photo.visible = texture != null
-	var travel: float = 36.0 if flip else -36.0
-	_from = Vector2(-travel, -18.0)
-	_to = Vector2(travel, 12.0)
+	_backdrop.texture = texture if contain else null
+	_backdrop.visible = contain and texture != null
+	if texture == null:
+		return
+	var area: Vector2 = _clip.size
+	var aspect: float = float(texture.get_width()) / maxf(float(texture.get_height()), 1.0)
+	var fitted := Vector2(area.x, area.x / aspect)
+	var wider: bool = fitted.y < area.y
+	if wider != contain:
+		fitted = Vector2(area.y * aspect, area.y)
+	if contain:
+		fitted *= UiStyle.PHOTO_CONTAIN_SCALE
+		_photo_home = (area - fitted) * 0.5
+	else:
+		fitted *= UiStyle.PHOTO_COVER_SCALE
+		_photo_home = -(fitted - area) * focus.clamp(Vector2.ZERO, Vector2.ONE)
+	_photo.size = fitted
+	_photo.pivot_offset = fitted * 0.5
+	var travel: float = UiStyle.PHOTO_PAN_PX if flip else -UiStyle.PHOTO_PAN_PX
+	_from = Vector2(-travel, -UiStyle.PHOTO_PAN_PX * 0.5)
+	_to = Vector2(travel, UiStyle.PHOTO_PAN_PX * 0.35)
 	set_pan(0.0)
 
 
 func hide_photo() -> void:
 	_photo.visible = false
 	_photo.texture = null
+	_backdrop.visible = false
+	_backdrop.texture = null
 
 
 func set_pan(t: float) -> void:
 	var zoom: float = lerpf(1.0, Tuning.CUTSCENE_PHOTO_ZOOM, smoothstep(0.0, 1.0, t))
 	_photo.scale = Vector2(zoom, zoom)
-	_photo.position = _from.lerp(_to, smoothstep(0.0, 1.0, t))
+	_photo.position = _photo_home + _from.lerp(_to, smoothstep(0.0, 1.0, t))
 
 
 ## Replaces the caption. hold_s > 0 fades it out after that long; empty text fades it out now.
@@ -193,23 +219,25 @@ func _bbcode(text: String) -> String:
 
 
 func _build() -> void:
-	var clip := Control.new()
-	clip.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	clip.clip_contents = true
-	clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_clip = Control.new()
+	_clip.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_clip.clip_contents = true
+	_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_backdrop = TextureRect.new()
+	_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_backdrop.modulate = UiStyle.PHOTO_BACKDROP
+	_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_backdrop.visible = false
+	_clip.add_child(_backdrop)
 	_photo = TextureRect.new()
-	_photo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_photo.offset_left = -48.0
-	_photo.offset_top = -48.0
-	_photo.offset_right = 48.0
-	_photo.offset_bottom = 48.0
 	_photo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_photo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_photo.stretch_mode = TextureRect.STRETCH_SCALE
 	_photo.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_photo.pivot_offset = Vector2(960.0, 540.0)
 	_photo.visible = false
-	clip.add_child(_photo)
-	add_child(clip)
+	_clip.add_child(_photo)
+	add_child(_clip)
 
 	_curtain = ColorRect.new()
 	_curtain.color = Color.BLACK

@@ -67,7 +67,9 @@ var _reentry_holding: bool = false
 var _reentry_beat: String = ""
 var _reentry_beat_span: float = 1.0
 var _parachute_playing: bool = false
-var _recovery_hold: bool = false
+## Reentry photos still to show, and what comes after them.
+var _photo_queue: Array = []
+var _after_photos: String = ""
 var _radio_blackout: bool = false
 var _map_left_s: float = 0.0
 ## "", "exterior" or "map". Debug preview, cleared when a real shot takes the camera.
@@ -178,9 +180,16 @@ func start_session() -> void:
 	_card_left_s = float(Game.events["intro"]["duration_s"])
 	_apply_view("front_windows", "earth")
 	notice_requested.emit("", 0.0)
+	_show_intro_card()
+
+
+func _show_intro_card() -> void:
 	var card := _stage()
-	if card != null:
-		card.show_intro(Game.events["intro"]["text"])
+	if card == null:
+		return
+	var intro: Dictionary = Game.events["intro"]
+	var photo: Texture2D = _load_texture(str(intro.get("photo", "")))
+	card.show_intro(str(intro.get("text", "")), str(intro.get("how_to", "")), photo, str(intro.get("photo_caption", "")))
 
 
 ## Space. Skips a card, finishes the choice highlight, pauses a timeskip, or skips reentry.
@@ -435,11 +444,6 @@ func _toggle_timeskip() -> void:
 
 
 func _run_reentry(delta: float) -> void:
-	if _recovery_hold:
-		_reentry_hold_s -= delta
-		if _reentry_hold_s <= 0.0:
-			_begin_scorecard()
-		return
 	if _reentry_holding:
 		_reentry_hold_s -= delta
 		_tick_reentry_beat()
@@ -485,16 +489,57 @@ func _present_reentry_step(step: Dictionary) -> void:
 		_start_radio_blackout(step)
 	elif id == "contact":
 		_end_radio_blackout()
-		_hide_reentry_photo()
-		_show_caption(_step_caption(step))
 		_play_clip(str(step.get("audio", "")))
-		_parachute_playing = true
-		_fade_in_beat()
-		_present_exterior("pan", "earth", "parachute")
+		_start_photos(step.get("photos", []), "descent")
+
+
+## The capsule under its parachutes, following the clock from contact to splashdown.
+func _start_descent() -> void:
+	_hide_reentry_photo()
+	_show_caption(_step_caption(_reentry_step("contact")))
+	_parachute_playing = true
+	_fade_in_beat()
+	_present_exterior("pan", "earth", "parachute")
+	Game.set_rate(_clock_rate())
+	Game.play(_clock_target)
+
+
+## Shows reentry photos one after another with the clock stopped, then carries on with next:
+## "plasma", "descent" or "scorecard". Photos whose file is missing are skipped.
+func _start_photos(photos: Array, next: String) -> void:
+	_photo_queue = []
+	for photo: Variant in photos:
+		if photo is Dictionary and _asset_exists(str(photo.get("image", ""))):
+			_photo_queue.append(photo)
+	_after_photos = next
+	_next_photo()
+
+
+func _next_photo() -> void:
+	if _photo_queue.is_empty():
+		_reentry_beat = ""
+		_reentry_holding = false
+		match _after_photos:
+			"plasma":
+				_start_plasma()
+			"descent":
+				_start_descent()
+			_:
+				_begin_scorecard()
+		return
+	var photo: Dictionary = _photo_queue.pop_front()
+	_reentry_beat = "photo"
+	_reentry_holding = true
+	_reentry_hold_s = float(photo.get("hold_s", Tuning.REENTRY_PHOTO_HOLD_S))
+	_hide_space()
+	_fade_in_beat()
+	_show_photo_entry(photo, false)
+	_show_caption(str(photo.get("caption", "")))
+	Game.pause()
 
 
 func _begin_recovery() -> void:
-	if _recovery_hold or _reentry_beat == "splash" or phase != PHASE_REENTRY:
+	if _reentry_beat == "splash" or _reentry_beat == "photo" or phase != PHASE_REENTRY:
 		return
 	_end_radio_blackout()
 	_parachute_playing = false
@@ -509,6 +554,7 @@ func _start_plasma() -> void:
 	_reentry_beat = "plasma"
 	_reentry_holding = true
 	_reentry_hold_s = Tuning.REENTRY_PLASMA_S
+	_hide_reentry_photo()
 	_show_caption(_step_caption(_reentry_step("entry")))
 	_fade_in_beat()
 	_present_exterior("bay", "earth", "plasma")
@@ -533,19 +579,6 @@ func _start_splash() -> void:
 	var step: Dictionary = _reentry_step("splashdown")
 	_show_caption(_step_caption(step))
 	_present_exterior("pan", "earth", "splash")
-	Game.pause()
-
-
-func _show_recovery_still() -> void:
-	_reentry_beat = ""
-	_reentry_holding = false
-	_recovery_hold = true
-	_hide_space()
-	var step: Dictionary = _reentry_step("splashdown")
-	_fade_in_beat()
-	_show_reentry_photo(_first_image(step))
-	_show_caption(_step_caption(step))
-	_reentry_hold_s = Tuning.REENTRY_RECOVERY_HOLD_S
 	Game.pause()
 
 
@@ -586,11 +619,13 @@ func _end_reentry_beat() -> void:
 	_reentry_holding = false
 	_reentry_beat = ""
 	if beat == "farewell":
-		_start_plasma()
+		_start_photos(_reentry_step("lm_jettison").get("photos", []), "plasma")
 	elif beat == "plasma":
 		_finish_plasma()
 	elif beat == "splash":
-		_show_recovery_still()
+		_start_photos(_reentry_step("splashdown").get("photos", []), "scorecard")
+	elif beat == "photo":
+		_next_photo()
 	else:
 		Game.set_rate(_clock_rate())
 		Game.play(_clock_target)
@@ -640,7 +675,7 @@ func _clear_reentry_presentation() -> void:
 	_reentry_holding = false
 	_reentry_beat = ""
 	_parachute_playing = false
-	_recovery_hold = false
+	_photo_queue = []
 	_reentry_hold_s = 0.0
 	var bio := _bio()
 	if bio != null:
@@ -672,13 +707,6 @@ func _step_caption(step: Dictionary) -> String:
 	for line: Variant in step.get("captions", []):
 		lines.append(str(line))
 	return "\n".join(lines)
-
-
-func _first_image(step: Dictionary) -> String:
-	var images: Array = step.get("images", [])
-	if images.is_empty():
-		return ""
-	return str(images[0])
 
 
 ## The one place story captions go, so two never stack. hold_s > 0 fades it out by itself.
@@ -718,15 +746,21 @@ func _chapter_text() -> String:
 	return "%d of %d · %s" % [event_index + 1, events.size(), str(_current_event().get("title", ""))]
 
 
-func _show_reentry_photo(path: String) -> void:
+## A photo from events.json: "image", and optionally "fit": "contain" for a photo shown whole, and
+## "focus": [x, y] for the part of a cropped photo to keep in view. A missing file shows the cabin.
+func _show_photo_entry(entry: Dictionary, flip: bool) -> void:
 	var view := _cutscene()
 	if view == null:
 		return
-	var texture: Texture2D = _load_texture(path)
+	var texture: Texture2D = _load_texture(str(entry.get("image", "")))
 	if texture == null:
 		view.hide_photo()
-	else:
-		view.show_photo(texture, false)
+		return
+	var focus := Vector2(0.5, 0.5)
+	var spot: Array = entry.get("focus", [])
+	if spot.size() == 2:
+		focus = Vector2(float(spot[0]), float(spot[1]))
+	view.show_photo(texture, flip, str(entry.get("fit", "")) == "contain", focus)
 
 
 func _hide_reentry_photo() -> void:
@@ -858,6 +892,8 @@ func _animate_shot(shot: Dictionary) -> void:
 		var view := _cutscene()
 		if view != null:
 			view.set_pan(t)
+	else:
+		_set_cabin_dolly(smoothstep(0.0, 1.0, t) * Tuning.CUTSCENE_CABIN_DOLLY_M)
 
 
 ## Dips to black before the next shot. After the last shot the cutscene ends without a dip.
@@ -888,8 +924,15 @@ func _advance_shot() -> void:
 		view.open_curtain(Tuning.CUTSCENE_DIP_OPEN_S)
 
 
+func _set_cabin_dolly(metres: float) -> void:
+	var cabin := _cabin_node()
+	if cabin != null and cabin.camera != null:
+		cabin.camera.dolly_m = metres
+
+
 func _begin_shot(shot: Dictionary) -> void:
 	_hide_space()
+	_set_cabin_dolly(0.0)
 	var view := _cutscene()
 	var kind: String = shot.get("kind", "cabin")
 	if kind == "exterior":
@@ -917,12 +960,7 @@ func _begin_shot(shot: Dictionary) -> void:
 		var playing := _bio()
 		if playing != null:
 			playing.stop_voice()
-		var texture: Texture2D = _load_texture(str(shot.get("image", "")))
-		if view != null:
-			if texture != null:
-				view.show_photo(texture, _shot_index % 2 == 1)
-			else:
-				view.hide_photo()
+		_show_photo_entry(shot, _shot_index % 2 == 1)
 	elif kind == "audio":
 		if view != null:
 			view.hide_photo()
@@ -1127,7 +1165,7 @@ func _restore_stage() -> void:
 		return
 	match phase:
 		PHASE_INTRO:
-			card.show_intro(str(Game.events["intro"]["text"]))
+			_show_intro_card()
 		PHASE_POLL:
 			_show_poll()
 		PHASE_HOLD, PHASE_SCORECARD:
@@ -1152,6 +1190,7 @@ func _cabin_node() -> Cabin:
 
 func _hide_cutscene() -> void:
 	_hide_space()
+	_set_cabin_dolly(0.0)
 	var view := _cutscene()
 	if view != null:
 		view.hide_view()
@@ -1328,7 +1367,7 @@ func _collect_missing_assets(node: Variant) -> void:
 	if node is Dictionary:
 		for key: String in node:
 			var value: Variant = node[key]
-			if (key == "audio" or key == "image") and value is String:
+			if (key == "audio" or key == "image" or key == "photo") and value is String:
 				_asset_exists(value)
 			elif key == "images" and value is Array:
 				for path: Variant in value:

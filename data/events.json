@@ -1,9 +1,11 @@
 {
   "intro": {
     "start_get": 55.866667,
-    "duration_s": 10,
-    "images": ["res://assets/images/earth_from_lm.jpg"],
-    "text": "April 13, 1970. Apollo 13 is about 330,000 km from Earth, two days into a smooth flight to the Moon."
+    "duration_s": 14,
+    "photo": "res://assets/images/crew_portrait.jpg",
+    "photo_caption": "Jim Lovell, Jack Swigert and Fred Haise",
+    "text": "April 13, 1970. Apollo 13 is about 330,000 km from Earth, two days into a smooth flight to the Moon.",
+    "how_to": "You make five of the big calls. When asked, vote A or B in the chat."
   },
   "events": [
     {
@@ -91,25 +93,20 @@
             "caption": "Aquarius swings around the far side of the Moon."
           },
           {
-            "kind": "exterior",
+            "kind": "photo",
+            "image": "res://assets/images/moon_far_side.jpg",
             "duration_s": 6.0,
-            "move": "push_in",
-            "body": "moon",
-            "caption": "The ship is still one stack: Odyssey, then Aquarius."
-          },
-          {
-            "kind": "exterior",
-            "duration_s": 5.0,
-            "move": "pan",
-            "body": "moon",
-            "caption": "Sunlight moves along the hull."
+            "caption": "On the far side, the crew photographs the crater Tsiolkovsky."
           },
           {"kind": "cabin", "duration_s": 4.0, "caption": "Radio contact with Houston is restored at about 77:33."},
           {
-            "kind": "audio",
-            "audio": "res://assets/audio/e2_burn.mp3",
+            "kind": "exterior",
             "duration_s": 12.0,
-            "caption": "The burn home, called PC+2, is set for GET 079:27:39.",
+            "move": "orbit",
+            "body": "moon",
+            "action": "burn",
+            "audio": "res://assets/audio/e2_burn.mp3",
+            "caption": "Aquarius's engine fires for the burn home, called PC+2, at GET 079:27:39.",
             "subtitles": [
               {"at_s": 1.0, "hold_s": 6.0, "text": "Houston and the crew count through the burn."}
             ]
@@ -153,13 +150,7 @@
       "get": 88.0,
       "cutscene": {
         "shots": [
-          {"kind": "cabin", "duration_s": 5.0, "caption": "The CO2 caution light comes on."},
-          {
-            "kind": "photo",
-            "image": "res://assets/images/co2_adapter.jpg",
-            "duration_s": 8.0,
-            "caption": "The square canisters don't fit the round sockets."
-          },
+          {"kind": "cabin", "duration_s": 5.0, "caption": "The CO2 caution light comes on.\nOdyssey's square canisters don't fit Aquarius's round sockets."},
           {
             "kind": "audio",
             "audio": "res://assets/audio/e3_procedure.mp3",
@@ -168,6 +159,13 @@
             "subtitles": [
               {"at_s": 1.0, "hold_s": 8.0, "text": "Kerwin begins reading the procedure at about 90:22."}
             ]
+          },
+          {
+            "kind": "photo",
+            "image": "res://assets/images/co2_adapter.jpg",
+            "duration_s": 7.0,
+            "focus": [0.5, 0.4],
+            "caption": "The finished adapter, nicknamed the mailbox."
           }
         ]
       },
@@ -216,9 +214,10 @@
           {"kind": "cabin", "duration_s": 6.0, "caption": "To save power, almost everything is switched off."},
           {
             "kind": "photo",
-            "image": "res://assets/images/dark_cabin.jpg",
+            "image": "res://assets/images/aquarius_cabin.jpg",
             "duration_s": 8.0,
-            "caption": "The cabin is dark, cold and wet."
+            "focus": [0.5, 0.25],
+            "caption": "Jim Lovell in Aquarius, a spacecraft built for two."
           },
           {"kind": "cabin", "duration_s": 6.0, "caption": "Water isn't just for drinking. It cools the electronics too."}
         ]
@@ -321,7 +320,10 @@
         "title": "LM jettison",
         "get_from_splashdown": -1.41,
         "audio": "res://assets/audio/e5_farewell.mp3",
-        "captions": ["Kerwin: “Farewell, Aquarius, and we thank you.”"]
+        "captions": ["Kerwin: “Farewell, Aquarius, and we thank you.”"],
+        "photos": [
+          {"image": "res://assets/images/aquarius_jettison.jpg", "caption": "Aquarius, photographed from Odyssey after it was let go."}
+        ]
       },
       {
         "id": "blackout",
@@ -343,14 +345,21 @@
         "get_from_splashdown": -0.161389,
         "audio": "res://assets/audio/e5_splash.mp3",
         "action": "parachute",
-        "captions": ["Contact restored.", "Three main parachutes open."]
+        "captions": ["Three main parachutes open."],
+        "photos": [
+          {"image": "res://assets/images/mission_control_parachutes.jpg", "caption": "Contact restored. In Houston, the parachutes appear on the main screen."}
+        ]
       },
       {
         "id": "splashdown",
         "title": "Splashdown",
         "get_from_splashdown": 0.0,
-        "images": ["res://assets/images/recovery.jpg"],
-        "captions": ["Splashdown in the South Pacific."]
+        "captions": ["Splashdown in the South Pacific."],
+        "photos": [
+          {"image": "res://assets/images/parachutes.jpg", "fit": "contain", "caption": "The real splashdown, under three main parachutes."},
+          {"image": "res://assets/images/recovery.jpg", "caption": "Swigert is lifted to a helicopter while Lovell waits in the raft."},
+          {"image": "res://assets/images/crew_on_deck.jpg", "caption": "Haise, Lovell and Swigert arrive on the recovery ship, USS Iwo Jima."}
+        ]
       }
     ]
   },

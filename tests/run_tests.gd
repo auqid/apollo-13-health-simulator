@@ -18,7 +18,8 @@ const MapPath := preload("res://scenes/space/map_path.gd")
 const Exterior := preload("res://scenes/space/exterior.gd")
 
 const EFFECT_KEYS: Array[String] = ["flags", "power_margin", "fatigue"]
-const TEXT_KEYS: Array[String] = ["text", "question", "label", "hint", "note", "title", "closing", "history", "caption", "heat_shield_text"]
+const TEXT_KEYS: Array[String] = ["text", "question", "label", "hint", "note", "title", "closing", "history", "caption",
+	"heat_shield_text", "how_to", "photo_caption"]
 const EVENT_IDS: Array[String] = ["e1", "e2", "e3", "e4", "e5"]
 ## These drive the autoloads, which are not in the tree yet during _init.
 const SESSION_TESTS: Array[String] = [
@@ -176,7 +177,7 @@ func _collect_asset_paths(node: Variant, out: Array[String]) -> void:
 	if node is Dictionary:
 		for key: String in node:
 			var value: Variant = node[key]
-			if (key == "audio" or key == "image") and value is String and not value.is_empty():
+			if (key == "audio" or key == "image" or key == "photo") and value is String and not value.is_empty():
 				out.append(value)
 			elif key == "images" and value is Array:
 				for path: Variant in value:
@@ -373,7 +374,10 @@ func test_reentry_sequence_is_timed_from_splashdown() -> void:
 	_check(early_chutes.x > early_chutes.y, "drogues open before the mains")
 	_check(late_chutes.y > 0.8 and late_chutes.y > late_chutes.x, "three mains are open at the end of the descent")
 	_check(Exterior.splash_float(0.0) < 0.2 and Exterior.splash_float(1.0) > 0.9, "splashdown ends with the capsule floating")
-	_check(steps["splashdown"]["images"][0].ends_with("recovery.jpg"), "recovery photo")
+	var endings: PackedStringArray = []
+	for photo: Dictionary in steps["splashdown"].get("photos", []):
+		endings.append(str(photo["image"]).get_file())
+	_check("recovery.jpg" in endings, "recovery photo after splashdown, got %s" % [endings])
 	for splashdown: float in Tuning.SPLASHDOWN_GET_BY_RETURN.values():
 		var jettison: float = splashdown + float(steps["lm_jettison"]["get_from_splashdown"])
 		var blackout: float = splashdown + float(steps["blackout"]["get_from_splashdown"])
@@ -420,6 +424,8 @@ func test_asset_paths_point_into_assets() -> void:
 	for path in paths:
 		_check(path.begins_with("res://assets/audio/") or path.begins_with("res://assets/images/"),
 			"asset path is under assets/: %s" % path)
+		if path.begins_with("res://assets/images/"):
+			_check(ResourceLoader.exists(path), "photo is in the project: %s" % path)
 
 
 # --- Tuning and history tests ---

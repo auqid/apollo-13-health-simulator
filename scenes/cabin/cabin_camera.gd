@@ -6,6 +6,8 @@ const Tuning := preload("res://sim/tuning.gd")
 
 ## Extra rotation in radians (pitch, yaw, roll), set by the effects every frame.
 var shake_rotation := Vector3.ZERO
+## How far the camera has eased forward from its preset, for a slow push-in during cutscenes.
+var dolly_m: float = 0.0
 var preset: String = ""
 ## Preset name -> Transform3D
 var _presets: Dictionary = {}
@@ -54,7 +56,8 @@ func _base() -> Transform3D:
 func _apply() -> void:
 	var drift_position := Vector3(_wave(0), _wave(1), _wave(2)) * Tuning.CAMERA_DRIFT_M
 	var drift_rotation := Vector3(_wave(3), _wave(4), _wave(5)) * deg_to_rad(Tuning.CAMERA_DRIFT_DEG)
-	transform = _base() * Transform3D(Basis.from_euler(drift_rotation + shake_rotation), drift_position)
+	var push := Vector3(0.0, 0.0, -dolly_m)
+	transform = _base() * Transform3D(Basis.from_euler(drift_rotation + shake_rotation), drift_position + push)
 
 
 ## One slow sine per drift channel, each with its own period and phase.
