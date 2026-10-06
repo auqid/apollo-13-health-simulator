@@ -248,6 +248,10 @@ The cabin is 1970 hardware; the HUD is today's sensors looking at it. The contra
 - **Palette:** panel grey `#5E6560`, instrument black `#1A1D1C`, placard white `#ECE9E1`, caution amber `#E2A33B`, warning red `#C4372C`, sensor teal `#8CCFC1` (HUD only), cold tint `#9DB8D9`.
 - **Type:** Barlow Condensed for title cards, captions and in-cabin placards. Barlow with tabular numbers for the HUD. Download both from Google Fonts (open license) into `assets/fonts/`.
 
+### Exterior build notes
+- Low-poly spacecraft at about real size, finished as in the 1970 photos: a polished aluminium Service Module with white radiator bands, its reaction control quads and the four-dish high-gain antenna; the silver Command Module with its windows, hatch and thruster ports, browned and streaked after reentry; Aquarius's ascent stage mostly aluminized with dark panels, on its gold descent stage.
+- Aquarius's landing gear is folded until GET 061:00:10, when Haise reported it "down and locked" during the lifeboat power-up, so the explosion and lifeboat shots show it folded and every later shot shows it deployed, with the ladder on the front leg and contact probes under the other three.
+
 ### Cabin build notes
 - Use low-poly geometry: boxes and extrusions for the front panel, side panels and overhead.
 - Draw panel details as simple textures (gauge faces, rows of toggle switches) instead of modelling them.

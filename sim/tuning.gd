@@ -7,6 +7,9 @@ extends RefCounted
 const EXPLOSION_GET: float = 55.9
 const STANDARD_SPLASHDOWN_GET: float = 142.9
 const FAST_SPLASHDOWN_GET: float = 119.0
+## Aquarius's landing gear went "down and locked" here (Haise, 061:00:10, Flight Journal), so the
+## exterior shots show it folded before and deployed after.
+const LM_GEAR_DOWN_GET: float = 61.002778
 const SPLASHDOWN_GET_BY_RETURN: Dictionary = {
 	"standard": STANDARD_SPLASHDOWN_GET,
 	"fast": FAST_SPLASHDOWN_GET,

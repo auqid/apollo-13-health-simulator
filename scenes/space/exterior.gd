@@ -161,8 +161,10 @@ func build() -> void:
 	add_child(_camera)
 
 
-func show_exterior(move: String, body: String, action: String = "") -> void:
+## gear_down: Aquarius's landing gear deployed, as it was from GET 061:00 on.
+func show_exterior(move: String, body: String, action: String = "", gear_down: bool = true) -> void:
 	build()
+	_craft.set_landing_gear(gear_down)
 	_showing = true
 	visible = true
 	_move = move if move in MOVES else "orbit"
@@ -695,7 +697,7 @@ func _build_explosion() -> void:
 		"color": OXYGEN, "opacity": 0.14})
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 413
-	var white := Spacecraft.paint(Spacecraft.WHITE, 0.5, 0.1)
+	var white := Spacecraft.hull()
 	white.cull_mode = BaseMaterial3D.CULL_DISABLED
 	var shred := Spacecraft.foil(Color(0.8, 0.66, 0.42))
 	shred.cull_mode = BaseMaterial3D.CULL_DISABLED

@@ -1316,9 +1316,13 @@ func _present_exterior(move: String, body: String, action: String = "") -> void:
 	var cabin := _cabin_node()
 	if cabin != null:
 		cabin.set_presented(false)
+	# Aquarius's legs go down at GET 061:00; a debug preview shows them as its shot would.
+	var gear_down: bool = Game.state.time.current_get >= Tuning.LM_GEAR_DOWN_GET
+	if _space_preview != "":
+		gear_down = action not in ["explosion", "lifeboat"]
 	var space := _exterior()
 	if space != null:
-		space.show_exterior(move, body, action)
+		space.show_exterior(move, body, action, gear_down)
 
 
 func _present_map(get_h: float, splashdown_h: float, next_get_h: float = -1.0, next_label: String = "") -> void:

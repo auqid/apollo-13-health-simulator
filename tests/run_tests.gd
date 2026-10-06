@@ -16,6 +16,7 @@ const Cabin := preload("res://scenes/cabin/cabin.gd")
 const AudioMix := preload("res://audio/audio_mix.gd")
 const MapPath := preload("res://scenes/space/map_path.gd")
 const Exterior := preload("res://scenes/space/exterior.gd")
+const Spacecraft := preload("res://scenes/space/spacecraft.gd")
 const UiStyle := preload("res://scenes/ui/ui_style.gd")
 const CrewLook := preload("res://scenes/ui/crew_look.gd")
 const CutsceneView := preload("res://scenes/ui/cutscene_view.gd")
@@ -346,6 +347,25 @@ func test_cutscenes_have_editable_shots() -> void:
 		if "Artemis II in 2026" in caption["text"]:
 			far_side = true
 	_check(far_side, "the far-side caption names the distance record")
+
+
+## Aquarius flew with its legs folded until Haise reported them "down and locked" at 061:00:10,
+## after the explosion and before the far side, so the explosion shots fold them and later shots don't.
+func test_aquarius_legs_go_down_at_061() -> void:
+	var events: Array = Timeline.event_list(_load_events())
+	_check(Tuning.LM_GEAR_DOWN_GET > Tuning.EXPLOSION_GET and Tuning.LM_GEAR_DOWN_GET < float(events[1]["get"]),
+		"the gear goes down after the explosion and before the return burn")
+	var holder := Node3D.new()
+	var craft := Spacecraft.new(holder)
+	var legs: Array = craft.get("_legs")
+	_check(legs.size() == 4, "Aquarius has four legs")
+	craft.set_landing_gear(false)
+	var stowed_foot: Vector3 = legs[0].transform * Vector3(Spacecraft.LEG_FOOT.x, Spacecraft.LEG_FOOT.y, 0.0)
+	craft.set_landing_gear(true)
+	var deployed_foot: Vector3 = legs[0].transform * Vector3(Spacecraft.LEG_FOOT.x, Spacecraft.LEG_FOOT.y, 0.0)
+	_check(stowed_foot.x < deployed_foot.x - 1.0, "folded, the footpad hangs in close to the descent stage")
+	_check(stowed_foot.y < deployed_foot.y, "folded, the leg hangs straight down")
+	holder.free()
 
 
 func test_map_and_exterior_camera_follow_the_mission() -> void:
