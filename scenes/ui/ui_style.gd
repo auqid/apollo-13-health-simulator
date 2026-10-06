@@ -34,16 +34,24 @@ const SIZE_VITAL := 32
 const SIZE_CAPTION := 32
 const SIZE_POLL := 36
 const SIZE_POLL_LETTER := 72
+## Poll option names and their Good and Cost lines, big enough to read over a screen share.
+const SIZE_OPTION := 42
+const SIZE_TRADEOFF := 28
+## The option not chosen fades to this, and the vote countdown bar is this tall.
+const UNCHOSEN_ALPHA := 0.4
+const COUNTDOWN_HEIGHT := 6
 const SIZE_QUESTION := 40
 const SIZE_CARD_TITLE := 64
 const SIZE_CLOCK := 46
+const SIZE_SPOTLIGHT := 56
 
 ## Screen effects draw under the HUD so the HUD never blurs.
 const LAYER_SCREEN_FX := 1
 const LAYER_HUD := 10
-const LAYER_NOTICE := 15
-## Intro, cutscene, poll, reentry and scorecard cards. Above the HUD, under the debug panel.
+## Intro, poll and scorecard cards. Above the HUD, under the notices and the debug panel.
 const LAYER_CARD := 16
+## Presenter notices sit above the cards, so "Paused" shows even over a poll.
+const LAYER_NOTICE := 17
 const LAYER_DEBUG := 20
 
 const MARGIN := 40
@@ -57,6 +65,9 @@ const ROW_GAP := 10
 const SECTION_GAP := 20
 ## Fits the name column, four vital columns and the row and panel padding.
 const CARD_COLUMN_WIDTH := 1080
+## The intro card: the crew photo (4:5) beside the text.
+const INTRO_PHOTO_SIZE := Vector2(360, 450)
+const INTRO_TEXT_WIDTH := 640
 const HUD_PANEL_WIDTH := 552
 const NAME_COLUMN_WIDTH := 96
 const VITAL_COLUMN_WIDTH := 96
@@ -79,8 +90,51 @@ const DEBUG_BUTTON_PADDING_V := 4
 const CAPTION_OUTLINE_SIZE := 8
 const CAPTION_OUTLINE := Color(0.0, 0.0, 0.0, 0.85)
 const FADE_S := 0.4
+## Subtitles and story captions: one line of text at a time, in a dark box at the bottom.
+const SIZE_SUBTITLE := 36
+const CAPTION_MAX_WIDTH := 1400
+const CAPTION_WRAP_SLACK := 4
+const CAPTION_PADDING_H := 22
+const CAPTION_PADDING_V := 10
+const CAPTION_BOX := Color(0.0, 0.0, 0.0, 0.62)
+## The speaker's name at the start of a subtitle is drawn in this colour.
+const CAPTION_SPEAKER := Color(PLACARD_WHITE, 0.6)
+## Distance from the bottom of the screen to the caption box, inside the bar or as a lower third.
+const CAPTION_BOTTOM_IN_BAR := 18
+const CAPTION_BOTTOM_LOWER_THIRD := 64
+const CAPTION_FADE_S := 0.3
+## Cinematic bars during cutscenes, the mission map and the reentry.
+const LETTERBOX_HEIGHT := 128
+const LETTERBOX_SLIDE_S := 0.6
+const SIZE_CHAPTER := 28
+## Cutscene photos: a covering photo is this much bigger than the screen so the pan never shows
+## an edge; a contained one leaves this share of the screen, over a dim copy of itself.
+const PHOTO_COVER_SCALE := 1.06
+const PHOTO_CONTAIN_SCALE := 0.86
+const PHOTO_PAN_PX := 36.0
+const PHOTO_BACKDROP := Color(0.22, 0.22, 0.24)
+## Presenter notices (paused, muted, alarm silenced) sit at the top, away from the captions.
+const SIZE_NOTICE := 24
+const NOTICE_TOP := 24
+const NOTICE_PADDING_H := 18
+const NOTICE_PADDING_V := 6
+
+## What a decision changes, shown big during the timeskip after it, and the line on the vote's
+## reveal that points to it. Keys match "watch" in events.json.
+const SPOTLIGHTS: Dictionary = {
+	"cabin_temp": {"title": "Cabin temperature", "watch": "Watch the cabin temperature."},
+	"co2": {"title": "CO2", "watch": "Watch the CO2."},
+	"water": {"title": "Water left", "watch": "Watch the water left."},
+	"power": {"title": "Power margin", "watch": "Watch the power margin."},
+	"splashdown": {"title": "Time to splashdown", "watch": "Watch the time to splashdown."},
+}
 
 static var _fonts: Dictionary = {}
+
+
+## "Watch the cabin temperature." for a spotlight key, or "" if there is none.
+static func watch_line(key: String) -> String:
+	return str(SPOTLIGHTS.get(key, {}).get("watch", ""))
 
 
 ## A font from assets/fonts, with tabular figures if asked. Falls back to Godot's default font

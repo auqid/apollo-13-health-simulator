@@ -105,6 +105,12 @@ func set_radio_blackout(amount: float) -> void:
 	radio_blackout = clampf(amount, 0.0, 1.0)
 
 
+## Ends a micro-blink at once, so pausing never freezes the view half dark.
+func clear_blink() -> void:
+	_arm_blink(false)
+	_apply_shader()
+
+
 ## One line for the debug panel.
 ## True while the red master alarm lamps are lit, during the explosion dim.
 func master_alarm_lit() -> bool:
@@ -238,16 +244,19 @@ func _apply() -> void:
 		cabin.set_light_level(_light * (1.0 - _dim))
 
 
+## The crew's view only: exterior shots, photos of the descent and the map get no CO2 haze,
+## cold tint, condensation or blinks. The radio blackout still covers everything.
 func _apply_shader() -> void:
 	if _material == null:
 		return
-	_material.set_shader_parameter("vignette", _vignette)
-	_material.set_shader_parameter("blur_px", _blur_px)
-	_material.set_shader_parameter("tint", _tint)
-	_material.set_shader_parameter("condensation", _condensation)
+	var inside: float = 1.0 if cabin == null or cabin.visible else 0.0
+	_material.set_shader_parameter("vignette", _vignette * inside)
+	_material.set_shader_parameter("blur_px", _blur_px * inside)
+	_material.set_shader_parameter("tint", _tint * inside)
+	_material.set_shader_parameter("condensation", _condensation * inside)
 	var cover: float = radio_blackout
 	if cover <= 0.0:
-		cover = _blink_blackout()
+		cover = _blink_blackout() * inside
 	_material.set_shader_parameter("blackout", cover)
 
 

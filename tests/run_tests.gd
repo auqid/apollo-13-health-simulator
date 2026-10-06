@@ -16,12 +16,22 @@ const Cabin := preload("res://scenes/cabin/cabin.gd")
 const AudioMix := preload("res://audio/audio_mix.gd")
 const MapPath := preload("res://scenes/space/map_path.gd")
 const Exterior := preload("res://scenes/space/exterior.gd")
+const UiStyle := preload("res://scenes/ui/ui_style.gd")
 
 const EFFECT_KEYS: Array[String] = ["flags", "power_margin", "fatigue"]
-const TEXT_KEYS: Array[String] = ["text", "question", "label", "hint", "note", "title", "closing", "history", "caption", "heat_shield_text"]
+const TEXT_KEYS: Array[String] = ["text", "question", "label", "hint", "note", "title", "closing", "history", "caption",
+	"heat_shield_text", "how_to", "photo_caption", "quote", "quote_by"]
 const EVENT_IDS: Array[String] = ["e1", "e2", "e3", "e4", "e5"]
-## This one drives the autoloads, which are not in the tree yet during _init.
-const SESSION_TEST := "test_every_option_combination_reaches_the_scorecard"
+## These drive the autoloads, which are not in the tree yet during _init.
+const SESSION_TESTS: Array[String] = [
+	"test_every_option_combination_reaches_the_scorecard",
+	"test_reentry_plays_through_in_about_a_minute",
+	"test_a_vote_reveals_the_1970_call",
+	"test_subtitles_follow_the_mission_audio",
+	"test_pause_holds_everything_until_resumed",
+]
+## Frame step for tests that play the session in real time.
+const FRAME_S: float = 1.0 / 60.0
 ## Step size for the 32 full runs; every event and CO2 peak lands on a step.
 const COMBO_STEP_H: float = 0.1
 
@@ -43,22 +53,26 @@ func _init() -> void:
 	var test_names: Array[String] = []
 	for method: Dictionary in get_method_list():
 		var method_name: String = method["name"]
-		if method_name.begins_with("test_") and method_name != SESSION_TEST:
+		if method_name.begins_with("test_") and method_name not in SESSION_TESTS:
 			test_names.append(method_name)
 	for test_name in test_names:
 		_run_one(test_name)
-	_run_session_test.call_deferred(test_names.size())
+	_run_session_tests.call_deferred(test_names.size())
 
 
-func _run_session_test(already: int) -> void:
-	_run_one(SESSION_TEST)
-	print("%d tests, %d checks, %d failures" % [already + 1, _checks, _failures])
+func _run_session_tests(already: int) -> void:
+	for test_name in SESSION_TESTS:
+		_run_one(test_name)
+	print("%d tests, %d checks, %d failures" % [already + SESSION_TESTS.size(), _checks, _failures])
 	quit(1 if _failures > 0 else 0)
 
 
 func _run_one(test_name: String) -> void:
 	_test_failures = 0
+	var checks_before: int = _checks
 	call(test_name)
+	# A script error stops a test without failing a check, so a test that checked nothing failed.
+	_check(_checks > checks_before, "%s made at least one check (a script error stops a test early)" % test_name)
 	print("%s  %s" % ["PASS" if _test_failures == 0 else "FAIL", test_name])
 
 
@@ -170,7 +184,7 @@ func _collect_asset_paths(node: Variant, out: Array[String]) -> void:
 	if node is Dictionary:
 		for key: String in node:
 			var value: Variant = node[key]
-			if (key == "audio" or key == "image") and value is String and not value.is_empty():
+			if (key == "audio" or key == "image" or key == "photo") and value is String and not value.is_empty():
 				out.append(value)
 			elif key == "images" and value is Array:
 				for path: Variant in value:
@@ -367,12 +381,27 @@ func test_reentry_sequence_is_timed_from_splashdown() -> void:
 	_check(early_chutes.x > early_chutes.y, "drogues open before the mains")
 	_check(late_chutes.y > 0.8 and late_chutes.y > late_chutes.x, "three mains are open at the end of the descent")
 	_check(Exterior.splash_float(0.0) < 0.2 and Exterior.splash_float(1.0) > 0.9, "splashdown ends with the capsule floating")
-	_check(steps["splashdown"]["images"][0].ends_with("recovery.jpg"), "recovery photo")
+	var endings: PackedStringArray = []
+	for photo: Dictionary in steps["splashdown"].get("photos", []):
+		endings.append(str(photo["image"]).get_file())
+	_check("recovery.jpg" in endings, "recovery photo after splashdown, got %s" % [endings])
 	for splashdown: float in Tuning.SPLASHDOWN_GET_BY_RETURN.values():
 		var jettison: float = splashdown + float(steps["lm_jettison"]["get_from_splashdown"])
 		var blackout: float = splashdown + float(steps["blackout"]["get_from_splashdown"])
 		var contact: float = splashdown + float(steps["contact"]["get_from_splashdown"])
 		_check(jettison < blackout and blackout < contact and contact < splashdown, "reentry order before splashdown %.1f" % splashdown)
+
+
+func test_each_timeskip_spotlights_what_its_decision_changes() -> void:
+	var events: Array = _load_events()["events"]
+	for i in events.size():
+		var event: Dictionary = events[i]
+		var watch: String = str(event.get("watch", ""))
+		if i == events.size() - 1:
+			_check(watch.is_empty(), "%s goes straight to the reentry, so it has nothing to watch" % event["id"])
+			continue
+		_check(UiStyle.SPOTLIGHTS.has(watch), "%s watches something the HUD can show, got '%s'" % [event["id"], watch])
+		_check(not UiStyle.watch_line(watch).is_empty(), "%s has a watch line for the reveal" % event["id"])
 
 
 func test_reentry_steps_are_in_order_before_splashdown() -> void:
@@ -414,6 +443,7 @@ func test_asset_paths_point_into_assets() -> void:
 	for path in paths:
 		_check(path.begins_with("res://assets/audio/") or path.begins_with("res://assets/images/"),
 			"asset path is under assets/: %s" % path)
+		_check(ResourceLoader.exists(path), "asset is in the project: %s" % path)
 
 
 # --- Tuning and history tests ---
@@ -1081,6 +1111,12 @@ func test_every_option_combination_reaches_the_scorecard() -> void:
 		while phase != "scorecard" and steps < 40:
 			steps += 1
 			var before: String = phase
+			if phase == "cutscene" and int(session.get("event_index")) == EVENT_IDS.size() - 1:
+				var shots: Array = session.get("_shots")
+				var dropped_early: bool = picks[1] == "b"
+				var first: Dictionary = shots[0] if not shots.is_empty() else {}
+				_check(dropped_early == (first.get("action", "") != "sm_jettison"),
+					"%s E5 plays the Service Module jettison only if it is still attached" % label)
 			if phase == "poll":
 				session.call("choose", picks[int(session.get("event_index"))])
 				session.call("finish_choice_hold")
@@ -1097,3 +1133,118 @@ func test_every_option_combination_reaches_the_scorecard() -> void:
 		_near(played_state.time.current_get, splashdown, 1e-3, "%s splashdown" % label)
 		for i in EVENT_IDS.size():
 			_check(played_state.decisions.get(EVENT_IDS[i], "") == picks[i], "%s records %s" % [label, EVENT_IDS[i]])
+
+
+func test_a_vote_reveals_the_1970_call() -> void:
+	var session: Node = root.get_node_or_null("Director")
+	if session == null:
+		_check(false, "the Director autoload is loaded")
+		return
+	var e2: Dictionary = Timeline.find_event(_load_events(), "e2")
+	var same: Dictionary = session.call("_reveal_lines", e2, "a")
+	_check(same["line"] == "Same call as 1970.", "choosing the 1970 option says so, got '%s'" % same["line"])
+	_check(same["historical"] == "a", "the 1970 option gets the badge")
+	_check(same["note"].is_empty(), "the 1970 option has no note")
+	var other: Dictionary = session.call("_reveal_lines", e2, "b")
+	_check("Normal speed" in other["line"], "the other option names the 1970 call, got '%s'" % other["line"])
+	_check("rejected" in other["note"], "the fast return explains why it was rejected in 1970")
+	_check(other["watch"] == UiStyle.watch_line("splashdown"), "then it says what to watch")
+
+
+func test_subtitles_follow_the_mission_audio() -> void:
+	var session: Node = root.get_node_or_null("Director")
+	if session == null:
+		_check(false, "the Director autoload is loaded")
+		return
+	var cues: Array = [
+		{"at_s": 1.0, "hold_s": 2.0, "text": "First"},
+		{"at_s": 4.0, "hold_s": 2.0, "text": "Second"},
+		{"at_s": 20.0, "hold_s": 2.0, "text": "Third"},
+	]
+	var bridge: float = Tuning.CAPTION_BRIDGE_S
+	_check(session.call("active_line", cues, 0.5, "Base") == "Base", "the caption shows before the first line")
+	_check(session.call("active_line", cues, 2.0, "Base") == "First", "a line shows while it is spoken")
+	_check(session.call("active_line", cues, 3.5, "Base") == "First", "a short pause keeps the line up")
+	_check(session.call("active_line", cues, 4.5, "Base") == "Second", "the next line replaces it as soon as it starts")
+	_check(session.call("active_line", cues, 6.0 + bridge + 0.5, "Base") == "Base", "a long pause goes back to the caption")
+	_check(session.call("active_line", cues, 21.0, "Base") == "Third", "the last line shows")
+	# Every clip's lines are in order, inside the clip, and readable for at least 1.8 seconds.
+	var clips: Dictionary = {}
+	_collect_subtitled(_load_events(), clips)
+	_check(clips.size() >= 8, "found the subtitled clips (%d)" % clips.size())
+	for path: String in clips:
+		var stream: AudioStream = load(path) if ResourceLoader.exists(path) else null
+		var length_s: float = stream.get_length() if stream != null else INF
+		var previous: float = -1.0
+		for cue: Dictionary in clips[path]:
+			var at_s: float = float(cue["at_s"])
+			_check(at_s > previous and at_s + float(cue["hold_s"]) <= length_s + 0.5,
+				"%s line at %.2f s is in order and inside the clip" % [path.get_file(), at_s])
+			_check(float(cue["hold_s"]) >= 1.8, "%s line at %.2f s stays up long enough to read" % [path.get_file(), at_s])
+			previous = at_s
+
+
+func test_pause_holds_everything_until_resumed() -> void:
+	var session: Node = root.get_node_or_null("Director")
+	if session == null:
+		_check(false, "the Director autoload is loaded")
+		return
+	_check(InputMap.has_action("pause_game"), "P is an Input Map action")
+	_check(Tuning.POLL_COUNTDOWN_S == 0.0, "polls wait for the presenter, with no countdown")
+	session.call("jump_to_state", "e1_cutscene")
+	session.call("_process", FRAME_S)
+	var elapsed: float = session.get("_shot_elapsed_s")
+	session.call("toggle_pause")
+	_check(paused, "P pauses the game")
+	for i in 120:
+		session.call("_process", FRAME_S)
+	_check(is_equal_approx(session.get("_shot_elapsed_s"), elapsed), "the cutscene stands still while paused")
+	_check(session.get("phase") == "cutscene", "pausing does not skip the cutscene")
+	session.call("toggle_pause")
+	_check(not paused, "P again carries on")
+	session.call("_process", FRAME_S)
+	_check(session.get("_shot_elapsed_s") > elapsed, "the cutscene moves again after resuming")
+	session.call("set_paused", true)
+	session.call("restart_now")
+	_check(not paused and session.get("phase") == "intro", "restarting while paused starts the intro running")
+
+
+## Clip path -> its subtitles, for every shot, timeskip caption or reentry step that has both.
+func _collect_subtitled(node: Variant, out: Dictionary) -> void:
+	if node is Dictionary:
+		if node.has("audio") and node.has("subtitles"):
+			out[str(node["audio"])] = node["subtitles"]
+		for key: String in node:
+			_collect_subtitled(node[key], out)
+	elif node is Array:
+		for item: Variant in node:
+			_collect_subtitled(item, out)
+
+
+## Plays the reentry frame by frame, as the presenter would see it, with no key presses.
+func test_reentry_plays_through_in_about_a_minute() -> void:
+	var session: Node = root.get_node_or_null("Director")
+	var played: Node = root.get_node_or_null("Game")
+	if session == null or played == null:
+		_check(false, "the Game and Director autoloads are loaded")
+		return
+	var blackout_step: Dictionary = {}
+	for step: Dictionary in _load_events()["reentry"]["steps"]:
+		if step["id"] == "blackout":
+			blackout_step = step
+	session.call("jump_to_state", "reentry")
+	var elapsed_s: float = 0.0
+	var blackout_from_s: float = -1.0
+	var blackout_s: float = -1.0
+	while elapsed_s < 180.0 and session.get("phase") == "reentry":
+		played.call("_physics_process", FRAME_S)
+		session.call("_process", FRAME_S)
+		elapsed_s += FRAME_S
+		var dark: bool = session.get("_radio_blackout")
+		if dark and blackout_from_s < 0.0:
+			blackout_from_s = elapsed_s
+		elif not dark and blackout_from_s >= 0.0 and blackout_s < 0.0:
+			blackout_s = elapsed_s - blackout_from_s
+	_check(session.get("phase") == "scorecard", "the reentry ends on the scorecard (after %.0f s)" % elapsed_s)
+	_check(elapsed_s < 90.0, "the reentry takes about a minute, not %.0f s" % elapsed_s)
+	_near(blackout_s, float(blackout_step["screen_s"]), 1.0, "the radio blackout lasts its screen time")

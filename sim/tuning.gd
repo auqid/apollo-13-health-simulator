@@ -153,20 +153,43 @@ const SEEK_STEP_H: float = 0.05
 const RESTART_CONFIRM_S: float = 3.0
 ## Seconds a caption or notice stays on screen.
 const CAPTION_HOLD_S: float = 4.0
+## A subtitle of mission audio stays up this much longer than its line, unless the next line
+## starts first, so short pauses between speakers don't flicker back to the caption.
+const CAPTION_BRIDGE_S: float = 3.0
+## In the reentry, a new photo or the splash shows its own caption this long before the radio's
+## subtitles carry on.
+const CAPTION_BEAT_S: float = 2.5
+## A shot or a timeskip pause outlasts its mission audio by this much, so the last word isn't cut.
+const CLIP_TAIL_S: float = 0.4
 ## Clock speeds offered in the debug panel, in GET hours per real second.
 const DEBUG_RATES_H_PER_S: Array = [0.1, 0.5, 1.0, 2.0, 4.0, 8.0]
 ## How far a cutscene photo zooms during its pan.
 const CUTSCENE_PHOTO_ZOOM: float = 1.08
+## Between cutscene shots the picture dips to black: the curtain closes, the next shot starts, then
+## it opens. Slow fades, never a flash.
+const CUTSCENE_DIP_CLOSE_S: float = 0.3
+const CUTSCENE_DIP_OPEN_S: float = 0.45
+## Cabin shots in a cutscene ease the camera this far forward, so a long line of audio is not a still.
+const CUTSCENE_CABIN_DOLLY_M: float = 0.22
 ## How long the mission map stays up at the start of a timeskip, in real seconds.
 const MAP_HOLD_S: float = 4.0
 ## One loop of the exterior preview orbit.
 const EXTERIOR_PREVIEW_S: float = 12.0
-## How long the chosen poll option stays highlighted before the session continues.
-const POLL_CHOICE_HOLD_S: float = 1.5
+## How long the chosen poll option and the 1970 reveal stay up before the session continues.
+## Space moves on sooner.
+const POLL_CHOICE_HOLD_S: float = 5.0
+## A countdown for the chat vote on each poll card, in seconds. 0 shows none, so the presenter
+## takes as long as reading the chat needs. A countdown never picks; at zero it only prompts.
+const POLL_COUNTDOWN_S: float = 0.0
+## With -- --autoplay (for recording a backup video), each vote is made this long after its poll
+## opens, and the scorecard reveals a row this often.
+const AUTOPLAY_VOTE_S: float = 7.0
+const AUTOPLAY_ROW_S: float = 1.5
 ## Farewell line stays at least this long, so it can be read when the clip is missing.
 const REENTRY_FAREWELL_HOLD_S: float = 6.0
-## Recovery photo before the scorecard.
-const REENTRY_RECOVERY_HOLD_S: float = 6.0
+## How long each reentry photo stays up (Aquarius, Mission Control, splashdown, recovery) unless
+## events.json gives its own hold_s.
+const REENTRY_PHOTO_HOLD_S: float = 4.5
 ## Silent exterior of Odyssey, heat shield first, before the radio blackout.
 const REENTRY_PLASMA_S: float = 8.0
 ## Debug loop of the parachute descent. In the session it follows the clock from contact to splashdown.
@@ -261,6 +284,9 @@ const CAMERA_MOVE_S: float = 2.0
 const CAMERA_DRIFT_M: float = 0.02
 const CAMERA_DRIFT_DEG: float = 0.6
 const CAMERA_DRIFT_PERIODS_S: Array = [9.7, 13.3, 17.9, 11.1, 15.7, 21.3]
+## The bang: one knock of the camera, this strong, gone within this long.
+const CAMERA_JOLT_RAD: float = 0.03
+const CAMERA_JOLT_S: float = 1.2
 
 # --- Loose objects floating in the cabin, real seconds ---
 const FLOAT_DRIFT_M_MIN: float = 0.03
@@ -297,6 +323,13 @@ const AUDIO_DUCK_DB: float = -18.0
 const AUDIO_DUCK_ATTACK_S: float = 0.04
 const AUDIO_DUCK_RELEASE_S: float = 0.4
 const AUDIO_VOLUME_SILENT_DB: float = -80.0
+## Quindar tones, the beeps Mission Control's radio sent to open and close each transmission:
+## 2525 Hz to open, 2475 Hz to close, a quarter of a second each. Played when a poll opens and
+## when a vote is locked in.
+const AUDIO_QUINDAR_OPEN_HZ: float = 2525.0
+const AUDIO_QUINDAR_CLOSE_HZ: float = 2475.0
+const AUDIO_QUINDAR_S: float = 0.25
+const AUDIO_QUINDAR_GAIN: float = 0.1
 const AUDIO_TEST_VOICE_S: float = 2.0
 const AUDIO_TEST_VOICE_HZ: float = 196.0
 const AUDIO_TEST_VOICE_GAIN: float = 0.22

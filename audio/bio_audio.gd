@@ -22,6 +22,9 @@ var _heart: AudioStreamPlayer
 var _breath: AudioStreamPlayer
 var _alarm: AudioStreamPlayer
 var _voice: AudioStreamPlayer
+var _beep: AudioStreamPlayer
+var _quindar_open: AudioStreamWAV
+var _quindar_close: AudioStreamWAV
 var _beat_pos_s: float = 0.0
 var _beat_len_s: float = 1.0
 var _breath_pos_s: float = 0.0
@@ -44,11 +47,16 @@ func _ready() -> void:
 	_voice = AudioStreamPlayer.new()
 	_voice.bus = AudioMix.BUS_VOICE
 	add_child(_voice)
+	_beep = AudioStreamPlayer.new()
+	_beep.bus = AudioMix.BUS_VOICE
+	add_child(_beep)
+	_quindar_open = _tone(Tuning.AUDIO_QUINDAR_OPEN_HZ, Tuning.AUDIO_QUINDAR_S, Tuning.AUDIO_QUINDAR_GAIN)
+	_quindar_close = _tone(Tuning.AUDIO_QUINDAR_CLOSE_HZ, Tuning.AUDIO_QUINDAR_S, Tuning.AUDIO_QUINDAR_GAIN)
 	_apply_volumes()
 
 
 func _exit_tree() -> void:
-	for player in [_heart, _breath, _alarm, _voice]:
+	for player in [_heart, _breath, _alarm, _voice, _beep]:
 		if player != null:
 			player.stop()
 
@@ -83,6 +91,12 @@ func bus_linear(bus_name: String) -> float:
 func play_test_voice() -> void:
 	_voice.stream = _voice_tone()
 	_voice.play()
+
+
+## A Quindar tone, the beep that opened (or closed) each Mission Control transmission.
+func play_quindar(opening: bool) -> void:
+	_beep.stream = _quindar_open if opening else _quindar_close
+	_beep.play()
 
 
 ## A short muffled thud. There is no recording of the tank explosion itself.
@@ -298,6 +312,21 @@ func _voice_tone() -> AudioStreamWAV:
 			env = maxf(Tuning.AUDIO_TEST_VOICE_S - t_s, 0.0) / edge_s
 		var wobble: float = 0.85 + 0.15 * sin(TAU * 3.0 * t_s)
 		var sample: float = sin(TAU * Tuning.AUDIO_TEST_VOICE_HZ * t_s) * wobble * env * Tuning.AUDIO_TEST_VOICE_GAIN
+		bytes.encode_s16(i * 2, clampi(int(sample * 32767.0), -32767, 32767))
+	return _wav_from(bytes, rate)
+
+
+## A pure sine tone with short fades at each end, so it starts and stops without a click.
+func _tone(hz: float, seconds: float, gain: float) -> AudioStreamWAV:
+	var rate: int = Tuning.AUDIO_MIX_RATE
+	var count: int = int(seconds * rate)
+	var bytes := PackedByteArray()
+	bytes.resize(count * 2)
+	var edge_s: float = 0.006
+	for i in count:
+		var t_s: float = float(i) / rate
+		var env: float = clampf(minf(t_s, seconds - t_s) / edge_s, 0.0, 1.0)
+		var sample: float = sin(TAU * hz * t_s) * env * gain
 		bytes.encode_s16(i * 2, clampi(int(sample * 32767.0), -32767, 32767))
 	return _wav_from(bytes, rate)
 

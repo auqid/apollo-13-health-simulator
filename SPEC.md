@@ -20,8 +20,15 @@ Each event follows the same pattern:
 2. **Poll card**: a full-screen question with options A and B, each with a one-line consequence hint. The presenter runs the chat poll and presses A or B.
 3. **Timeskip**: the mission clock fast-forwards at about 2 GET hours per real second while the vitals and effects change live. Timed captions appear during the skip.
 
-### Intro card (10 s)
-"April 13, 1970. Apollo 13 is about 330,000 km from Earth, two days into a smooth flight to the Moon." The mission clock starts at GET 55:52 with calm vitals.
+### Presentation rules
+- **One caption at a time.** Cutscene subtitles, timeskip captions and the fever line all go through one caption line, so a new caption replaces the last. Captions clear at every phase change. Presenter notices (paused, muted, alarm silenced, restart) sit at the top centre instead.
+- **Cinematic bars** frame cutscenes, the mission map and the reentry. They show the chapter ("2 of 5 · The return burn") and the mission clock (plus the focused crew member's heart rate during the reentry), and the HUD fades out meanwhile. Shots dip to black between each other.
+- **Poll card:** says which decision it is and waits for the presenter, with no countdown, so there is time to read the chat. (`POLL_COUNTDOWN_S` in `sim/tuning.gd` can show one; it never picks.) After the vote it says whether the call matches 1970 (the 1970 option gets a badge), shows the option's note if it has one, and says what to watch next.
+- **Spotlight:** during each timeskip the HUD shows the value that event's decision changes (`watch` in `events.json`: cabin temperature, time to splashdown, CO2 or water left) under the clock, rising or falling, and lights up its row.
+- **Quindar tones** (2525 Hz to open, 2475 Hz to close, 250 ms each, the beeps that bracketed Mission Control's transmissions) play when a poll opens and when a vote locks in.
+
+### Intro card (14 s)
+A cold open: the headline is Lovell's "Houston, we've had a problem." and his voice plays it one second in (`houston_problem.mp3`). Below it, the crew photo and "April 13, 1970. Apollo 13 is about 330,000 km from Earth, two days into a smooth flight to the Moon.", then how to vote. The mission clock starts at GET 55:52 with calm vitals. The full exchange plays in context in E1. (The film's "Houston, we have a problem" is a misquote and film audio is not allowed.)
 
 ---
 
@@ -35,6 +42,7 @@ Each option carries an `effects` object in `events.json`. The option marked hist
   - **A. Save power** (historical). Good: more battery for the trip home. Cost: the cabin gets close to freezing. Cabin temperature heads toward 3 °C. Power margin is unchanged.
   - **B. Keep a heater on.** Good: a warmer crew that sleeps better. Cost: less battery for the trip home. Cabin temperature bottoms out around 10 °C, and the fatigue rate drops 25%. Power margin −30.
 - **Timeskip to GET 79.0.** Captions:
+  - At 56:09:07: Lovell's report that they are venting something into space (`e1_venting.mp3`). The clock stops while a timeskip clip plays, with its subtitles.
   - At 61:29:43.5: a 34-second burn puts them back on a path that loops around the Moon and home.
   - At about 77:08: behind the Moon, radio contact is lost for about 25 minutes. Play 4 seconds of silence.
   - On the far-side pass, with no GET in the caption: they are farther from Earth than any humans before them. A distance record that stood until Artemis II in 2026.
@@ -53,7 +61,7 @@ Each option carries an `effects` object in `events.json`. The option marked hist
   - **A. Wait for Houston** (historical). Good: a tested design that seals well. Cost: CO2 climbs higher while we wait. CO2 peaks at about 15 mmHg, then falls to about 1.5 within 2 hours. Do not show a GET for the CO2 peak on screen.
   - **B. Build it now.** Good: CO2 stops rising sooner. Cost: a tired crew and a leaky seal. CO2 peaks at about 10 mmHg, then settles at about 2.5 because the improvised seal leaks a little. Crew fatigue +0.15. Do not show a GET for the CO2 peak on screen.
 - **Optional mini-game** (only if ahead of schedule): the player drags the real parts onto the adapter (two lithium hydroxide canisters, gray tape, bags from two cooling garments, an LM cue card, suit hoses and a sock). CO2 keeps rising while they work.
-- **Timeskip to GET 96.0.** At about 91:30, Haise: "Our do-it-yourself lithium hydroxide canister change is complete." Do not show a GET for the CO2 peak.
+- **Timeskip to GET 96.0.** At 091:10:26, Swigert: "Okay. Our do-it-yourself lithium hydroxide canister change is complete." (the first adapter; the Flight Journal confirms Swigert, not Haise). The caption says this is what happened in 1970, so it holds on the "build it now" path too. Do not show a GET for the CO2 peak.
 
 ### E4: The cold coast (GET 96.0)
 - **Cutscene:** a dark cabin with breath fog and condensation. Caption: water isn't just for drinking; the LM needs it to cool its electronics.
@@ -65,7 +73,7 @@ Each option carries an `effects` object in `events.json`. The option marked hist
   - At about 112:12: *Aquarius* starts recharging *Odyssey*'s reentry batteries. Charging takes about 15 hours.
 
 ### E5: Wake up *Odyssey* (splashdown −5 h)
-- **Cutscene:** if the Service Module is still attached, jettison it now (about 138:02). Show the NASA photo of the damaged Service Module with the crew's audio. Lovell: "And there's one whole side of that spacecraft missing." Then: "Right by the high gain antenna, the whole panel is blown out, almost from the base to the engine." Optional, at 138:09:09, Haise: "Man, that's unbelievable!"
+- **Cutscene:** if the Service Module is still attached, jettison it now (about 138:02). Show the NASA photo of the damaged Service Module with the crew's audio. Lovell: "And there's one whole side of that spacecraft missing." Then: "Right by the high gain antenna, the whole panel is blown out, almost from the base to the engine." Haise's "Man, that's unbelievable!" is at 138:09:09, four minutes after the clip, so it is not used.
 - **Poll:** "The landing capsule is frozen and wet inside. When do we switch it on?"
   - **A. As late as possible** (historical). Good: more battery for landing. Cost: freezing, dripping final hours. The cabin stays cold, and the condensation overlay is on. Power margin is unchanged.
   - **B. Early, to warm up.** Good: a warmer, drier crew. Cost: less battery for landing. Cabin temperature +5 °C for the final hours and less condensation. Power margin −20.
@@ -74,7 +82,8 @@ Each option carries an `effects` object in `events.json`. The option marked hist
   2. Blackout from 142:39 to 142:45. The screen goes nearly black, leaving only the heartbeat audio and the mission clock, compressed to about 20 s. Caption: "Radio blackout lasted about six minutes, roughly a minute and a half longer than expected."
   3. Entry interface at 142:40:46. Stress +15 bpm (+35 with `heatShieldRisk`).
   4. Contact restored at 142:45, parachutes, then splashdown at 142:54:41.
-- **Scorecard.**
+  5. NASA photos between the beats (`photos` on each reentry step): Aquarius after the jettison, Mission Control with the parachutes on the main screen at contact, then the real splashdown, the recovery and the crew arriving on USS Iwo Jima.
+- **Scorecard.** It also says how many of the five calls matched 1970.
 
 ---
 
@@ -192,7 +201,8 @@ Benchmark sources:
 
 | Key | Action |
 |---|---|
-| Space or → | Advance, skip the current cutscene, or reveal the next scorecard row |
+| Space or → | Advance, skip the current cutscene, or reveal the next scorecard row. During a timeskip it pauses, and while paused it carries on |
+| P | Pause or resume everything: cutscene, mission audio, clock and cards. A notice says how to carry on |
 | Enter | Reveal every scorecard row |
 | A / B | Choose a poll option |
 | 1 / 2 / 3 | Focus Lovell / Swigert / Haise |
@@ -202,6 +212,15 @@ Benchmark sources:
 | F | Fullscreen |
 | R | Restart (asks for confirmation) |
 | ` | Debug panel |
+
+Development flags go after `--` on the command line:
+
+| Flag | Effect |
+|---|---|
+| `--jump=e3_poll` | Start at a session state (any id from the debug panel's Session buttons) |
+| `--preview=explosion` | Loop one exterior shot: exterior, explosion, lifeboat, burn, sm_jettison, lm_jettison, plasma, parachute, splash, map |
+| `--autoplay` or `--autoplay=abaab` | Vote by itself (the 1970 calls, or the given picks) and reveal the scorecard, for recording a backup video |
+| `--debug`, `--no-hud`, `--camera=`, `--outside=`, `--fx=`, `--fx-strength=` | As before |
 
 ---
 
@@ -234,14 +253,16 @@ Sources:
 
 | File | Content |
 |---|---|
+| `audio/houston_problem.mp3` | Lovell's "Houston, we've had a problem." on its own, for the intro's cold open |
 | `audio/e1_problem.mp3` | The "we've had a problem" exchange, plus a few seconds of reports about venting |
 | `audio/e2_burn.mp3` | Around the PC+2 burn |
 | `audio/e3_procedure.mp3` | Joe Kerwin reading up the adapter procedure (from about 90:22) |
-| `audio/e3_complete.mp3` | Haise at about 91:30, reporting the canister change complete |
+| `audio/e1_venting.mp3` | Lovell at 056:09:07, seeing the ship venting |
+| `audio/e3_complete.mp3` | Swigert at 091:10:26, reporting the canister change complete |
 | `audio/e5_sm.mp3` | Lovell and Haise describing the Service Module damage (about 138:02) |
 | `audio/e5_farewell.mp3` | Joe Kerwin at 141:30:05: "Farewell, Aquarius, and we thank you." |
 | `audio/e5_splash.mp3` | Contact after blackout, parachutes, splashdown |
-| `images/` | Earth from the LM, the Moon's far side, the CO2 adapter, the dark cabin, the damaged Service Module, parachutes, recovery |
+| `images/` | The crew, the Moon's far side, the CO2 adapter, Lovell in Aquarius, the damaged Service Module, Aquarius after jettison, Mission Control at splashdown, the splashdown, recovery, the crew on USS Iwo Jima. Each file's NASA ID, source and caption facts are in `assets/SOURCES.md`. |
 
 Trim clips to 10–30 s and normalize the volume (Audacity is fine).
 
