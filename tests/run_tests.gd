@@ -1369,7 +1369,7 @@ func test_timeskip_captions_stay_up_long_enough_to_read() -> void:
 		if captions.is_empty():
 			continue
 		session.call("jump_to_state", "%s_timeskip" % event["id"])
-		_check_reading_time(captions, _play_timeskip(session, played, view), "%s on the 1970 path" % event["id"], INF)
+		_check_reading_time(session, captions, _play_timeskip(session, played, view), "%s on the 1970 path" % event["id"], INF)
 		if event["id"] != "e4":
 			continue
 		session.call("jump_to_state", "e4_timeskip")
@@ -1378,7 +1378,7 @@ func test_timeskip_captions_stay_up_long_enough_to_read() -> void:
 		session.call("_begin_timeskip")
 		var ends_get: float = session.get("_clock_target")
 		_near(ends_get, 114.0, 0.01, "the fast way home ends the cold coast at GET 114")
-		_check_reading_time(captions, _play_timeskip(session, played, view), "e4 with the fast way home", ends_get)
+		_check_reading_time(session, captions, _play_timeskip(session, played, view), "e4 with the fast way home", ends_get)
 	_check(quotes >= 8, "the crew's own words come up in the timeskips (%d quotes)" % quotes)
 	root.remove_child(view)
 	view.free()
@@ -1404,8 +1404,9 @@ func _play_timeskip(session: Node, played: Node, view: Node) -> Dictionary:
 
 
 ## A caption needs READ_WORDS_PER_S, and at least READ_MIN_S. One with a clip is read on its own
-## for read_s before the clip, so that alone must be enough.
-func _check_reading_time(captions: Array, longest: Dictionary, label: String, until_get: float) -> void:
+## for read_s before the clip, so that alone must be enough, unless the clip speaks its words.
+## (No audio plays in the tests, so a quote's read_s stands in for its clip.)
+func _check_reading_time(session: Node, captions: Array, longest: Dictionary, label: String, until_get: float) -> void:
 	for caption: Dictionary in captions:
 		if float(caption["get"]) >= until_get:
 			continue
@@ -1413,7 +1414,7 @@ func _check_reading_time(captions: Array, longest: Dictionary, label: String, un
 		var words: int = text.replace("\n", " ").split(" ", false).size()
 		var needed: float = maxf(Tuning.READ_MIN_S, words / Tuning.READ_WORDS_PER_S)
 		var stood: float = float(longest.get(text, 0.0))
-		if caption.has("audio"):
+		if caption.has("audio") and not session.call("is_spoken", caption):
 			stood = float(caption.get("read_s", 0.0))
 		_check(stood >= needed - FRAME_S, "%s: '%s…' stays up %.1f s; reading it takes %.1f s" % [
 			label, text.left(40), stood, needed])

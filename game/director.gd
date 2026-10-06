@@ -1430,7 +1430,8 @@ func _asset_exists(path: String) -> bool:
 
 ## Timeskip captions fire as the clock passes their GET. One with "silence_s" or "read_s" stops the
 ## clock for that long; one with "audio" stops it while the clip plays, with its subtitles. With
-## both, the caption is read first, on its own, and then the clip plays.
+## both, the caption is read first, on its own, and then the clip plays, unless the caption is
+## just the words the clip speaks (a crew quote): then the clip plays at once.
 func _run_timeskip_captions(delta: float) -> void:
 	if phase != PHASE_TIMESKIP:
 		return
@@ -1461,7 +1462,7 @@ func _run_timeskip_captions(delta: float) -> void:
 	_caption_base = str(caption.get("text", ""))
 	_start_cues([])
 	var hold_s: float = maxf(float(caption.get("silence_s", 0.0)), float(caption.get("read_s", 0.0)))
-	if hold_s > 0.0 and not str(caption.get("audio", "")).is_empty():
+	if hold_s > 0.0 and not str(caption.get("audio", "")).is_empty() and not is_spoken(caption):
 		_held_clip = caption
 	else:
 		hold_s = maxf(hold_s, _start_timeskip_clip(caption))
@@ -1469,6 +1470,15 @@ func _run_timeskip_captions(delta: float) -> void:
 		_resume_after_hold = Game.running
 		_clock_hold_s = hold_s
 		Game.pause()
+
+
+## Whether a caption's text is exactly what its clip says, line by line, as a crew quote's is.
+static func is_spoken(caption: Dictionary) -> bool:
+	var lines: PackedStringArray = []
+	for cue: Variant in caption.get("subtitles", []):
+		if cue is Dictionary:
+			lines.append(str(cue.get("text", "")))
+	return not lines.is_empty() and "\n".join(lines) == str(caption.get("text", ""))
 
 
 ## Plays a timeskip caption's clip with its subtitles. Returns how long to stop the clock for it,

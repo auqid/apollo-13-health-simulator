@@ -251,6 +251,7 @@ The cabin is 1970 hardware; the HUD is today's sensors looking at it. The contra
 ### Exterior build notes
 - Low-poly spacecraft at about real size, finished as in the 1970 photos: a polished aluminium Service Module with white radiator bands, its reaction control quads and the four-dish high-gain antenna; the silver Command Module with its windows, hatch and thruster ports, browned and streaked after reentry; Aquarius's ascent stage mostly aluminized with dark panels, on its gold descent stage.
 - Aquarius's landing gear is folded until GET 061:00:10, when Haise reported it "down and locked" during the lifeboat power-up, so the explosion and lifeboat shots show it folded and every later shot shows it deployed, with the ladder on the front leg and contact probes under the other three.
+- At splashdown the crew releases the three mains: they go slack, drift downwind and lie flat on the sea behind the capsule, as in the recovery photos.
 
 ### Cabin build notes
 - Use low-poly geometry: boxes and extrusions for the front panel, side panels and overhead.

@@ -68,7 +68,7 @@ const FUEL_CELL := Color(0.6, 0.6, 0.62)
 const WINDOW_GLASS := Color(0.05, 0.06, 0.07)
 const WINDOW_GLOW := Color(1.0, 0.8, 0.5)
 ## Aquarius's cabin was powered down to the minimum, so its windows glow dimmer than Odyssey's.
-const LM_WINDOW_GLOW := Color(0.22, 0.17, 0.1)
+const LM_WINDOW_GLOW := Color(0.32, 0.25, 0.14)
 
 static var _foil_bumps: NoiseTexture2D
 static var _scorch_streaks: NoiseTexture2D
