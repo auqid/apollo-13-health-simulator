@@ -22,7 +22,7 @@ var _clock_box: PanelContainer
 var _clock: Label
 var _since: Label
 var _panel: PanelContainer
-var _clock_layer: CanvasLayer
+var _fade: Tween
 ## crew id -> {"row": PanelContainer, "name": Label, <vital field>: Label}
 var _rows: Dictionary = {}
 var _cabin_temp: Label
@@ -51,27 +51,15 @@ func _ready() -> void:
 	_on_state_changed(Game.state)
 
 
-## Keeps the mission clock above a reentry photo. The sensor panel stays on the HUD layer.
-func set_clock_above_photos(above: bool) -> void:
-	if _clock_box == null:
-		return
-	if above:
-		if _clock_layer == null:
-			_clock_layer = CanvasLayer.new()
-			_clock_layer.layer = UiStyle.LAYER_NOTICE - 1
-			add_child(_clock_layer)
-		if _clock_box.get_parent() != _clock_layer:
-			_clock_box.reparent(_clock_layer)
-	elif _clock_box.get_parent() != self:
-		_clock_box.reparent(self)
-
-
-## Hides the sensor panel. The mission clock stays up.
-func set_panel_visible(shown: bool) -> void:
-	if _panel != null:
-		_panel.visible = shown
-	if _since != null:
-		_since.visible = shown
+## Fades the clock and the sensor panel out for cutscenes and the reentry, and back in for play.
+## The cinematic bars carry the mission clock meanwhile.
+func set_cinematic(on: bool) -> void:
+	if _fade != null:
+		_fade.kill()
+	_fade = create_tween().set_parallel(true)
+	var alpha: float = 0.0 if on else 1.0
+	for part: Control in [_clock_box, _panel]:
+		_fade.tween_property(part, "modulate:a", alpha, UiStyle.FADE_S)
 
 
 func _build_clock() -> void:

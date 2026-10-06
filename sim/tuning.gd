@@ -157,6 +157,10 @@ const CAPTION_HOLD_S: float = 4.0
 const DEBUG_RATES_H_PER_S: Array = [0.1, 0.5, 1.0, 2.0, 4.0, 8.0]
 ## How far a cutscene photo zooms during its pan.
 const CUTSCENE_PHOTO_ZOOM: float = 1.08
+## Between cutscene shots the picture dips to black: the curtain closes, the next shot starts, then
+## it opens. Slow fades, never a flash.
+const CUTSCENE_DIP_CLOSE_S: float = 0.3
+const CUTSCENE_DIP_OPEN_S: float = 0.45
 ## How long the mission map stays up at the start of a timeskip, in real seconds.
 const MAP_HOLD_S: float = 4.0
 ## One loop of the exterior preview orbit.

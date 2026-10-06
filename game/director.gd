@@ -52,6 +52,10 @@ var _shots: Array = []
 var _shot_index: int = 0
 var _shot_left_s: float = 0.0
 var _shot_elapsed_s: float = 0.0
+## How long the current shot runs, after stretching it to fit its audio.
+var _shot_span_s: float = 1.0
+## >= 0 while the picture dips to black before the next shot.
+var _cut_left_s: float = -1.0
 var _caption_index: int = 0
 var _silence_left_s: float = 0.0
 var _resume_after_silence: bool = false
@@ -173,6 +177,7 @@ func start_session() -> void:
 	phase = PHASE_INTRO
 	_card_left_s = float(Game.events["intro"]["duration_s"])
 	_apply_view("front_windows", "earth")
+	notice_requested.emit("", 0.0)
 	var card := _stage()
 	if card != null:
 		card.show_intro(Game.events["intro"]["text"])
@@ -315,6 +320,7 @@ func _start_event_cutscene(sm_already_gone: bool) -> void:
 
 func _begin_poll() -> void:
 	_hide_cutscene()
+	_set_cinematic(false)
 	_show_poll()
 
 
@@ -339,6 +345,7 @@ func _begin_timeskip() -> void:
 		card.hide_card()
 	notice_requested.emit("", 0.0)
 	_map_left_s = Tuning.MAP_HOLD_S
+	_set_cinematic(true, "Next: %s" % str(events[event_index + 1].get("title", "")))
 	_present_map(Game.state.time.current_get, Game.state.time.splashdown_get)
 
 
@@ -352,9 +359,10 @@ func _begin_reentry() -> void:
 	if card != null:
 		card.hide_card()
 	notice_requested.emit("", 0.0)
-	var hud := _hud()
-	if hud != null:
-		hud.set_clock_above_photos(true)
+	_set_cinematic(true, "Reentry")
+	var view := _cutscene()
+	if view != null:
+		view.show_heart_rate(true)
 	Game.set_rate(_clock_rate())
 	Game.play(_clock_target)
 
@@ -463,29 +471,25 @@ func _present_reentry_step(step: Dictionary) -> void:
 	var id: String = str(step.get("id", ""))
 	if id == "lm_jettison":
 		_hide_reentry_photo()
-		_show_reentry_caption(_step_caption(step))
+		_show_caption(_step_caption(step))
 		var clip_s: float = _play_clip(str(step.get("audio", "")))
 		_reentry_beat = "farewell"
 		_reentry_holding = true
 		_reentry_hold_s = maxf(clip_s, Tuning.REENTRY_FAREWELL_HOLD_S)
 		_reentry_beat_span = _reentry_hold_s
+		_fade_in_beat()
 		_present_exterior("pan", "earth", "lm_jettison")
-		var hud := _hud()
-		if hud != null:
-			hud.set_panel_visible(false)
 		Game.pause()
 	elif id == "blackout":
 		_start_radio_blackout(step)
 	elif id == "contact":
 		_end_radio_blackout()
 		_hide_reentry_photo()
-		_show_reentry_caption(_step_caption(step))
+		_show_caption(_step_caption(step))
 		_play_clip(str(step.get("audio", "")))
 		_parachute_playing = true
+		_fade_in_beat()
 		_present_exterior("pan", "earth", "parachute")
-		var hud := _hud()
-		if hud != null:
-			hud.set_panel_visible(false)
 
 
 func _begin_recovery() -> void:
@@ -504,11 +508,9 @@ func _start_plasma() -> void:
 	_reentry_beat = "plasma"
 	_reentry_holding = true
 	_reentry_hold_s = Tuning.REENTRY_PLASMA_S
-	_show_reentry_caption(_step_caption(_reentry_step("entry")))
+	_show_caption(_step_caption(_reentry_step("entry")))
+	_fade_in_beat()
 	_present_exterior("bay", "earth", "plasma")
-	var hud := _hud()
-	if hud != null:
-		hud.set_panel_visible(false)
 	Game.pause()
 
 
@@ -528,11 +530,8 @@ func _start_splash() -> void:
 	_reentry_holding = true
 	_reentry_hold_s = Tuning.REENTRY_SPLASH_S
 	var step: Dictionary = _reentry_step("splashdown")
-	_show_reentry_caption(_step_caption(step))
+	_show_caption(_step_caption(step))
 	_present_exterior("pan", "earth", "splash")
-	var hud := _hud()
-	if hud != null:
-		hud.set_panel_visible(false)
 	Game.pause()
 
 
@@ -542,8 +541,9 @@ func _show_recovery_still() -> void:
 	_recovery_hold = true
 	_hide_space()
 	var step: Dictionary = _reentry_step("splashdown")
+	_fade_in_beat()
 	_show_reentry_photo(_first_image(step))
-	_show_reentry_caption(_step_caption(step))
+	_show_caption(_step_caption(step))
 	_reentry_hold_s = Tuning.REENTRY_RECOVERY_HOLD_S
 	Game.pause()
 
@@ -603,7 +603,7 @@ func _start_radio_blackout(step: Dictionary) -> void:
 		var extra: String = str(step.get("heat_shield_text", ""))
 		if not extra.is_empty():
 			line = extra if line.is_empty() else "%s\n%s" % [line, extra]
-	_show_reentry_caption(line)
+	_show_caption(line)
 	var bio := _bio()
 	if bio != null:
 		bio.stop_voice()
@@ -611,9 +611,6 @@ func _start_radio_blackout(step: Dictionary) -> void:
 	var effects := _effects()
 	if effects != null:
 		effects.set_radio_blackout(Tuning.FX_RADIO_BLACKOUT)
-	var hud := _hud()
-	if hud != null:
-		hud.set_panel_visible(false)
 	Game.set_rate(_blackout_rate())
 
 
@@ -627,19 +624,14 @@ func _end_radio_blackout() -> void:
 	var effects := _effects()
 	if effects != null:
 		effects.set_radio_blackout(0.0)
-	var hud := _hud()
-	if hud != null:
-		hud.set_panel_visible(true)
 
 
+## A steady rate that fits the whole blackout into screen_s. Working it out from the time left
+## each frame would slow the clock forever and never reach contact.
 func _blackout_rate() -> float:
-	var start: float = _reentry_get("blackout")
-	var end: float = _reentry_get("contact")
+	var span_h: float = maxf(_reentry_get("contact") - _reentry_get("blackout"), 0.001)
 	var screen_s: float = float(_reentry_step("blackout").get("screen_s", 20.0))
-	var remaining_h: float = maxf(end - Game.state.time.current_get, 0.0)
-	if remaining_h <= Timeline.EPSILON_H:
-		remaining_h = maxf(end - start, 0.001)
-	return remaining_h / maxf(screen_s, 1.0)
+	return span_h / maxf(screen_s, 1.0)
 
 
 func _clear_reentry_presentation() -> void:
@@ -656,10 +648,10 @@ func _clear_reentry_presentation() -> void:
 	var effects := _effects()
 	if effects != null:
 		effects.set_radio_blackout(0.0)
-	var hud := _hud()
-	if hud != null:
-		hud.set_panel_visible(true)
-		hud.set_clock_above_photos(false)
+	var view := _cutscene()
+	if view != null:
+		view.show_heart_rate(false)
+	_set_cinematic(false)
 	_hide_cutscene()
 
 
@@ -688,10 +680,41 @@ func _first_image(step: Dictionary) -> String:
 	return str(images[0])
 
 
-func _show_reentry_caption(text: String) -> void:
+## The one place story captions go, so two never stack. hold_s > 0 fades it out by itself.
+func _show_caption(text: String, hold_s: float = 0.0) -> void:
 	var view := _cutscene()
 	if view != null:
-		view.show_caption(text)
+		view.show_caption(text, hold_s)
+
+
+func _clear_caption() -> void:
+	_show_caption("")
+
+
+## Cinematic bars with a chapter and the clock for story moments. The HUD fades out meanwhile.
+func _set_cinematic(on: bool, chapter: String = "") -> void:
+	var view := _cutscene()
+	if view != null:
+		view.set_letterbox(on)
+		if on:
+			view.set_chapter(chapter)
+	var hud := _hud()
+	if hud != null:
+		hud.set_cinematic(on)
+
+
+## A reentry beat cuts in from black instead of popping.
+func _fade_in_beat() -> void:
+	var view := _cutscene()
+	if view != null:
+		view.set_curtain(1.0)
+		view.open_curtain(Tuning.CUTSCENE_DIP_OPEN_S)
+
+
+## "2 of 5 · The return burn" for the event being played.
+func _chapter_text() -> String:
+	var events: Array = Timeline.event_list(Game.events)
+	return "%d of %d · %s" % [event_index + 1, events.size(), str(_current_event().get("title", ""))]
 
 
 func _show_reentry_photo(path: String) -> void:
@@ -791,12 +814,18 @@ func _start_shots(shots: Array) -> void:
 	_shots = _with_cabin_beats(shots)
 	_shot_index = -1
 	_shot_left_s = 0.0
+	_cut_left_s = -1.0
 	var card := _stage()
 	if card != null:
 		card.hide_card()
+	_clear_caption()
 	if shots.is_empty():
 		_end_cutscene()
 		return
+	_set_cinematic(true, _chapter_text())
+	var view := _cutscene()
+	if view != null:
+		view.set_curtain(1.0)
 	_advance_shot()
 
 
@@ -804,22 +833,45 @@ func _run_cutscene(delta: float) -> void:
 	if _shot_index < 0 or _shot_index >= _shots.size():
 		return
 	_shot_elapsed_s += delta
-	_shot_left_s -= delta
 	var shot: Dictionary = _shots[_shot_index]
+	_animate_shot(shot)
+	if _cut_left_s >= 0.0:
+		_cut_left_s -= delta
+		if _cut_left_s < 0.0:
+			_advance_shot()
+		return
+	_shot_left_s -= delta
+	_show_shot_line(shot)
+	if _shot_left_s <= 0.0:
+		_close_shot()
+
+
+## Moves the exterior camera or the photo pan along the shot. It keeps moving while the picture dips.
+func _animate_shot(shot: Dictionary) -> void:
+	var t: float = clampf(_shot_elapsed_s / maxf(_shot_span_s, 0.1), 0.0, 1.0)
 	if shot.get("kind", "") == "exterior":
 		var space := _exterior()
 		if space != null:
-			space.set_progress(clampf(_shot_elapsed_s / maxf(float(shot.get("duration_s", 1.0)), 0.1), 0.0, 1.0))
+			space.set_progress(t)
 	elif shot.get("kind", "") == "photo":
 		var view := _cutscene()
 		if view != null:
-			view.set_pan(clampf(_shot_elapsed_s / maxf(float(shot.get("duration_s", 1.0)), 0.1), 0.0, 1.0))
-	_show_shot_line(shot)
-	if _shot_left_s <= 0.0:
-		_advance_shot()
+			view.set_pan(t)
+
+
+## Dips to black before the next shot. After the last shot the cutscene ends without a dip.
+func _close_shot() -> void:
+	if _shot_index + 1 >= _shots.size():
+		_end_cutscene()
+		return
+	_cut_left_s = Tuning.CUTSCENE_DIP_CLOSE_S
+	var view := _cutscene()
+	if view != null:
+		view.close_curtain(Tuning.CUTSCENE_DIP_CLOSE_S)
 
 
 func _advance_shot() -> void:
+	_cut_left_s = -1.0
 	_shot_index += 1
 	if _shot_index >= _shots.size():
 		_end_cutscene()
@@ -827,7 +879,12 @@ func _advance_shot() -> void:
 	var shot: Dictionary = _shots[_shot_index]
 	_shot_elapsed_s = 0.0
 	_shot_left_s = maxf(float(shot.get("duration_s", 4.0)), 0.5)
+	_shot_span_s = _shot_left_s
 	_begin_shot(shot)
+	_shot_span_s = _shot_left_s
+	var view := _cutscene()
+	if view != null:
+		view.open_curtain(Tuning.CUTSCENE_DIP_OPEN_S)
 
 
 func _begin_shot(shot: Dictionary) -> void:
@@ -887,14 +944,13 @@ func _show_shot_line(shot: Dictionary) -> void:
 		if _shot_elapsed_s >= start_s and _shot_elapsed_s < start_s + hold_s:
 			line = str(cue.get("text", line))
 			break
-	var view := _cutscene()
-	if view != null:
-		view.show_caption(line)
+	_show_caption(line)
 
 
 func _end_cutscene() -> void:
 	_shots = []
 	_shot_index = -1
+	_cut_left_s = -1.0
 	_hide_cutscene()
 	if _cutscene_next == PHASE_TIMESKIP:
 		_begin_timeskip()
@@ -979,6 +1035,7 @@ func _finish_opening_map() -> void:
 	_hide_space()
 	if phase != PHASE_TIMESKIP:
 		return
+	_set_cinematic(false)
 	Game.set_rate(_clock_rate())
 	Game.play(_clock_target)
 
@@ -1067,7 +1124,7 @@ func _restore_stage() -> void:
 		PHASE_POLL:
 			_show_poll()
 		PHASE_HOLD, PHASE_SCORECARD:
-			card.visible = true
+			card.restore()
 		_:
 			card.hide_card()
 
@@ -1149,7 +1206,6 @@ func _run_timeskip_captions(delta: float) -> void:
 		_silence_left_s -= delta
 		if _silence_left_s <= 0.0 and _resume_after_silence:
 			_resume_after_silence = false
-			notice_requested.emit("", 0.0)
 			Game.set_rate(_clock_rate())
 			Game.play(_clock_target)
 		return
@@ -1160,7 +1216,7 @@ func _run_timeskip_captions(delta: float) -> void:
 	if Game.state.time.current_get + Timeline.EPSILON_H < float(caption.get("get", INF)):
 		return
 	_caption_index += 1
-	notice_requested.emit(str(caption.get("text", "")), 0.0)
+	_show_caption(str(caption.get("text", "")))
 	_play_clip(str(caption.get("audio", "")))
 	var silence_s: float = float(caption.get("silence_s", 0.0))
 	if silence_s > 0.0:
@@ -1252,7 +1308,7 @@ func _toggle_fullscreen() -> void:
 
 
 func _on_caption_requested(text: String) -> void:
-	notice_requested.emit(text, Tuning.CAPTION_HOLD_S)
+	_show_caption(text, Tuning.CAPTION_HOLD_S)
 
 
 func _boot() -> void:
@@ -1295,3 +1351,9 @@ func _apply_command_line() -> void:
 			effects.set_strength(arg.trim_prefix("--fx-strength=").to_float())
 		elif arg.begins_with("--fx=") and effects != null:
 			effects.set_mode(arg.trim_prefix("--fx="))
+		elif arg.begins_with("--jump="):
+			jump_to_state(arg.trim_prefix("--jump="))
+		elif arg.begins_with("--preview="):
+			var preview: String = "preview_" + arg.trim_prefix("--preview=")
+			if has_method(preview):
+				call(preview)

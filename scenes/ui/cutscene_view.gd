@@ -1,23 +1,54 @@
 extends CanvasLayer
-## A cutscene photo with a slow pan and zoom. Captions and subtitles sit at the bottom.
-## Hiding the photo leaves the cabin visible.
+## How cutscenes look (SPEC.md section 1): a photo with a slow pan and zoom, cinematic bars that
+## carry the chapter and the mission clock, a dip to black between shots, and the caption.
+## Every story caption, in a cutscene or a timeskip, goes through show_caption, so two captions
+## never stack: a new one replaces the last. Hiding the photo leaves the 3D view visible.
 
 const UiStyle := preload("res://scenes/ui/ui_style.gd")
 const Tuning := preload("res://sim/tuning.gd")
+const SimState := preload("res://sim/sim_state.gd")
 
 const GROUP := "cutscene_view"
+## "Name: words" at the start of a subtitle. The name is drawn dimmer than the words.
+const SPEAKER_PATTERN := "^([A-Z][A-Za-z]+): "
 
 var _photo: TextureRect
-var _caption: Label
+var _curtain: ColorRect
+var _top_bar: ColorRect
+var _bottom_bar: ColorRect
+var _chapter: Label
+var _clock: Label
+var _caption_area: MarginContainer
+var _caption_box: PanelContainer
+var _caption: RichTextLabel
+var _caption_text: String = ""
+## Seconds until the caption fades by itself; 0 keeps it until it is replaced or cleared.
+var _caption_left_s: float = 0.0
+var _bars: float = 0.0
+var _heart_rate_shown: bool = false
+var _bars_tween: Tween
+var _curtain_tween: Tween
+var _caption_tween: Tween
 var _from := Vector2.ZERO
 var _to := Vector2.ZERO
+var _speaker := RegEx.create_from_string(SPEAKER_PATTERN)
 
 
 func _ready() -> void:
 	add_to_group(GROUP)
 	layer = UiStyle.LAYER_HUD + 2
 	_build()
-	visible = false
+	_set_bars(0.0)
+
+
+func _process(delta: float) -> void:
+	if _caption_left_s > 0.0:
+		_caption_left_s -= delta
+		if _caption_left_s <= 0.0:
+			_caption_left_s = 0.0
+			show_caption("")
+	if _bars > 0.0:
+		_update_clock()
 
 
 func show_photo(texture: Texture2D, flip: bool) -> void:
@@ -27,13 +58,11 @@ func show_photo(texture: Texture2D, flip: bool) -> void:
 	_from = Vector2(-travel, -18.0)
 	_to = Vector2(travel, 12.0)
 	set_pan(0.0)
-	visible = true
 
 
 func hide_photo() -> void:
 	_photo.visible = false
 	_photo.texture = null
-	visible = true
 
 
 func set_pan(t: float) -> void:
@@ -42,17 +71,125 @@ func set_pan(t: float) -> void:
 	_photo.position = _from.lerp(_to, smoothstep(0.0, 1.0, t))
 
 
-func show_caption(text: String) -> void:
-	_caption.text = text
-	_caption.visible = not text.is_empty()
-	visible = true
+## Replaces the caption. hold_s > 0 fades it out after that long; empty text fades it out now.
+## Asking again for the caption already shown changes nothing, so it can be called every frame.
+func show_caption(text: String, hold_s: float = 0.0) -> void:
+	_caption_left_s = hold_s
+	if text == _caption_text:
+		return
+	_caption_text = text
+	if _caption_tween != null:
+		_caption_tween.kill()
+	_caption_tween = create_tween()
+	if text.is_empty():
+		_caption_tween.tween_property(_caption_box, "modulate:a", 0.0, UiStyle.CAPTION_FADE_S)
+		return
+	if _caption_box.modulate.a > 0.01:
+		_caption_tween.tween_property(_caption_box, "modulate:a", 0.0, UiStyle.CAPTION_FADE_S * 0.5)
+	_caption_tween.tween_callback(_set_caption_text.bind(text))
+	_caption_tween.tween_property(_caption_box, "modulate:a", 1.0, UiStyle.CAPTION_FADE_S)
 
 
+func clear_caption() -> void:
+	show_caption("")
+
+
+func caption_text() -> String:
+	return _caption_text
+
+
+## Cinematic bars slide in for cutscenes and slide away for play. The caption moves into the bar.
+func set_letterbox(on: bool) -> void:
+	if _bars_tween != null:
+		_bars_tween.kill()
+	_bars_tween = create_tween()
+	_bars_tween.tween_method(_set_bars, _bars, 1.0 if on else 0.0, UiStyle.LETTERBOX_SLIDE_S) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
+## The chapter shown in the top bar, such as "1 of 5 · Explosion and lifeboat".
+func set_chapter(text: String) -> void:
+	_chapter.text = text
+
+
+## During the reentry the top bar also shows the focused crew member's heart rate.
+func show_heart_rate(shown: bool) -> void:
+	_heart_rate_shown = shown
+	_update_clock()
+
+
+## Fades the picture to black over seconds. Captions and bars stay on top.
+func close_curtain(seconds: float) -> void:
+	_tween_curtain(1.0, seconds)
+
+
+func open_curtain(seconds: float) -> void:
+	_tween_curtain(0.0, seconds)
+
+
+func set_curtain(amount: float) -> void:
+	if _curtain_tween != null:
+		_curtain_tween.kill()
+	_curtain.modulate.a = clampf(amount, 0.0, 1.0)
+
+
+## Back to play: no photo, no bars, no curtain, no caption.
 func hide_view() -> void:
-	_photo.texture = null
-	_photo.visible = false
-	_caption.text = ""
-	visible = false
+	hide_photo()
+	set_curtain(0.0)
+	clear_caption()
+
+
+func _tween_curtain(alpha: float, seconds: float) -> void:
+	if _curtain_tween != null:
+		_curtain_tween.kill()
+	if seconds <= 0.0:
+		_curtain.modulate.a = alpha
+		return
+	_curtain_tween = create_tween()
+	_curtain_tween.tween_property(_curtain, "modulate:a", alpha, seconds).set_trans(Tween.TRANS_SINE)
+
+
+func _set_bars(amount: float) -> void:
+	_bars = amount
+	var height: float = UiStyle.LETTERBOX_HEIGHT * amount
+	_top_bar.offset_bottom = height
+	_bottom_bar.offset_top = -height
+	_chapter.modulate.a = amount
+	_clock.modulate.a = amount
+	var bottom: float = lerpf(UiStyle.CAPTION_BOTTOM_LOWER_THIRD, UiStyle.CAPTION_BOTTOM_IN_BAR, amount)
+	_caption_area.add_theme_constant_override("margin_bottom", roundi(bottom))
+	_update_clock()
+
+
+func _update_clock() -> void:
+	var host := get_node_or_null("/root/Game")
+	if host == null or host.get("state") == null:
+		return
+	var state: SimState = host.get("state")
+	var line: String = "GET %s" % UiStyle.format_get(state.time.current_get)
+	if _heart_rate_shown:
+		var crew_id: String = str(host.get("focused_crew"))
+		var member: SimState.CrewMember = state.crew[crew_id]
+		line = "%s %d bpm    %s" % [SimState.CREW_NAMES[crew_id], roundi(member.hr), line]
+	_clock.text = line
+
+
+func _set_caption_text(text: String) -> void:
+	var font: Font = UiStyle.font(UiStyle.FONT_CAPTION)
+	var measured: Vector2 = font.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_CENTER,
+		UiStyle.CAPTION_MAX_WIDTH, UiStyle.SIZE_SUBTITLE)
+	_caption.custom_minimum_size.x = minf(ceilf(measured.x) + UiStyle.CAPTION_WRAP_SLACK, UiStyle.CAPTION_MAX_WIDTH)
+	_caption.text = "[center]%s[/center]" % _bbcode(text)
+
+
+func _bbcode(text: String) -> String:
+	var safe: String = text.replace("[", "[lb]")
+	var found: RegExMatch = _speaker.search(safe)
+	if found == null:
+		return safe
+	var speaker: String = found.get_string(1)
+	return "[color=#%s]%s:[/color] %s" % [UiStyle.CAPTION_SPEAKER.to_html(), speaker, safe.substr(found.get_end())]
 
 
 func _build() -> void:
@@ -70,19 +207,77 @@ func _build() -> void:
 	_photo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	_photo.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_photo.pivot_offset = Vector2(960.0, 540.0)
+	_photo.visible = false
 	clip.add_child(_photo)
 	add_child(clip)
-	var bar := MarginContainer.new()
-	bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	bar.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	bar.add_theme_constant_override("margin_left", 160)
-	bar.add_theme_constant_override("margin_right", 160)
-	bar.add_theme_constant_override("margin_bottom", 48)
-	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_caption = UiStyle.label("", UiStyle.FONT_CAPTION, UiStyle.SIZE_CAPTION)
-	_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+	_curtain = ColorRect.new()
+	_curtain.color = Color.BLACK
+	_curtain.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_curtain.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_curtain.modulate.a = 0.0
+	add_child(_curtain)
+
+	_top_bar = _bar(Control.PRESET_TOP_WIDE)
+	_bottom_bar = _bar(Control.PRESET_BOTTOM_WIDE)
+	var header := MarginContainer.new()
+	header.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	header.offset_bottom = UiStyle.LETTERBOX_HEIGHT
+	header.add_theme_constant_override("margin_left", UiStyle.MARGIN)
+	header.add_theme_constant_override("margin_right", UiStyle.MARGIN)
+	header.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var line := HBoxContainer.new()
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chapter = UiStyle.label("", UiStyle.FONT_TITLE, UiStyle.SIZE_CHAPTER, UiStyle.TEXT_DIM)
+	_chapter.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_chapter.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_chapter.size_flags_vertical = Control.SIZE_FILL
+	line.add_child(_chapter)
+	_clock = UiStyle.label("", UiStyle.FONT_HUD, UiStyle.SIZE_CHAPTER, UiStyle.TEXT_DIM, true)
+	_clock.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_clock.size_flags_vertical = Control.SIZE_FILL
+	line.add_child(_clock)
+	header.add_child(line)
+	_top_bar.add_child(header)
+
+	_caption_area = MarginContainer.new()
+	_caption_area.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	_caption_area.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_caption_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var center := CenterContainer.new()
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_caption_box = PanelContainer.new()
+	var box := StyleBoxFlat.new()
+	box.bg_color = UiStyle.CAPTION_BOX
+	box.set_corner_radius_all(UiStyle.PANEL_RADIUS)
+	box.content_margin_left = UiStyle.CAPTION_PADDING_H
+	box.content_margin_right = UiStyle.CAPTION_PADDING_H
+	box.content_margin_top = UiStyle.CAPTION_PADDING_V
+	box.content_margin_bottom = UiStyle.CAPTION_PADDING_V
+	_caption_box.add_theme_stylebox_override("panel", box)
+	_caption_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_caption_box.modulate.a = 0.0
+	_caption = RichTextLabel.new()
+	_caption.bbcode_enabled = true
+	_caption.fit_content = true
+	_caption.scroll_active = false
 	_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_caption.add_theme_font_override("normal_font", UiStyle.font(UiStyle.FONT_CAPTION))
+	_caption.add_theme_font_size_override("normal_font_size", UiStyle.SIZE_SUBTITLE)
+	_caption.add_theme_color_override("default_color", UiStyle.PLACARD_WHITE)
 	_caption.add_theme_constant_override("outline_size", UiStyle.CAPTION_OUTLINE_SIZE)
 	_caption.add_theme_color_override("font_outline_color", UiStyle.CAPTION_OUTLINE)
-	bar.add_child(_caption)
+	_caption_box.add_child(_caption)
+	center.add_child(_caption_box)
+	_caption_area.add_child(center)
+	add_child(_caption_area)
+
+
+func _bar(preset: Control.LayoutPreset) -> ColorRect:
+	var bar := ColorRect.new()
+	bar.color = Color.BLACK
+	bar.set_anchors_and_offsets_preset(preset)
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bar)
+	return bar

@@ -20,8 +20,13 @@ const Exterior := preload("res://scenes/space/exterior.gd")
 const EFFECT_KEYS: Array[String] = ["flags", "power_margin", "fatigue"]
 const TEXT_KEYS: Array[String] = ["text", "question", "label", "hint", "note", "title", "closing", "history", "caption", "heat_shield_text"]
 const EVENT_IDS: Array[String] = ["e1", "e2", "e3", "e4", "e5"]
-## This one drives the autoloads, which are not in the tree yet during _init.
-const SESSION_TEST := "test_every_option_combination_reaches_the_scorecard"
+## These drive the autoloads, which are not in the tree yet during _init.
+const SESSION_TESTS: Array[String] = [
+	"test_every_option_combination_reaches_the_scorecard",
+	"test_reentry_plays_through_in_about_a_minute",
+]
+## Frame step for tests that play the session in real time.
+const FRAME_S: float = 1.0 / 60.0
 ## Step size for the 32 full runs; every event and CO2 peak lands on a step.
 const COMBO_STEP_H: float = 0.1
 
@@ -43,16 +48,17 @@ func _init() -> void:
 	var test_names: Array[String] = []
 	for method: Dictionary in get_method_list():
 		var method_name: String = method["name"]
-		if method_name.begins_with("test_") and method_name != SESSION_TEST:
+		if method_name.begins_with("test_") and method_name not in SESSION_TESTS:
 			test_names.append(method_name)
 	for test_name in test_names:
 		_run_one(test_name)
-	_run_session_test.call_deferred(test_names.size())
+	_run_session_tests.call_deferred(test_names.size())
 
 
-func _run_session_test(already: int) -> void:
-	_run_one(SESSION_TEST)
-	print("%d tests, %d checks, %d failures" % [already + 1, _checks, _failures])
+func _run_session_tests(already: int) -> void:
+	for test_name in SESSION_TESTS:
+		_run_one(test_name)
+	print("%d tests, %d checks, %d failures" % [already + SESSION_TESTS.size(), _checks, _failures])
 	quit(1 if _failures > 0 else 0)
 
 
@@ -1097,3 +1103,32 @@ func test_every_option_combination_reaches_the_scorecard() -> void:
 		_near(played_state.time.current_get, splashdown, 1e-3, "%s splashdown" % label)
 		for i in EVENT_IDS.size():
 			_check(played_state.decisions.get(EVENT_IDS[i], "") == picks[i], "%s records %s" % [label, EVENT_IDS[i]])
+
+
+## Plays the reentry frame by frame, as the presenter would see it, with no key presses.
+func test_reentry_plays_through_in_about_a_minute() -> void:
+	var session: Node = root.get_node_or_null("Director")
+	var played: Node = root.get_node_or_null("Game")
+	if session == null or played == null:
+		_check(false, "the Game and Director autoloads are loaded")
+		return
+	var blackout_step: Dictionary = {}
+	for step: Dictionary in _load_events()["reentry"]["steps"]:
+		if step["id"] == "blackout":
+			blackout_step = step
+	session.call("jump_to_state", "reentry")
+	var elapsed_s: float = 0.0
+	var blackout_from_s: float = -1.0
+	var blackout_s: float = -1.0
+	while elapsed_s < 180.0 and session.get("phase") == "reentry":
+		played.call("_physics_process", FRAME_S)
+		session.call("_process", FRAME_S)
+		elapsed_s += FRAME_S
+		var dark: bool = session.get("_radio_blackout")
+		if dark and blackout_from_s < 0.0:
+			blackout_from_s = elapsed_s
+		elif not dark and blackout_from_s >= 0.0 and blackout_s < 0.0:
+			blackout_s = elapsed_s - blackout_from_s
+	_check(session.get("phase") == "scorecard", "the reentry ends on the scorecard (after %.0f s)" % elapsed_s)
+	_check(elapsed_s < 90.0, "the reentry takes about a minute, not %.0f s" % elapsed_s)
+	_near(blackout_s, float(blackout_step["screen_s"]), 1.0, "the radio blackout lasts its screen time")

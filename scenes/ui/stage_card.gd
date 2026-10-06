@@ -14,6 +14,8 @@ const SCORE_YOU_WIDTH := 180
 const SCORE_VERDICT_WIDTH := 110
 const SCORE_HISTORY_WIDTH := 460
 
+var _root: Control
+var _fade: Tween
 var _dim: ColorRect
 var _column: VBoxContainer
 var _title: Label
@@ -37,12 +39,7 @@ func _ready() -> void:
 
 func show_intro(text: String) -> void:
 	_show_text("Apollo 13", text, CONTINUE_HINT)
-	visible = true
-
-
-func show_cutscene(title: String, get_text: String) -> void:
-	_show_text(title, "GET %s\nPlaceholder" % get_text, CONTINUE_HINT)
-	visible = true
+	_appear()
 
 
 func show_poll(question: String, options: Array) -> void:
@@ -57,7 +54,7 @@ func show_poll(question: String, options: Array) -> void:
 		_options.add_child(_option_row(option))
 	_hint.text = POLL_HINT
 	_dim.visible = true
-	visible = true
+	_appear()
 
 
 func highlight(option_key: String) -> void:
@@ -67,12 +64,6 @@ func highlight(option_key: String) -> void:
 		row.add_theme_stylebox_override("panel", _option_style(selected))
 		row.modulate.a = 1.0 if selected else 0.45
 	_hint.text = ""
-
-
-func show_reentry(steps: PackedStringArray) -> void:
-	var body: String = "Placeholder. The clock runs through to splashdown.\n\n" + "\n".join(steps)
-	_show_text("Reentry", body, CONTINUE_HINT)
-	visible = true
 
 
 ## choices: {poll, choice, historical}. rows: {label, you, history, verdict}.
@@ -104,7 +95,7 @@ func show_scorecard(title: String, choices: Array, rows: Array, closing: String)
 	_score_shown = 0
 	_hint.text = SCORE_HINT
 	_dim.visible = true
-	visible = true
+	_appear()
 
 
 func reveal_next() -> void:
@@ -127,8 +118,30 @@ func reveal_all() -> void:
 	_finish_scorecard()
 
 
+## Fades the card out. Showing another card while it fades brings it straight back.
 func hide_card() -> void:
-	visible = false
+	if not visible:
+		return
+	if _fade != null:
+		_fade.kill()
+	_fade = create_tween()
+	_fade.tween_property(_root, "modulate:a", 0.0, UiStyle.FADE_S)
+	_fade.tween_callback(hide)
+
+
+## Shows the card again as it was, after a debug preview hid it.
+func restore() -> void:
+	_appear()
+
+
+func _appear() -> void:
+	if _fade != null:
+		_fade.kill()
+	if not visible:
+		_root.modulate.a = 0.0
+		visible = true
+	_fade = create_tween()
+	_fade.tween_property(_root, "modulate:a", 1.0, UiStyle.FADE_S)
 
 
 func _show_text(title: String, body: String, hint: String) -> void:
@@ -145,11 +158,15 @@ func _show_text(title: String, body: String, hint: String) -> void:
 
 
 func _build() -> void:
+	_root = Control.new()
+	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_root)
 	_dim = ColorRect.new()
 	_dim.color = Color(UiStyle.BACKDROP, 0.84)
 	_dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_dim)
+	_root.add_child(_dim)
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -182,7 +199,7 @@ func _build() -> void:
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(_column)
 	center.add_child(panel)
-	add_child(center)
+	_root.add_child(center)
 
 
 func _option_row(option: Dictionary) -> Control:

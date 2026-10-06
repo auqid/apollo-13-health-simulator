@@ -1,9 +1,10 @@
 extends CanvasLayer
-## One line of text at the bottom of the screen for captions and presenter hints. Fades in and
-## out slowly; never flashes.
+## Presenter notices (paused, muted, alarm silenced, restart) in a small box at the top centre,
+## away from the story captions at the bottom. Fades in and out slowly; never flashes.
 
 const UiStyle := preload("res://scenes/ui/ui_style.gd")
 
+var _box: PanelContainer
 var _label: Label
 var _tween: Tween
 
@@ -11,18 +12,24 @@ var _tween: Tween
 func _ready() -> void:
 	layer = UiStyle.LAYER_NOTICE
 	var area := MarginContainer.new()
-	area.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	area.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	area.add_theme_constant_override("margin_bottom", UiStyle.MARGIN)
+	area.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	area.add_theme_constant_override("margin_top", UiStyle.NOTICE_TOP)
 	area.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_label = UiStyle.label("", UiStyle.FONT_CAPTION, UiStyle.SIZE_CAPTION)
-	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_label.add_theme_constant_override("outline_size", UiStyle.CAPTION_OUTLINE_SIZE)
-	_label.add_theme_color_override("font_outline_color", UiStyle.CAPTION_OUTLINE)
-	_label.modulate.a = 0.0
-	area.add_child(_label)
+	var center := CenterContainer.new()
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_box = PanelContainer.new()
+	var style := UiStyle.panel_box()
+	style.content_margin_left = UiStyle.NOTICE_PADDING_H
+	style.content_margin_right = UiStyle.NOTICE_PADDING_H
+	style.content_margin_top = UiStyle.NOTICE_PADDING_V
+	style.content_margin_bottom = UiStyle.NOTICE_PADDING_V
+	_box.add_theme_stylebox_override("panel", style)
+	_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_box.modulate.a = 0.0
+	_label = UiStyle.label("", UiStyle.FONT_HUD, UiStyle.SIZE_NOTICE)
+	_box.add_child(_label)
+	center.add_child(_box)
+	area.add_child(center)
 	add_child(area)
 	Director.notice_requested.connect(show_notice)
 
@@ -32,10 +39,10 @@ func show_notice(text: String, hold_s: float) -> void:
 		_tween.kill()
 	_tween = create_tween()
 	if text.is_empty():
-		_tween.tween_property(_label, "modulate:a", 0.0, UiStyle.FADE_S)
+		_tween.tween_property(_box, "modulate:a", 0.0, UiStyle.FADE_S)
 		return
 	_label.text = text
-	_tween.tween_property(_label, "modulate:a", 1.0, UiStyle.FADE_S)
+	_tween.tween_property(_box, "modulate:a", 1.0, UiStyle.FADE_S)
 	if hold_s > 0.0:
 		_tween.tween_interval(hold_s)
-		_tween.tween_property(_label, "modulate:a", 0.0, UiStyle.FADE_S)
+		_tween.tween_property(_box, "modulate:a", 0.0, UiStyle.FADE_S)

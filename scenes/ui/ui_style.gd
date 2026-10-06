@@ -79,6 +79,28 @@ const DEBUG_BUTTON_PADDING_V := 4
 const CAPTION_OUTLINE_SIZE := 8
 const CAPTION_OUTLINE := Color(0.0, 0.0, 0.0, 0.85)
 const FADE_S := 0.4
+## Subtitles and story captions: one line of text at a time, in a dark box at the bottom.
+const SIZE_SUBTITLE := 36
+const CAPTION_MAX_WIDTH := 1400
+const CAPTION_WRAP_SLACK := 4
+const CAPTION_PADDING_H := 22
+const CAPTION_PADDING_V := 10
+const CAPTION_BOX := Color(0.0, 0.0, 0.0, 0.62)
+## The speaker's name at the start of a subtitle is drawn in this colour.
+const CAPTION_SPEAKER := Color(PLACARD_WHITE, 0.6)
+## Distance from the bottom of the screen to the caption box, inside the bar or as a lower third.
+const CAPTION_BOTTOM_IN_BAR := 18
+const CAPTION_BOTTOM_LOWER_THIRD := 64
+const CAPTION_FADE_S := 0.3
+## Cinematic bars during cutscenes, the mission map and the reentry.
+const LETTERBOX_HEIGHT := 128
+const LETTERBOX_SLIDE_S := 0.6
+const SIZE_CHAPTER := 28
+## Presenter notices (paused, muted, alarm silenced) sit at the top, away from the captions.
+const SIZE_NOTICE := 24
+const NOTICE_TOP := 24
+const NOTICE_PADDING_H := 18
+const NOTICE_PADDING_V := 6
 
 static var _fonts: Dictionary = {}
 
