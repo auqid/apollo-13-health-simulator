@@ -63,9 +63,12 @@ var _shot_span_s: float = 1.0
 ## >= 0 while the picture dips to black before the next shot.
 var _cut_left_s: float = -1.0
 var _caption_index: int = 0
-## A timeskip stops its clock for a silence or a clip: seconds left, and whether to run on after.
+## A timeskip stops its clock for a silence, a caption being read or a clip: seconds left, and
+## whether to run on after.
 var _clock_hold_s: float = 0.0
 var _resume_after_hold: bool = false
+## A caption with "read_s" and a clip shows on its own first; its clip waits here until then.
+var _held_clip: Dictionary = {}
 ## The caption the current beat wants, and the subtitles of the mission audio playing over it,
 ## timed in seconds since that clip started. A subtitle shows while it is spoken; the beat's
 ## caption shows between lines.
@@ -473,6 +476,7 @@ func _begin_timeskip() -> void:
 	_caption_index = 0
 	_clock_hold_s = 0.0
 	_resume_after_hold = false
+	_held_clip = {}
 	_hide_cutscene()
 	var card := _stage()
 	if card != null:
@@ -1420,8 +1424,9 @@ func _asset_exists(path: String) -> bool:
 	return false
 
 
-## Timeskip captions fire as the clock passes their GET. One with "silence_s" stops the clock for
-## that long; one with "audio" stops it while the clip plays, with its subtitles.
+## Timeskip captions fire as the clock passes their GET. One with "silence_s" or "read_s" stops the
+## clock for that long; one with "audio" stops it while the clip plays, with its subtitles. With
+## both, the caption is read first, on its own, and then the clip plays.
 func _run_timeskip_captions(delta: float) -> void:
 	if phase != PHASE_TIMESKIP:
 		return
@@ -1433,6 +1438,10 @@ func _run_timeskip_captions(delta: float) -> void:
 		return
 	if _clock_hold_s > 0.0:
 		_clock_hold_s -= delta
+		if _clock_hold_s <= 0.0 and not _held_clip.is_empty():
+			var held: Dictionary = _held_clip
+			_held_clip = {}
+			_clock_hold_s = _start_timeskip_clip(held)
 		if _clock_hold_s <= 0.0 and _resume_after_hold:
 			_resume_after_hold = false
 			Game.set_rate(_clock_rate())
@@ -1446,15 +1455,26 @@ func _run_timeskip_captions(delta: float) -> void:
 		return
 	_caption_index += 1
 	_caption_base = str(caption.get("text", ""))
-	var clip_s: float = _play_clip(str(caption.get("audio", "")))
-	_start_cues(caption.get("subtitles", []) if clip_s > 0.0 else [])
-	var hold_s: float = float(caption.get("silence_s", 0.0))
-	if clip_s > 0.0:
-		hold_s = maxf(hold_s, clip_s + Tuning.CLIP_TAIL_S)
+	_start_cues([])
+	var hold_s: float = maxf(float(caption.get("silence_s", 0.0)), float(caption.get("read_s", 0.0)))
+	if hold_s > 0.0 and not str(caption.get("audio", "")).is_empty():
+		_held_clip = caption
+	else:
+		hold_s = maxf(hold_s, _start_timeskip_clip(caption))
 	if hold_s > 0.0:
 		_resume_after_hold = Game.running
 		_clock_hold_s = hold_s
 		Game.pause()
+
+
+## Plays a timeskip caption's clip with its subtitles. Returns how long to stop the clock for it,
+## or 0 if it has no clip or the file is missing.
+func _start_timeskip_clip(caption: Dictionary) -> float:
+	var clip_s: float = _play_clip(str(caption.get("audio", "")))
+	if clip_s <= 0.0:
+		return 0.0
+	_start_cues(caption.get("subtitles", []))
+	return clip_s + Tuning.CLIP_TAIL_S
 
 
 func _cutscene() -> CutsceneView:

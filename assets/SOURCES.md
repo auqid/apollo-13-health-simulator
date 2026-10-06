@@ -9,6 +9,9 @@ Every photo and recording here is NASA work and in the public domain. Nothing co
 |---|---|---|---|
 | `crew_portrait.jpg` | S70-36485 | The crew, left to right: Jim Lovell, Jack Swigert, Fred Haise. Official pre-flight portrait, April 1970. | https://images-assets.nasa.gov/image/S70-36485/S70-36485~orig.jpg |
 | `face_lovell.jpg`, `face_swigert.jpg`, `face_haise.jpg` | S70-36485 | Each crew member's face, cropped from `crew_portrait.jpg` for the sensor panel and the subtitles: 400 x 500 boxes at x 314, y 716 (Lovell), x 830, y 576 (Swigert) and x 1230, y 910 (Haise), scaled to 240 x 300. | As `crew_portrait.jpg` |
+| `face_lousma.jpg` | S71-52262 | CAPCOM Jack Lousma, for his subtitles. Official portrait, December 1971, about 20 months after the flight (no individual 1970 portrait was found). The suit name tag reads J. LOUSMA. Cropped from the 3084 x 3855 original at x 777, y 300, 1308 x 1635, scaled to 240 x 300. | https://images-assets.nasa.gov/image/S71-52262/S71-52262~orig.jpg |
+| `face_kerwin.jpg` | S71-52264 | CAPCOM Joe Kerwin, for his subtitles. Official portrait, 1971 (NASA gives only the year). The suit name tag reads J. KERWIN. Cropped from the 6553 x 8256 original at x 1279, y 652, 2714 x 3393, scaled to 240 x 300. | https://images-assets.nasa.gov/image/S71-52264/S71-52264~orig.jpg |
+| `face_brand.jpg` | S71-51263 | CAPCOM Vance Brand, for his subtitles. Official portrait, 21 September 1971. The suit name tag reads V. BRAND. Cropped from the 3118 x 3897 original at x 709, y 154, 1622 x 2028, scaled to 240 x 300. | https://images-assets.nasa.gov/image/S71-51263/S71-51263~orig.jpg |
 | `moon_far_side.jpg` | AS13-60-8659 | The crater Tsiolkovsky on the lunar far side, photographed by the crew during the pass around the Moon. | https://images-assets.nasa.gov/image/as13-60-8659/as13-60-8659~orig.jpg |
 | `co2_adapter.jpg` | AS13-62-8929 | The improvised "mail box" adapter in the Lunar Module that let the crew use the Command Module's lithium hydroxide canisters. NASA's library copy is mirrored (the "SUIT GAS DIVERTER" label reads backwards); this file is flipped back, checked against the LPI scan of the same frame. | https://images-assets.nasa.gov/image/as13-62-8929/as13-62-8929~orig.jpg |
 | `aquarius_cabin.jpg` | AS13-62-8990 | Jim Lovell in the Lunar Module cabin. Taken after the mail box photo on the same magazine; no time or temperature is given. Caption from the Apollo Flight Journal photo index. | https://www.lpi.usra.edu/resources/apollo/images/print/AS13/62/8990.jpg (scan: NASA-JSC Image Science and Analysis Laboratory) |
@@ -18,6 +21,23 @@ Every photo and recording here is NASA work and in the public domain. Nothing co
 | `parachutes.jpg` | S70-35638 | The Command Module splashing down under its three main parachutes in the South Pacific. | https://images-assets.nasa.gov/image/S70-35638/S70-35638~orig.jpg |
 | `recovery.jpg` | S70-35651 | Jack Swigert lifted toward a recovery helicopter in a net while Jim Lovell waits in the life raft beside the Command Module, with Navy swimmers. 17 April 1970. | https://images-assets.nasa.gov/image/S70-35651/S70-35651~orig.jpg |
 | `crew_on_deck.jpg` | S70-35614 | Fred Haise, Jim Lovell and Jack Swigert (left to right) step out of the recovery helicopter onto USS Iwo Jima. Black and white. | https://images-assets.nasa.gov/image/S70-35614/S70-35614~orig.jpg |
+
+## Crew quotes (timeskip captions in `data/events.json`)
+
+Text only, word for word from the Apollo 13 Flight Journal transcript
+(https://www.apollojournals.org/afj/ap13fj/), at the GET it gives. Editors' notes such as "[Pause.]"
+are left out because they were not spoken. Not checked against the 1970 NASA typed transcript.
+
+| GET | Speaker | Flight Journal page | Notes |
+|---|---|---|---|
+| 068:03:33 | Lovell | `11day3-minimise-power.html` | To his crewmates, picked up on the open radio loop. |
+| 071:06:34 | Haise | `11day3-minimise-power.html` | To Kerwin, just after "Jim and Jack are in the upstairs bedroom taking a nap now." |
+| 085:51:21, 085:51:28 | Lousma, Lovell | `14day4-homeward.html` | |
+| 092:00:12 | Swigert | `15day4-mailbox.html` | While copying a switch list from Kerwin. |
+| 112:12:16 | Haise | `21day5-batterycharge.html` | To Lousma. The "..." is in the transcript. |
+| 117:51:24 | Lovell | `21day5-batterycharge.html` | To Kerwin. |
+| 132:37:59 | Swigert | `25day6-thelastcoursecorrection.html` | To Lousma. |
+| 135:46:52 | Lovell | `25day6-thelastcoursecorrection.html` | To Lousma. |
 
 ## Mission audio (`assets/audio/`)
 

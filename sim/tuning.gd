@@ -153,6 +153,11 @@ const SEEK_STEP_H: float = 0.05
 const RESTART_CONFIRM_S: float = 3.0
 ## Seconds a caption or notice stays on screen.
 const CAPTION_HOLD_S: float = 4.0
+## Every timeskip caption and crew quote stays up long enough for the room to read it, at this
+## many words a second and never less than READ_MIN_S. A caption's "read_s" in events.json stops
+## the clock to make the time.
+const READ_WORDS_PER_S: float = 3.0
+const READ_MIN_S: float = 3.0
 ## A subtitle of mission audio stays up this much longer than its line, unless the next line
 ## starts first, so short pauses between speakers don't flicker back to the caption.
 const CAPTION_BRIDGE_S: float = 3.0

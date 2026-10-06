@@ -24,6 +24,8 @@ const EFFECT_KEYS: Array[String] = ["flags", "power_margin", "fatigue"]
 const TEXT_KEYS: Array[String] = ["text", "question", "label", "hint", "note", "title", "closing", "history", "caption",
 	"heat_shield_text", "how_to", "photo_caption", "quote", "quote_by"]
 const EVENT_IDS: Array[String] = ["e1", "e2", "e3", "e4", "e5"]
+## Voices with no photo beside their lines.
+const NO_PHOTO_SPEAKERS: Array[String] = ["Photographic helicopter"]
 ## These drive the autoloads, which are not in the tree yet during _init.
 const SESSION_TESTS: Array[String] = [
 	"test_every_option_combination_reaches_the_scorecard",
@@ -32,6 +34,7 @@ const SESSION_TESTS: Array[String] = [
 	"test_subtitles_follow_the_mission_audio",
 	"test_pause_holds_everything_until_resumed",
 	"test_subtitles_show_the_speakers_photos",
+	"test_timeskip_captions_stay_up_long_enough_to_read",
 ]
 ## Frame step for tests that play the session in real time.
 const FRAME_S: float = 1.0 / 60.0
@@ -283,16 +286,22 @@ func test_reveal_references_exist() -> void:
 			_check(key in EFFECT_KEYS, "reveal %s uses a known effect key" % reveal_id)
 
 
+## The fastest way home (E2-B) ends the cold coast early, so a caption after that end never comes
+## up on that path. Every caption still falls inside its timeskip on the normal-speed path.
 func test_timeskip_captions_fall_inside_their_timeskip() -> void:
 	var events: Array = _load_events().get("events", [])
+	var longest: float = Tuning.SPLASHDOWN_GET_BY_RETURN.values().max()
 	for splashdown: float in Tuning.SPLASHDOWN_GET_BY_RETURN.values():
 		for i in range(events.size() - 1):
 			var start: float = _event_get(events[i], splashdown)
 			var end: float = _event_get(events[i + 1], splashdown)
+			var previous: float = start
 			for caption: Dictionary in events[i].get("timeskip", {}).get("captions", []):
 				var caption_get: float = caption["get"]
-				_check(caption_get > start and caption_get < end,
+				_check(caption_get > start and (caption_get < end or splashdown < longest),
 					"%s caption at GET %.1f falls between %.1f and %.1f" % [events[i]["id"], caption_get, start, end])
+				_check(caption_get >= previous, "%s captions are in GET order (%.3f)" % [events[i]["id"], caption_get])
+				previous = caption_get
 
 
 func test_cutscenes_have_editable_shots() -> void:
@@ -462,14 +471,23 @@ func test_everyone_on_screen_has_a_photo() -> void:
 		"both speakers of an exchange, in order")
 	_check(CutsceneView.speakers("Lovell: “One.”\nLovell: “Two.”") == PackedStringArray(["Lovell"]), "a speaker shows once")
 	_check(CutsceneView.speakers("Haise is running a fever.").is_empty(), "a story caption has no speaker")
-	# Every crew member who speaks in a subtitle has a photo to show beside the line.
+	# Everyone who speaks, in a subtitle or a timeskip quote, has a photo to show beside the line.
+	var lines: Array[String] = []
 	var clips: Dictionary = {}
 	_collect_subtitled(_load_events(), clips)
 	for path: String in clips:
 		for cue: Dictionary in clips[path]:
-			for person: String in CutsceneView.speakers(str(cue["text"])):
-				if SimState.CREW_NAMES.values().has(person):
-					_check(people.has(person), "%s, speaking in %s, has a photo" % [person, path.get_file()])
+			lines.append(str(cue["text"]))
+	for event: Dictionary in Timeline.event_list(_load_events()):
+		for caption: Dictionary in event.get("timeskip", {}).get("captions", []):
+			lines.append(str(caption["text"]))
+	var speakers: Dictionary = {}
+	for line in lines:
+		for person: String in CutsceneView.speakers(line):
+			speakers[person] = true
+	_check(speakers.size() >= 6, "found the speakers (%s)" % ", ".join(speakers.keys()))
+	for person: String in speakers:
+		_check(people.has(person) or person in NO_PHOTO_SPEAKERS, "%s has a photo to show when speaking" % person)
 
 
 # --- Crew look tests ---
@@ -1299,6 +1317,8 @@ func test_subtitles_show_the_speakers_photos() -> void:
 	var shown: Dictionary = {
 		"Lovell: “Houston, we've had a problem.”": 1,
 		"Lovell: “Okay.”\nSwigert: “Roger.”": 2,
+		"Lovell: “One hundred per cent.”\nBrand: “Roger.”": 2,
+		"Kerwin: “Farewell, Aquarius, and we thank you.”": 1,
 		"Haise is running a fever.": 0,
 		"Photographic helicopter: “Splashdown.”": 0,
 	}
@@ -1309,6 +1329,75 @@ func test_subtitles_show_the_speakers_photos() -> void:
 		_check(view.call("speaker_faces_shown") == shown[text], "%d photos beside '%s'" % [shown[text], text])
 	root.remove_child(view)
 	view.free()
+
+
+## Every timeskip caption and crew quote stays on screen long enough to read: on the 1970 path,
+## and in the cold coast when the fastest way home (E2-B) ends it at GET 114.
+func test_timeskip_captions_stay_up_long_enough_to_read() -> void:
+	var session: Node = root.get_node_or_null("Director")
+	var played: Node = root.get_node_or_null("Game")
+	if session == null or played == null:
+		_check(false, "the Game and Director autoloads are loaded")
+		return
+	var view: CanvasLayer = CutsceneView.new()
+	root.add_child(view)
+	var quotes: int = 0
+	for event: Dictionary in Timeline.event_list(_load_events()):
+		var captions: Array = event.get("timeskip", {}).get("captions", [])
+		for caption: Dictionary in captions:
+			if not CutsceneView.speakers(str(caption["text"])).is_empty():
+				quotes += 1
+		if captions.is_empty():
+			continue
+		session.call("jump_to_state", "%s_timeskip" % event["id"])
+		_check_reading_time(captions, _play_timeskip(session, played, view), "%s on the 1970 path" % event["id"], INF)
+		if event["id"] != "e4":
+			continue
+		session.call("jump_to_state", "e4_timeskip")
+		played.get("plan")["e2"] = "b"
+		played.call("replay_to", float(event["get"]))
+		session.call("_begin_timeskip")
+		var ends_get: float = session.get("_clock_target")
+		_near(ends_get, 114.0, 0.01, "the fast way home ends the cold coast at GET 114")
+		_check_reading_time(captions, _play_timeskip(session, played, view), "e4 with the fast way home", ends_get)
+	_check(quotes >= 8, "the crew's own words come up in the timeskips (%d quotes)" % quotes)
+	root.remove_child(view)
+	view.free()
+	session.call("jump_to_state", "intro")
+
+
+## Plays the current timeskip frame by frame. Returns caption text -> the longest it stayed on screen.
+func _play_timeskip(session: Node, played: Node, view: Node) -> Dictionary:
+	var longest: Dictionary = {}
+	var shown: String = view.call("caption_text")
+	var since_s: float = 0.0
+	var t: float = 0.0
+	while session.get("phase") == "timeskip" and t < 600.0:
+		played.call("_physics_process", FRAME_S)
+		session.call("_process", FRAME_S)
+		t += FRAME_S
+		var text: String = view.call("caption_text")
+		if text != shown:
+			shown = text
+			since_s = t
+		longest[shown] = maxf(float(longest.get(shown, 0.0)), t - since_s)
+	return longest
+
+
+## A caption needs READ_WORDS_PER_S, and at least READ_MIN_S. One with a clip is read on its own
+## for read_s before the clip, so that alone must be enough.
+func _check_reading_time(captions: Array, longest: Dictionary, label: String, until_get: float) -> void:
+	for caption: Dictionary in captions:
+		if float(caption["get"]) >= until_get:
+			continue
+		var text: String = str(caption["text"])
+		var words: int = text.replace("\n", " ").split(" ", false).size()
+		var needed: float = maxf(Tuning.READ_MIN_S, words / Tuning.READ_WORDS_PER_S)
+		var stood: float = float(longest.get(text, 0.0))
+		if caption.has("audio"):
+			stood = float(caption.get("read_s", 0.0))
+		_check(stood >= needed - FRAME_S, "%s: '%s…' stays up %.1f s; reading it takes %.1f s" % [
+			label, text.left(40), stood, needed])
 
 
 ## Clip path -> its subtitles, for every shot, timeskip caption or reentry step that has both.
