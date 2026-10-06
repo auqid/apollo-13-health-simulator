@@ -167,8 +167,15 @@ const CUTSCENE_CABIN_DOLLY_M: float = 0.22
 const MAP_HOLD_S: float = 4.0
 ## One loop of the exterior preview orbit.
 const EXTERIOR_PREVIEW_S: float = 12.0
-## How long the chosen poll option stays highlighted before the session continues.
-const POLL_CHOICE_HOLD_S: float = 1.5
+## How long the chosen poll option and the 1970 reveal stay up before the session continues.
+## Space moves on sooner.
+const POLL_CHOICE_HOLD_S: float = 5.0
+## The chat vote countdown on each poll card. It only prompts the presenter; it never picks.
+const POLL_COUNTDOWN_S: float = 20.0
+## With -- --autoplay (for recording a backup video), each vote is made this long after its poll
+## opens, and the scorecard reveals a row this often.
+const AUTOPLAY_VOTE_S: float = 7.0
+const AUTOPLAY_ROW_S: float = 1.5
 ## Farewell line stays at least this long, so it can be read when the clip is missing.
 const REENTRY_FAREWELL_HOLD_S: float = 6.0
 ## How long each reentry photo stays up (Aquarius, Mission Control, splashdown, recovery) unless
@@ -304,6 +311,13 @@ const AUDIO_DUCK_DB: float = -18.0
 const AUDIO_DUCK_ATTACK_S: float = 0.04
 const AUDIO_DUCK_RELEASE_S: float = 0.4
 const AUDIO_VOLUME_SILENT_DB: float = -80.0
+## Quindar tones, the beeps Mission Control's radio sent to open and close each transmission:
+## 2525 Hz to open, 2475 Hz to close, a quarter of a second each. Played when a poll opens and
+## when a vote is locked in.
+const AUDIO_QUINDAR_OPEN_HZ: float = 2525.0
+const AUDIO_QUINDAR_CLOSE_HZ: float = 2475.0
+const AUDIO_QUINDAR_S: float = 0.25
+const AUDIO_QUINDAR_GAIN: float = 0.1
 const AUDIO_TEST_VOICE_S: float = 2.0
 const AUDIO_TEST_VOICE_HZ: float = 196.0
 const AUDIO_TEST_VOICE_GAIN: float = 0.22

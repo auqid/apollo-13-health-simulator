@@ -14,6 +14,7 @@
       "camera": "front_windows",
       "outside": "earth",
       "get": 55.9,
+      "watch": "cabin_temp",
       "cutscene": {
         "fact_check": "TODO(fact-check): subtitle timings once e1_problem.mp3 is trimmed. The words below are the 55:55:20 to 55:55:42 exchange.",
         "shots": [
@@ -83,6 +84,7 @@
       "camera": "front_windows",
       "outside": "moon",
       "get": 79.0,
+      "watch": "splashdown",
       "cutscene": {
         "shots": [
           {
@@ -148,6 +150,7 @@
       "camera": "co2_panel",
       "outside": "earth",
       "get": 88.0,
+      "watch": "co2",
       "cutscene": {
         "shots": [
           {"kind": "cabin", "duration_s": 5.0, "caption": "The CO2 caution light comes on.\nOdyssey's square canisters don't fit Aquarius's round sockets."},
@@ -209,6 +212,7 @@
       "camera": "front_windows",
       "outside": "earth",
       "get": 96.0,
+      "watch": "water",
       "cutscene": {
         "shots": [
           {"kind": "cabin", "duration_s": 6.0, "caption": "To save power, almost everything is switched off."},

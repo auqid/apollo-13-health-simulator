@@ -34,9 +34,16 @@ const SIZE_VITAL := 32
 const SIZE_CAPTION := 32
 const SIZE_POLL := 36
 const SIZE_POLL_LETTER := 72
+## Poll option names and their Good and Cost lines, big enough to read over a screen share.
+const SIZE_OPTION := 42
+const SIZE_TRADEOFF := 28
+## The option not chosen fades to this, and the vote countdown bar is this tall.
+const UNCHOSEN_ALPHA := 0.4
+const COUNTDOWN_HEIGHT := 6
 const SIZE_QUESTION := 40
 const SIZE_CARD_TITLE := 64
 const SIZE_CLOCK := 46
+const SIZE_SPOTLIGHT := 56
 
 ## Screen effects draw under the HUD so the HUD never blurs.
 const LAYER_SCREEN_FX := 1
@@ -111,7 +118,22 @@ const NOTICE_TOP := 24
 const NOTICE_PADDING_H := 18
 const NOTICE_PADDING_V := 6
 
+## What a decision changes, shown big during the timeskip after it, and the line on the vote's
+## reveal that points to it. Keys match "watch" in events.json.
+const SPOTLIGHTS: Dictionary = {
+	"cabin_temp": {"title": "Cabin temperature", "watch": "Watch the cabin temperature."},
+	"co2": {"title": "CO2", "watch": "Watch the CO2."},
+	"water": {"title": "Water left", "watch": "Watch the water left."},
+	"power": {"title": "Power margin", "watch": "Watch the power margin."},
+	"splashdown": {"title": "Time to splashdown", "watch": "Watch the time to splashdown."},
+}
+
 static var _fonts: Dictionary = {}
+
+
+## "Watch the cabin temperature." for a spotlight key, or "" if there is none.
+static func watch_line(key: String) -> String:
+	return str(SPOTLIGHTS.get(key, {}).get("watch", ""))
 
 
 ## A font from assets/fonts, with tabular figures if asked. Falls back to Godot's default font

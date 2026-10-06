@@ -35,6 +35,10 @@ const PHASE_REENTRY := "reentry"
 const PHASE_SCORECARD := "scorecard"
 const PAUSED_NOTICE := "Paused. Press Space to continue"
 const RESTART_NOTICE := "Press R again to restart"
+const DECISION_KICKER := "Decision %d of %d"
+const SAME_AS_1970 := "Same call as 1970."
+const CALL_IN_1970 := "In 1970, the call was: %s."
+const SCORE_MATCHES := "You made the same call as 1970 on %d of %d decisions."
 
 var hud_visible: bool = true
 var debug_visible: bool = false
@@ -75,6 +79,9 @@ var _map_left_s: float = 0.0
 ## "", "exterior" or "map". Debug preview, cleared when a real shot takes the camera.
 var _space_preview: String = ""
 var _preview_t: float = 0.0
+## Votes for --autoplay, one letter per event ("aaaaa" is the 1970 path), or "" when off.
+var _autoplay: String = ""
+var _autoplay_wait_s: float = 0.0
 
 
 func _ready() -> void:
@@ -95,6 +102,8 @@ func _process(delta: float) -> void:
 			skip()
 	elif phase == PHASE_CUTSCENE:
 		_run_cutscene(delta)
+	elif phase == PHASE_POLL or phase == PHASE_SCORECARD:
+		_run_autoplay(delta)
 	elif phase == PHASE_HOLD:
 		_hold_left_s -= delta
 		if _hold_left_s <= 0.0:
@@ -229,6 +238,31 @@ func choose(option_key: String) -> void:
 	var card := _stage()
 	if card != null:
 		card.highlight(option_key)
+		var reveal: Dictionary = _reveal_lines(event, option_key)
+		card.show_reveal(reveal["line"], reveal["note"], reveal["watch"], reveal["historical"])
+	var bio := _bio()
+	if bio != null:
+		bio.play_quindar(false)
+
+
+## What the card says after a vote: whether it matches 1970, the option's note if it has one, and
+## what to watch in the timeskip.
+func _reveal_lines(event: Dictionary, picked: String) -> Dictionary:
+	var chosen: Dictionary = Timeline.find_option(event, picked)
+	var historical_key: String = ""
+	for option: Dictionary in event.get("poll", {}).get("options", []):
+		if option.get("historical", false):
+			historical_key = str(option.get("key", ""))
+	var historical: Dictionary = Timeline.find_option(event, historical_key)
+	var line: String = SAME_AS_1970
+	if not chosen.get("historical", false):
+		line = CALL_IN_1970 % str(historical.get("label", ""))
+	return {
+		"line": line,
+		"note": str(chosen.get("note", "")),
+		"watch": UiStyle.watch_line(str(event.get("watch", ""))),
+		"historical": historical_key,
+	}
 
 
 func finish_choice_hold() -> void:
@@ -338,7 +372,34 @@ func _show_poll() -> void:
 	var event: Dictionary = _current_event()
 	var card := _stage()
 	if card != null:
-		card.show_poll(event["poll"]["question"], event["poll"]["options"])
+		var kicker: String = DECISION_KICKER % [event_index + 1, Timeline.event_list(Game.events).size()]
+		card.show_poll(event["poll"]["question"], event["poll"]["options"], kicker, Tuning.POLL_COUNTDOWN_S)
+	_set_spotlight("")
+	_autoplay_wait_s = Tuning.AUTOPLAY_VOTE_S
+	var bio := _bio()
+	if bio != null:
+		bio.play_quindar(true)
+
+
+## --autoplay: votes a while after each poll opens, and reveals the scorecard a row at a time.
+func _run_autoplay(delta: float) -> void:
+	if _autoplay.is_empty():
+		return
+	_autoplay_wait_s -= delta
+	if _autoplay_wait_s > 0.0:
+		return
+	if phase == PHASE_POLL:
+		choose(_autoplay[mini(event_index, _autoplay.length() - 1)])
+	else:
+		_autoplay_wait_s = Tuning.AUTOPLAY_ROW_S
+		_reveal_scorecard(false)
+
+
+## Lights up the value a decision changes while its timeskip runs. Empty clears it.
+func _set_spotlight(key: String) -> void:
+	var hud := _hud()
+	if hud != null:
+		hud.set_spotlight(key)
 
 
 func _begin_timeskip() -> void:
@@ -385,7 +446,13 @@ func _begin_scorecard() -> void:
 	var card: Dictionary = Game.events["scorecard"]
 	var stage := _stage()
 	if stage != null:
-		stage.show_scorecard(card["title"], _scorecard_choices(), _scorecard_rows(), card["closing"])
+		var choices: Array = _scorecard_choices()
+		var same: int = 0
+		for choice: Dictionary in choices:
+			if choice.get("historical", false):
+				same += 1
+		var summary: String = SCORE_MATCHES % [same, choices.size()]
+		stage.show_scorecard(card["title"], choices, _scorecard_rows(), card["closing"], summary)
 
 
 func _reveal_scorecard(everything: bool) -> void:
@@ -688,6 +755,7 @@ func _clear_reentry_presentation() -> void:
 	if view != null:
 		view.show_heart_rate(false)
 	_set_cinematic(false)
+	_set_spotlight("")
 	_hide_cutscene()
 
 
@@ -854,6 +922,7 @@ func _start_shots(shots: Array) -> void:
 	if card != null:
 		card.hide_card()
 	_clear_caption()
+	_set_spotlight("")
 	if shots.is_empty():
 		_end_cutscene()
 		return
@@ -1081,6 +1150,7 @@ func _finish_opening_map() -> void:
 	if phase != PHASE_TIMESKIP:
 		return
 	_set_cinematic(false)
+	_set_spotlight(str(_current_event().get("watch", "")))
 	Game.set_rate(_clock_rate())
 	Game.play(_clock_target)
 
@@ -1397,6 +1467,9 @@ func _apply_command_line() -> void:
 			effects.set_strength(arg.trim_prefix("--fx-strength=").to_float())
 		elif arg.begins_with("--fx=") and effects != null:
 			effects.set_mode(arg.trim_prefix("--fx="))
+		elif arg == "--autoplay" or arg.begins_with("--autoplay="):
+			var picks: String = arg.trim_prefix("--autoplay").trim_prefix("=").to_lower()
+			_autoplay = picks if picks.length() > 0 and picks.replace("a", "").replace("b", "").is_empty() else "aaaaa"
 		elif arg.begins_with("--jump="):
 			jump_to_state(arg.trim_prefix("--jump="))
 		elif arg.begins_with("--preview="):

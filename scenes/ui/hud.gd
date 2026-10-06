@@ -17,12 +17,23 @@ const VITAL_COLUMNS: Array[Dictionary] = [
 	{"field": "body_temp_c", "header": "Temp", "unit": "°C"},
 ]
 const CO2_LIMIT_TEXT := "Safe limit %.1f mmHg"
+## Changes smaller than this, per state update, count as steady.
+const TREND_EPSILON := 0.0001
 
+var _left: VBoxContainer
 var _clock_box: PanelContainer
 var _clock: Label
 var _since: Label
 var _panel: PanelContainer
 var _fade: Tween
+var _spot_key: String = ""
+var _spot_box: PanelContainer
+var _spot_title: Label
+var _spot_value: Label
+var _spot_trend: Label
+var _spot_last: float = NAN
+## Spotlight key -> the sensor panel row it lights up.
+var _env_rows: Dictionary = {}
 ## crew id -> {"row": PanelContainer, "name": Label, <vital field>: Label}
 var _rows: Dictionary = {}
 var _cabin_temp: Label
@@ -58,15 +69,33 @@ func set_cinematic(on: bool) -> void:
 		_fade.kill()
 	_fade = create_tween().set_parallel(true)
 	var alpha: float = 0.0 if on else 1.0
-	for part: Control in [_clock_box, _panel]:
+	for part: Control in [_left, _panel]:
 		_fade.tween_property(part, "modulate:a", alpha, UiStyle.FADE_S)
 
 
+## Puts the value a decision changes under the clock, with its trend, and lights up its row in the
+## sensor panel. An empty key clears it.
+func set_spotlight(key: String) -> void:
+	_spot_key = key if UiStyle.SPOTLIGHTS.has(key) else ""
+	_spot_last = NAN
+	_spot_box.visible = not _spot_key.is_empty()
+	for row_key: String in _env_rows:
+		_env_rows[row_key].add_theme_stylebox_override("panel", _focus_style if row_key == _spot_key else _row_style)
+	if not _spot_key.is_empty():
+		_spot_title.text = str(UiStyle.SPOTLIGHTS[_spot_key]["title"])
+		_spot_trend.text = ""
+		_update_spotlight(Game.state)
+
+
 func _build_clock() -> void:
+	_left = VBoxContainer.new()
+	_left.position = Vector2(UiStyle.MARGIN, UiStyle.MARGIN)
+	_left.add_theme_constant_override("separation", UiStyle.SECTION_GAP)
+	_left.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_left)
 	var box := PanelContainer.new()
 	_clock_box = box
 	box.add_theme_stylebox_override("panel", UiStyle.panel_box())
-	box.position = Vector2(UiStyle.MARGIN, UiStyle.MARGIN)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var column := VBoxContainer.new()
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -80,7 +109,59 @@ func _build_clock() -> void:
 	_since = UiStyle.label("", UiStyle.FONT_HUD_LIGHT, UiStyle.SIZE_BODY, UiStyle.TEXT_DIM, true)
 	column.add_child(_since)
 	box.add_child(column)
-	add_child(box)
+	_left.add_child(box)
+	_build_spotlight()
+
+
+func _build_spotlight() -> void:
+	_spot_box = PanelContainer.new()
+	var style := UiStyle.panel_box()
+	style.border_color = UiStyle.SENSOR_TEAL
+	style.border_width_left = UiStyle.FOCUS_BAR_WIDTH
+	_spot_box.add_theme_stylebox_override("panel", style)
+	_spot_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_spot_box.visible = false
+	var column := VBoxContainer.new()
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_spot_title = UiStyle.label("", UiStyle.FONT_HUD, UiStyle.SIZE_NAME, UiStyle.SENSOR_TEAL)
+	column.add_child(_spot_title)
+	var line := HBoxContainer.new()
+	line.add_theme_constant_override("separation", UiStyle.SECTION_GAP)
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_spot_value = UiStyle.label("", UiStyle.FONT_HUD_STRONG, UiStyle.SIZE_SPOTLIGHT, UiStyle.PLACARD_WHITE, true)
+	line.add_child(_spot_value)
+	_spot_trend = UiStyle.label("", UiStyle.FONT_HUD_LIGHT, UiStyle.SIZE_NAME, UiStyle.TEXT_DIM)
+	_spot_trend.size_flags_vertical = Control.SIZE_SHRINK_END
+	line.add_child(_spot_trend)
+	column.add_child(line)
+	_spot_box.add_child(column)
+	_left.add_child(_spot_box)
+
+
+func _update_spotlight(state: SimState) -> void:
+	if _spot_key.is_empty() or state == null:
+		return
+	var value: float = 0.0
+	match _spot_key:
+		"cabin_temp":
+			value = state.env.cabin_temp_c
+			_spot_value.text = "%.1f °C" % value
+		"co2":
+			value = state.env.co2_mmhg
+			_spot_value.text = "%.1f mmHg" % value
+		"water":
+			value = state.env.water_pct
+			_spot_value.text = "%d%%" % roundi(value)
+		"power":
+			value = state.env.power_margin
+			_spot_value.text = "%d" % roundi(value)
+		"splashdown":
+			value = maxf(state.time.splashdown_get - state.time.current_get, 0.0)
+			_spot_value.text = UiStyle.format_hours(value)
+	if not is_nan(_spot_last) and absf(value - _spot_last) > TREND_EPSILON:
+		_spot_trend.text = "Rising" if value > _spot_last else "Falling"
+	_spot_last = value
+	_set_caution(_spot_value, _spot_key == "co2" and SimModel.co2_alarm(state))
 
 
 func _build_panel() -> void:
@@ -107,14 +188,14 @@ func _build_panel() -> void:
 		column.add_child(_crew_row(crew_id))
 	column.add_child(_gap())
 	column.add_child(UiStyle.divider())
-	_cabin_temp = _env_row(column, "Cabin temperature")
-	_co2 = _env_row(column, "CO2")
+	_cabin_temp = _env_row(column, "Cabin temperature", "cabin_temp")
+	_co2 = _env_row(column, "CO2", "co2")
 	_co2_bar = Co2Bar.new()
 	column.add_child(_co2_bar)
 	column.add_child(_co2_limit_row())
-	_pressure = _env_row(column, "Cabin pressure")
-	_water = _env_row(column, "Water")
-	_power = _env_row(column, "Power margin")
+	_pressure = _env_row(column, "Cabin pressure", "pressure")
+	_water = _env_row(column, "Water", "water")
+	_power = _env_row(column, "Power margin", "power")
 	panel.add_child(column)
 	add_child(panel)
 
@@ -162,7 +243,11 @@ func _crew_row(crew_id: String) -> Control:
 	return row
 
 
-func _env_row(column: VBoxContainer, text: String) -> Label:
+func _env_row(column: VBoxContainer, text: String, key: String) -> Label:
+	var row := PanelContainer.new()
+	row.add_theme_stylebox_override("panel", _row_style)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_env_rows[key] = row
 	var line := HBoxContainer.new()
 	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var name_label := UiStyle.label(text, UiStyle.FONT_HUD_LIGHT, UiStyle.SIZE_BODY, UiStyle.TEXT_DIM)
@@ -173,7 +258,8 @@ func _env_row(column: VBoxContainer, text: String) -> Label:
 	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	line.add_child(name_label)
 	line.add_child(value)
-	column.add_child(line)
+	row.add_child(line)
+	column.add_child(row)
 	return value
 
 
@@ -240,6 +326,7 @@ func _on_state_changed(state: SimState) -> void:
 	_pressure.text = "%.2f psi" % state.env.pressure_psi
 	_water.text = "%d%%" % roundi(state.env.water_pct)
 	_power.text = "%d" % roundi(state.env.power_margin)
+	_update_spotlight(state)
 
 
 func _on_focus_changed(crew_id: String) -> void:

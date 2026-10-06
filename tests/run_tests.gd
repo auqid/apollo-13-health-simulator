@@ -16,6 +16,7 @@ const Cabin := preload("res://scenes/cabin/cabin.gd")
 const AudioMix := preload("res://audio/audio_mix.gd")
 const MapPath := preload("res://scenes/space/map_path.gd")
 const Exterior := preload("res://scenes/space/exterior.gd")
+const UiStyle := preload("res://scenes/ui/ui_style.gd")
 
 const EFFECT_KEYS: Array[String] = ["flags", "power_margin", "fatigue"]
 const TEXT_KEYS: Array[String] = ["text", "question", "label", "hint", "note", "title", "closing", "history", "caption",
@@ -25,6 +26,7 @@ const EVENT_IDS: Array[String] = ["e1", "e2", "e3", "e4", "e5"]
 const SESSION_TESTS: Array[String] = [
 	"test_every_option_combination_reaches_the_scorecard",
 	"test_reentry_plays_through_in_about_a_minute",
+	"test_a_vote_reveals_the_1970_call",
 ]
 ## Frame step for tests that play the session in real time.
 const FRAME_S: float = 1.0 / 60.0
@@ -65,7 +67,10 @@ func _run_session_tests(already: int) -> void:
 
 func _run_one(test_name: String) -> void:
 	_test_failures = 0
+	var checks_before: int = _checks
 	call(test_name)
+	# A script error stops a test without failing a check, so a test that checked nothing failed.
+	_check(_checks > checks_before, "%s made at least one check (a script error stops a test early)" % test_name)
 	print("%s  %s" % ["PASS" if _test_failures == 0 else "FAIL", test_name])
 
 
@@ -383,6 +388,18 @@ func test_reentry_sequence_is_timed_from_splashdown() -> void:
 		var blackout: float = splashdown + float(steps["blackout"]["get_from_splashdown"])
 		var contact: float = splashdown + float(steps["contact"]["get_from_splashdown"])
 		_check(jettison < blackout and blackout < contact and contact < splashdown, "reentry order before splashdown %.1f" % splashdown)
+
+
+func test_each_timeskip_spotlights_what_its_decision_changes() -> void:
+	var events: Array = _load_events()["events"]
+	for i in events.size():
+		var event: Dictionary = events[i]
+		var watch: String = str(event.get("watch", ""))
+		if i == events.size() - 1:
+			_check(watch.is_empty(), "%s goes straight to the reentry, so it has nothing to watch" % event["id"])
+			continue
+		_check(UiStyle.SPOTLIGHTS.has(watch), "%s watches something the HUD can show, got '%s'" % [event["id"], watch])
+		_check(not UiStyle.watch_line(watch).is_empty(), "%s has a watch line for the reveal" % event["id"])
 
 
 func test_reentry_steps_are_in_order_before_splashdown() -> void:
@@ -1109,6 +1126,22 @@ func test_every_option_combination_reaches_the_scorecard() -> void:
 		_near(played_state.time.current_get, splashdown, 1e-3, "%s splashdown" % label)
 		for i in EVENT_IDS.size():
 			_check(played_state.decisions.get(EVENT_IDS[i], "") == picks[i], "%s records %s" % [label, EVENT_IDS[i]])
+
+
+func test_a_vote_reveals_the_1970_call() -> void:
+	var session: Node = root.get_node_or_null("Director")
+	if session == null:
+		_check(false, "the Director autoload is loaded")
+		return
+	var e2: Dictionary = Timeline.find_event(_load_events(), "e2")
+	var same: Dictionary = session.call("_reveal_lines", e2, "a")
+	_check(same["line"] == "Same call as 1970.", "choosing the 1970 option says so, got '%s'" % same["line"])
+	_check(same["historical"] == "a", "the 1970 option gets the badge")
+	_check(same["note"].is_empty(), "the 1970 option has no note")
+	var other: Dictionary = session.call("_reveal_lines", e2, "b")
+	_check("Normal speed" in other["line"], "the other option names the 1970 call, got '%s'" % other["line"])
+	_check("rejected" in other["note"], "the fast return explains why it was rejected in 1970")
+	_check(other["watch"] == UiStyle.watch_line("splashdown"), "then it says what to watch")
 
 
 ## Plays the reentry frame by frame, as the presenter would see it, with no key presses.
