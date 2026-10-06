@@ -335,13 +335,12 @@ func jump_to_state(state_id: String) -> void:
 	if index < 0 or parts[1] not in [PHASE_CUTSCENE, PHASE_POLL, PHASE_TIMESKIP]:
 		push_warning("Unknown session state '%s'" % state_id)
 		return
-	var sm_before: bool = Game.state.flags.sm_jettisoned
 	_use_historical_plan(index + 1 if parts[1] == PHASE_TIMESKIP else index)
 	event_index = index
 	Game.replay_to(_event_get(events[index]))
 	_apply_event_view()
 	if parts[1] == PHASE_CUTSCENE:
-		_start_event_cutscene(sm_before)
+		_start_event_cutscene()
 	elif parts[1] == PHASE_POLL:
 		_show_poll()
 	else:
@@ -351,25 +350,38 @@ func jump_to_state(state_id: String) -> void:
 func _begin_cutscene() -> void:
 	var events: Array = Timeline.event_list(Game.events)
 	var event: Dictionary = events[event_index]
-	var sm_before: bool = Game.state.flags.sm_jettisoned
 	var at_get: float = _event_get(event)
 	if Game.state.time.current_get < at_get - Timeline.EPSILON_H:
 		Game.seek(at_get)
 	_apply_event_view()
-	_start_event_cutscene(sm_before)
+	_start_event_cutscene()
 
 
-func _start_event_cutscene(sm_already_gone: bool) -> void:
+## An event whose cutscene is a reveal (E5 lets the Service Module go) shows it, unless an earlier
+## vote already played that reveal (the fast return drops it at E2).
+func _start_event_cutscene() -> void:
 	_cutscene_next = PHASE_POLL
 	var event: Dictionary = _current_event()
-	if event["id"] == "e5" and sm_already_gone:
+	var reveal_id: String = str(event.get("cutscene", {}).get("reveal", ""))
+	if reveal_id.is_empty():
+		_start_shots(event.get("cutscene", {}).get("shots", []))
+	elif _reveal_already_played(reveal_id):
 		_start_shots([{"kind": "cabin", "duration_s": 5.0,
 			"caption": "The Service Module is already gone. Odyssey is waiting."}])
-		return
-	if event["id"] == "e5":
-		_start_shots(_reveal_shots(str(event.get("cutscene", {}).get("reveal", ""))))
-		return
-	_start_shots(event.get("cutscene", {}).get("shots", []))
+	else:
+		_start_shots(_reveal_shots(reveal_id))
+
+
+## Whether a vote before the current event already played this reveal. Reading the flags instead
+## would be wrong: reaching E5 applies its own reveal before its cutscene starts.
+func _reveal_already_played(reveal_id: String) -> bool:
+	for event: Dictionary in Timeline.event_list(Game.events):
+		if event["id"] == _current_event()["id"]:
+			return false
+		var option: Dictionary = Timeline.find_option(event, str(Game.state.decisions.get(event["id"], "")))
+		if str(option.get("reveal", "")) == reveal_id:
+			return true
+	return false
 
 
 func _begin_poll() -> void:

@@ -1110,6 +1110,12 @@ func test_every_option_combination_reaches_the_scorecard() -> void:
 		while phase != "scorecard" and steps < 40:
 			steps += 1
 			var before: String = phase
+			if phase == "cutscene" and int(session.get("event_index")) == EVENT_IDS.size() - 1:
+				var shots: Array = session.get("_shots")
+				var dropped_early: bool = picks[1] == "b"
+				var first: Dictionary = shots[0] if not shots.is_empty() else {}
+				_check(dropped_early == (first.get("action", "") != "sm_jettison"),
+					"%s E5 plays the Service Module jettison only if it is still attached" % label)
 			if phase == "poll":
 				session.call("choose", picks[int(session.get("event_index"))])
 				session.call("finish_choice_hold")
