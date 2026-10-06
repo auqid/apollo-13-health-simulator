@@ -1025,6 +1025,9 @@ func _begin_shot(shot: Dictionary) -> void:
 		var effects := _effects()
 		if effects != null:
 			effects.play_explosion_dim()
+		var cabin := _cabin_node()
+		if cabin != null and cabin.camera != null:
+			cabin.camera.jolt()
 	elif kind == "photo":
 		var playing := _bio()
 		if playing != null:

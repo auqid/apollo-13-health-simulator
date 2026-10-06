@@ -20,6 +20,13 @@ Each event follows the same pattern:
 2. **Poll card**: a full-screen question with options A and B, each with a one-line consequence hint. The presenter runs the chat poll and presses A or B.
 3. **Timeskip**: the mission clock fast-forwards at about 2 GET hours per real second while the vitals and effects change live. Timed captions appear during the skip.
 
+### Presentation rules
+- **One caption at a time.** Cutscene subtitles, timeskip captions and the fever line all go through one caption line, so a new caption replaces the last. Captions clear at every phase change. Presenter notices (paused, muted, alarm silenced, restart) sit at the top centre instead.
+- **Cinematic bars** frame cutscenes, the mission map and the reentry. They show the chapter ("2 of 5 · The return burn") and the mission clock (plus the focused crew member's heart rate during the reentry), and the HUD fades out meanwhile. Shots dip to black between each other.
+- **Poll card:** says which decision it is, and runs a 20 s countdown for the chat vote. At zero it asks the presenter to press A or B; it never picks. After the vote it says whether the call matches 1970 (the 1970 option gets a badge), shows the option's note if it has one, and says what to watch next.
+- **Spotlight:** during each timeskip the HUD shows the value that event's decision changes (`watch` in `events.json`: cabin temperature, time to splashdown, CO2 or water left) under the clock, rising or falling, and lights up its row.
+- **Quindar tones** (2525 Hz to open, 2475 Hz to close, 250 ms each, the beeps that bracketed Mission Control's transmissions) play when a poll opens and when a vote locks in.
+
 ### Intro card (10 s)
 "April 13, 1970. Apollo 13 is about 330,000 km from Earth, two days into a smooth flight to the Moon." The mission clock starts at GET 55:52 with calm vitals.
 
@@ -74,7 +81,8 @@ Each option carries an `effects` object in `events.json`. The option marked hist
   2. Blackout from 142:39 to 142:45. The screen goes nearly black, leaving only the heartbeat audio and the mission clock, compressed to about 20 s. Caption: "Radio blackout lasted about six minutes, roughly a minute and a half longer than expected."
   3. Entry interface at 142:40:46. Stress +15 bpm (+35 with `heatShieldRisk`).
   4. Contact restored at 142:45, parachutes, then splashdown at 142:54:41.
-- **Scorecard.**
+  5. NASA photos between the beats (`photos` on each reentry step): Aquarius after the jettison, Mission Control with the parachutes on the main screen at contact, then the real splashdown, the recovery and the crew arriving on USS Iwo Jima.
+- **Scorecard.** It also says how many of the five calls matched 1970.
 
 ---
 
@@ -203,6 +211,15 @@ Benchmark sources:
 | R | Restart (asks for confirmation) |
 | ` | Debug panel |
 
+Development flags go after `--` on the command line:
+
+| Flag | Effect |
+|---|---|
+| `--jump=e3_poll` | Start at a session state (any id from the debug panel's Session buttons) |
+| `--preview=explosion` | Loop one exterior shot: exterior, explosion, lifeboat, burn, sm_jettison, lm_jettison, plasma, parachute, splash, map |
+| `--autoplay` or `--autoplay=abaab` | Vote by itself (the 1970 calls, or the given picks) and reveal the scorecard, for recording a backup video |
+| `--debug`, `--no-hud`, `--camera=`, `--outside=`, `--fx=`, `--fx-strength=` | As before |
+
 ---
 
 ## 8. Visual direction
@@ -241,7 +258,7 @@ Sources:
 | `audio/e5_sm.mp3` | Lovell and Haise describing the Service Module damage (about 138:02) |
 | `audio/e5_farewell.mp3` | Joe Kerwin at 141:30:05: "Farewell, Aquarius, and we thank you." |
 | `audio/e5_splash.mp3` | Contact after blackout, parachutes, splashdown |
-| `images/` | Earth from the LM, the Moon's far side, the CO2 adapter, the dark cabin, the damaged Service Module, parachutes, recovery |
+| `images/` | The crew, the Moon's far side, the CO2 adapter, Lovell in Aquarius, the damaged Service Module, Aquarius after jettison, Mission Control at splashdown, the splashdown, recovery, the crew on USS Iwo Jima. Each file's NASA ID, source and caption facts are in `assets/SOURCES.md`. |
 
 Trim clips to 10–30 s and normalize the volume (Audacity is fine).
 

@@ -275,6 +275,9 @@ const CAMERA_MOVE_S: float = 2.0
 const CAMERA_DRIFT_M: float = 0.02
 const CAMERA_DRIFT_DEG: float = 0.6
 const CAMERA_DRIFT_PERIODS_S: Array = [9.7, 13.3, 17.9, 11.1, 15.7, 21.3]
+## The bang: one knock of the camera, this strong, gone within this long.
+const CAMERA_JOLT_RAD: float = 0.03
+const CAMERA_JOLT_S: float = 1.2
 
 # --- Loose objects floating in the cabin, real seconds ---
 const FLOAT_DRIFT_M_MIN: float = 0.03
