@@ -345,8 +345,9 @@ func _begin_timeskip() -> void:
 		card.hide_card()
 	notice_requested.emit("", 0.0)
 	_map_left_s = Tuning.MAP_HOLD_S
-	_set_cinematic(true, "Next: %s" % str(events[event_index + 1].get("title", "")))
-	_present_map(Game.state.time.current_get, Game.state.time.splashdown_get)
+	var next_title: String = str(events[event_index + 1].get("title", ""))
+	_set_cinematic(true, "Next: %s" % next_title)
+	_present_map(Game.state.time.current_get, Game.state.time.splashdown_get, _clock_target, next_title)
 
 
 func _begin_reentry() -> void:
@@ -975,6 +976,12 @@ func preview_lifeboat() -> void:
 	_begin_space_preview("lifeboat", str(shot.get("move", "push_in")), str(shot.get("body", "earth")), "lifeboat")
 
 
+## Debug: the descent engine burning for the trip home.
+func preview_burn() -> void:
+	var shot: Dictionary = _shot_with_action("burn")
+	_begin_space_preview("burn", str(shot.get("move", "orbit")), str(shot.get("body", "moon")), "burn")
+
+
 ## Debug: Odyssey heat-shield first, plasma building, then a fade toward black.
 func preview_plasma() -> void:
 	_begin_space_preview("plasma", "bay", "earth", "plasma")
@@ -1051,7 +1058,7 @@ func _begin_space_preview(which: String, move: String, body: String, action: Str
 
 
 func _preview_span() -> float:
-	if _space_preview == "explosion" or _space_preview == "lifeboat" or _space_preview == "sm_jettison":
+	if _space_preview in ["explosion", "lifeboat", "sm_jettison", "burn"]:
 		var shot: Dictionary = _shot_with_action(_space_preview)
 		return maxf(float(shot.get("duration_s", Tuning.EXTERIOR_PREVIEW_S)), 0.5)
 	if _space_preview == "lm_jettison":
@@ -1094,13 +1101,13 @@ func _present_exterior(move: String, body: String, action: String = "") -> void:
 		space.show_exterior(move, body, action)
 
 
-func _present_map(get_h: float, splashdown_h: float) -> void:
+func _present_map(get_h: float, splashdown_h: float, next_get_h: float = -1.0, next_label: String = "") -> void:
 	var cabin := _cabin_node()
 	if cabin != null:
 		cabin.set_presented(false)
 	var space := _exterior()
 	if space != null:
-		space.show_map(get_h, splashdown_h)
+		space.show_map(get_h, splashdown_h, next_get_h, next_label)
 
 
 func _hide_space() -> void:
