@@ -26,7 +26,8 @@ Each event follows the same pattern:
 - **Poll card:** says which decision it is and waits for the presenter, with no countdown, so there is time to read the chat. (`POLL_COUNTDOWN_S` in `sim/tuning.gd` can show one; it never picks.) After the vote it says whether the call matches 1970 (the 1970 option gets a badge), shows the option's note if it has one, and says what to watch next.
 - **Spotlight:** during each timeskip the HUD shows the value that event's decision changes (`watch` in `events.json`: cabin temperature, time to splashdown, CO2 or water left) under the clock, rising or falling, and lights up its row.
 - **Reading time:** every timeskip caption and crew quote stays up long enough to read, at 3 words a second and never less than 3 s (`READ_WORDS_PER_S`, `READ_MIN_S`). A caption's `read_s` stops the clock for that many seconds; on a caption with a clip, the caption shows on its own first and the clip plays after. The tests play each timeskip and check this.
-- **Crew quotes:** during the timeskips, the crew's own words come up as captions with their photos, each verbatim from the Apollo 13 Flight Journal transcript at its GET, and the clock stops while the room reads them. A line cut short is marked "...". They are listed under each event below.
+- **Crew quotes:** during the timeskips, the crew's own words come up with their photos and their real voices, cut from NASA's Mission Control tapes: the words verbatim from the Apollo 13 Flight Journal transcript at its GET, the clip playing at once, and the clock stopped while it plays and the room reads it. A line cut short is marked "...". They are listed under each event below, and the recordings in `assets/SOURCES.md`.
+- **Raised captions:** a caption the game raises on its own ("Haise is running a fever.") holds the screen for its 4 seconds even over subtitles, and a clip's subtitles stop once its last line is over.
 - **Quindar tones** (2525 Hz to open, 2475 Hz to close, 250 ms each, the beeps that bracketed Mission Control's transmissions) play when a poll opens and when a vote locks in.
 
 ### Intro card (14 s)
@@ -282,6 +283,7 @@ Sources:
 | `audio/e3_complete.mp3` | Swigert at 091:10:26, reporting the canister change complete |
 | `audio/e5_sm.mp3` | Lovell and Haise describing the Service Module damage (about 138:02) |
 | `audio/e5_farewell.mp3` | Joe Kerwin at 141:30:05: "Farewell, Aquarius, and we thank you." |
+| `audio/quote_*.mp3` | The eight crew quotes in the timeskips (see `assets/SOURCES.md`) |
 | `audio/e5_splash.mp3` | Contact after blackout, parachutes, splashdown |
 | `images/` | The crew and each crew member's face, the CAPCOMs' faces (Lousma, Kerwin, Brand), the Moon's far side, the CO2 adapter, Lovell in Aquarius, the damaged Service Module, Aquarius after jettison, Mission Control at splashdown, the splashdown, recovery, the crew on USS Iwo Jima. Each file's NASA ID, source and caption facts are in `assets/SOURCES.md`. |
 

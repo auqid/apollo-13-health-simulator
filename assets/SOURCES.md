@@ -26,20 +26,31 @@ Every photo and recording here is NASA work and in the public domain. Nothing co
 
 ## Crew quotes (timeskip captions in `data/events.json`)
 
-Text only, word for word from the Apollo 13 Flight Journal transcript
-(https://www.apollojournals.org/afj/ap13fj/), at the GET it gives. Editors' notes such as "[Pause.]"
-are left out because they were not spoken. Not checked against the 1970 NASA typed transcript.
+The words are verbatim from the Apollo 13 Flight Journal transcript
+(https://www.apollojournals.org/afj/ap13fj/) at the GET it gives; editors' notes such as
+"[Pause.]" are left out because they were not spoken. Each has its recording, cut from NASA's
+Mission Control 30-track tapes, CAPCOM loop (channel 15), on the Internet Archive, and made like
+the clips below (mono, -16 LUFS, short fades, no noise reduction). GET on the tape comes from
+Apollo in Real Time's tape alignment and matches the Flight Journal to within about 1 s, except
+where noted. The LM downlink is often noisy; the subtitles carry the words, and where speech-to-text
+on the noisy audio heard something slightly different, the Flight Journal wording is kept.
 
-| GET | Speaker | Flight Journal page | Notes |
-|---|---|---|---|
-| 068:03:33 | Lovell | `11day3-minimise-power.html` | To his crewmates, picked up on the open radio loop. |
-| 071:06:34 | Haise | `11day3-minimise-power.html` | To Kerwin, just after "Jim and Jack are in the upstairs bedroom taking a nap now." |
-| 085:51:21, 085:51:28 | Lousma, Lovell | `14day4-homeward.html` | |
-| 092:00:12 | Swigert | `15day4-mailbox.html` | While copying a switch list from Kerwin. |
-| 112:12:16 | Haise | `21day5-batterycharge.html` | To Lousma. The "..." is in the transcript. |
-| 117:51:24 | Lovell | `21day5-batterycharge.html` | To Kerwin. |
-| 132:37:59 | Swigert | `25day6-thelastcoursecorrection.html` | To Lousma. |
-| 135:46:52 | Lovell | `25day6-thelastcoursecorrection.html` | To Lousma. |
+| File | GET | Speaker | Tape, offset into the file | Flight Journal page | Notes |
+|---|---|---|---|---|---|
+| `quote_068_lovell.mp3` | 068:03:33 | Lovell | T926 HR1U, 13189.6 s | `11day3-minimise-power.html` | To his crewmates, picked up on the open loop. Noisy; ends early to leave out a click and a Mission Control voice. |
+| `quote_071_haise.mp3` | 071:06:34 | Haise | T926 HR1U, 24170.9 s | `11day3-minimise-power.html` | To Kerwin. Very faint: only "...space station" is clear. Kerwin's laugh is cut. |
+| `quote_085_lousma_lovell.mp3` | 085:51:21, 085:51:28 | Lousma, Lovell | T924 HR1L, 17409.5 s and 17415.7 s | `14day4-homeward.html` | The 5.3 s of hiss between the lines is shortened to 1.5 s, with a 0.1 s crossfade. Lousma is clear, Lovell noisy. |
+| `quote_092_swigert.mp3` | 092:00:12 | Swigert | T924 HR1L, 39539.4 s | `15day4-mailbox.html` | While copying a switch list from Kerwin. Noisy; a hesitation ("It's, uh,") the transcript leaves out. |
+| `quote_112_haise.mp3` | 112:12:16 | Haise | T921 HR1U, 52310.7 s | `21day5-batterycharge.html` | To Lousma. Clear. On the tape it is at 112:12:20; the Flight Journal's times run 4-6 s early around here. Starts with an "And" the transcript leaves out. The "..." is in the transcript. |
+| `quote_117_lovell.mp3` | 117:51:24 | Lovell | T716 HR1L, 13086.9 s | `21day5-batterycharge.html` | To Kerwin. Noisy in the middle. |
+| `quote_132_swigert.mp3` | 132:37:59 | Swigert | T927 HR1U, 6299.3 s | `25day6-thelastcoursecorrection.html` | To Lousma. Clear, over faint steady radio tones. |
+| `quote_135_lovell.mp3` | 135:46:52 | Lovell | T927 HR1U, 17632.0 s | `25day6-thelastcoursecorrection.html` | To Lousma. Clear. |
+
+Tape files: T926 https://archive.org/download/A13_T926_HR1U_CH7.wav/A13_T926_HR1U_CH15.wav,
+T924 https://archive.org/download/A13_T924_HR1L_CH7.wav/A13_T924_HR1L_CH15.wav,
+T921 https://archive.org/download/A13_T921_HR1U_CH7.wav/A13_T921_HR1U_CH15.wav,
+T716 https://archive.org/download/DA13_T716_HR1L_CH15.wav/DA13_T716_HR1L_CH15.wav,
+T927 https://archive.org/download/A13_T927_HR1U_CH7.wav/A13_T927_HR1U_CH15.wav.
 
 ## Mission audio (`assets/audio/`)
 

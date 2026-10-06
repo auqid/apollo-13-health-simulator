@@ -74,6 +74,9 @@ var _held_clip: Dictionary = {}
 ## caption shows between lines.
 var _caption_base: String = ""
 var _cues: Array = []
+## A caption the game raises on its own (Haise's fever) keeps the screen this much longer,
+## whatever subtitles are playing.
+var _priority_left_s: float = 0.0
 var _cue_s: float = 0.0
 ## A new photo or the splash keeps its own caption up this long before the subtitles carry on,
 ## and only lines that start after it can show.
@@ -111,6 +114,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if get_tree().paused:
 		return
+	_priority_left_s = maxf(_priority_left_s - delta, 0.0)
 	if _space_preview != "" and _space_preview != "map" and phase != PHASE_CUTSCENE:
 		_preview_t = fposmod(_preview_t + delta / _preview_span(), 1.0)
 		var space := _exterior()
@@ -851,6 +855,7 @@ func _show_caption(text: String, hold_s: float = 0.0) -> void:
 func _clear_caption() -> void:
 	_caption_base = ""
 	_cues = []
+	_priority_left_s = 0.0
 	_show_caption("")
 
 
@@ -1136,10 +1141,19 @@ func _advance_cues(delta: float) -> void:
 		return
 	_cue_s += delta
 	_base_hold_s = maxf(_base_hold_s - delta, 0.0)
+	# Once the clip has had its say, the beat's caption stays as it is, so a caption raised
+	# meanwhile is not covered again by lines that are over.
+	var spoken_s: float = 0.0
+	for cue: Dictionary in _cues:
+		spoken_s = maxf(spoken_s, float(cue["at_s"]) + float(cue["hold_s"]) + Tuning.CAPTION_BRIDGE_S)
+	if _base_hold_s <= 0.0 and _cue_s > spoken_s:
+		_cues = []
 	_refresh_caption()
 
 
 func _refresh_caption() -> void:
+	if _priority_left_s > 0.0:
+		return
 	if _base_hold_s > 0.0:
 		_show_caption(_caption_base)
 		return
@@ -1574,6 +1588,7 @@ func _toggle_fullscreen() -> void:
 
 
 func _on_caption_requested(text: String) -> void:
+	_priority_left_s = Tuning.CAPTION_HOLD_S
 	_show_caption(text, Tuning.CAPTION_HOLD_S)
 
 
