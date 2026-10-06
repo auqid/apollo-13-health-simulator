@@ -23,7 +23,7 @@ Each event follows the same pattern:
 ### Presentation rules
 - **One caption at a time.** Cutscene subtitles, timeskip captions and the fever line all go through one caption line, so a new caption replaces the last. Captions clear at every phase change. Presenter notices (paused, muted, alarm silenced, restart) sit at the top centre instead.
 - **Cinematic bars** frame cutscenes, the mission map and the reentry. They show the chapter ("2 of 5 · The return burn") and the mission clock (plus the focused crew member's heart rate during the reentry), and the HUD fades out meanwhile. Shots dip to black between each other.
-- **Poll card:** says which decision it is, and runs a 20 s countdown for the chat vote. At zero it asks the presenter to press A or B; it never picks. After the vote it says whether the call matches 1970 (the 1970 option gets a badge), shows the option's note if it has one, and says what to watch next.
+- **Poll card:** says which decision it is and waits for the presenter, with no countdown, so there is time to read the chat. (`POLL_COUNTDOWN_S` in `sim/tuning.gd` can show one; it never picks.) After the vote it says whether the call matches 1970 (the 1970 option gets a badge), shows the option's note if it has one, and says what to watch next.
 - **Spotlight:** during each timeskip the HUD shows the value that event's decision changes (`watch` in `events.json`: cabin temperature, time to splashdown, CO2 or water left) under the clock, rising or falling, and lights up its row.
 - **Quindar tones** (2525 Hz to open, 2475 Hz to close, 250 ms each, the beeps that bracketed Mission Control's transmissions) play when a poll opens and when a vote locks in.
 
@@ -201,7 +201,8 @@ Benchmark sources:
 
 | Key | Action |
 |---|---|
-| Space or → | Advance, skip the current cutscene, or reveal the next scorecard row |
+| Space or → | Advance, skip the current cutscene, or reveal the next scorecard row. During a timeskip it pauses, and while paused it carries on |
+| P | Pause or resume everything: cutscene, mission audio, clock and cards. A notice says how to carry on |
 | Enter | Reveal every scorecard row |
 | A / B | Choose a poll option |
 | 1 / 2 / 3 | Focus Lovell / Swigert / Haise |

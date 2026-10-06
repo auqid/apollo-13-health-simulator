@@ -178,8 +178,9 @@ const EXTERIOR_PREVIEW_S: float = 12.0
 ## How long the chosen poll option and the 1970 reveal stay up before the session continues.
 ## Space moves on sooner.
 const POLL_CHOICE_HOLD_S: float = 5.0
-## The chat vote countdown on each poll card. It only prompts the presenter; it never picks.
-const POLL_COUNTDOWN_S: float = 20.0
+## A countdown for the chat vote on each poll card, in seconds. 0 shows none, so the presenter
+## takes as long as reading the chat needs. A countdown never picks; at zero it only prompts.
+const POLL_COUNTDOWN_S: float = 0.0
 ## With -- --autoplay (for recording a backup video), each vote is made this long after its poll
 ## opens, and the scorecard reveals a row this often.
 const AUTOPLAY_VOTE_S: float = 7.0

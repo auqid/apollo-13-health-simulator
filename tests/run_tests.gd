@@ -28,6 +28,7 @@ const SESSION_TESTS: Array[String] = [
 	"test_reentry_plays_through_in_about_a_minute",
 	"test_a_vote_reveals_the_1970_call",
 	"test_subtitles_follow_the_mission_audio",
+	"test_pause_holds_everything_until_resumed",
 ]
 ## Frame step for tests that play the session in real time.
 const FRAME_S: float = 1.0 / 60.0
@@ -1181,6 +1182,31 @@ func test_subtitles_follow_the_mission_audio() -> void:
 				"%s line at %.2f s is in order and inside the clip" % [path.get_file(), at_s])
 			_check(float(cue["hold_s"]) >= 1.8, "%s line at %.2f s stays up long enough to read" % [path.get_file(), at_s])
 			previous = at_s
+
+
+func test_pause_holds_everything_until_resumed() -> void:
+	var session: Node = root.get_node_or_null("Director")
+	if session == null:
+		_check(false, "the Director autoload is loaded")
+		return
+	_check(InputMap.has_action("pause_game"), "P is an Input Map action")
+	_check(Tuning.POLL_COUNTDOWN_S == 0.0, "polls wait for the presenter, with no countdown")
+	session.call("jump_to_state", "e1_cutscene")
+	session.call("_process", FRAME_S)
+	var elapsed: float = session.get("_shot_elapsed_s")
+	session.call("toggle_pause")
+	_check(paused, "P pauses the game")
+	for i in 120:
+		session.call("_process", FRAME_S)
+	_check(is_equal_approx(session.get("_shot_elapsed_s"), elapsed), "the cutscene stands still while paused")
+	_check(session.get("phase") == "cutscene", "pausing does not skip the cutscene")
+	session.call("toggle_pause")
+	_check(not paused, "P again carries on")
+	session.call("_process", FRAME_S)
+	_check(session.get("_shot_elapsed_s") > elapsed, "the cutscene moves again after resuming")
+	session.call("set_paused", true)
+	session.call("restart_now")
+	_check(not paused and session.get("phase") == "intro", "restarting while paused starts the intro running")
 
 
 ## Clip path -> its subtitles, for every shot, timeskip caption or reentry step that has both.

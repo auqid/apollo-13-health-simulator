@@ -10,6 +10,8 @@ var _tween: Tween
 
 
 func _ready() -> void:
+	# The "Paused" notice has to fade in while the game is paused.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	layer = UiStyle.LAYER_NOTICE
 	var area := MarginContainer.new()
 	area.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)

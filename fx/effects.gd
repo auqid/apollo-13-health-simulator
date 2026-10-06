@@ -105,6 +105,12 @@ func set_radio_blackout(amount: float) -> void:
 	radio_blackout = clampf(amount, 0.0, 1.0)
 
 
+## Ends a micro-blink at once, so pausing never freezes the view half dark.
+func clear_blink() -> void:
+	_arm_blink(false)
+	_apply_shader()
+
+
 ## One line for the debug panel.
 ## True while the red master alarm lamps are lit, during the explosion dim.
 func master_alarm_lit() -> bool:

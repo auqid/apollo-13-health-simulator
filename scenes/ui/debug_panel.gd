@@ -51,6 +51,8 @@ var _fps_label: Label
 
 
 func _ready() -> void:
+	# Usable while the game is paused; its jumps carry on from the new state.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	layer = UiStyle.LAYER_DEBUG
 	_build()
 	Director.debug_visibility_changed.connect(_on_visibility_changed)
@@ -71,7 +73,7 @@ func _input(event: InputEvent) -> void:
 			or event.is_action_pressed("choose_a") or event.is_action_pressed("choose_b") \
 			or event.is_action_pressed("toggle_mute") or event.is_action_pressed("silence_alarm") \
 			or event.is_action_pressed("toggle_hud") or event.is_action_pressed("toggle_fullscreen") \
-			or event.is_action_pressed("restart"):
+			or event.is_action_pressed("restart") or event.is_action_pressed("pause_game"):
 		var focused: Control = get_viewport().gui_get_focus_owner()
 		if focused != null and is_ancestor_of(focused):
 			focused.release_focus()

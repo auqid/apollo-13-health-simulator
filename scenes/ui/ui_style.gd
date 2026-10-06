@@ -48,9 +48,10 @@ const SIZE_SPOTLIGHT := 56
 ## Screen effects draw under the HUD so the HUD never blurs.
 const LAYER_SCREEN_FX := 1
 const LAYER_HUD := 10
-const LAYER_NOTICE := 15
-## Intro, cutscene, poll, reentry and scorecard cards. Above the HUD, under the debug panel.
+## Intro, poll and scorecard cards. Above the HUD, under the notices and the debug panel.
 const LAYER_CARD := 16
+## Presenter notices sit above the cards, so "Paused" shows even over a poll.
+const LAYER_NOTICE := 17
 const LAYER_DEBUG := 20
 
 const MARGIN := 40

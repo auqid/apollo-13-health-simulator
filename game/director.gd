@@ -33,7 +33,7 @@ const PHASE_HOLD := "hold"
 const PHASE_TIMESKIP := "timeskip"
 const PHASE_REENTRY := "reentry"
 const PHASE_SCORECARD := "scorecard"
-const PAUSED_NOTICE := "Paused. Press Space to continue"
+const PAUSED_NOTICE := "Paused. Press P or Space to continue"
 const RESTART_NOTICE := "Press R again to restart"
 const DECISION_KICKER := "Decision %d of %d"
 const SAME_AS_1970 := "Same call as 1970."
@@ -98,12 +98,16 @@ var _autoplay_wait_s: float = 0.0
 
 
 func _ready() -> void:
+	# Keeps reading the presenter keys while the game is paused; _process stops itself instead.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	Game.target_reached.connect(_on_target_reached)
 	Game.caption_requested.connect(_on_caption_requested)
 	_boot.call_deferred()
 
 
 func _process(delta: float) -> void:
+	if get_tree().paused:
+		return
 	if _space_preview != "" and _space_preview != "map" and phase != PHASE_CUTSCENE:
 		_preview_t = fposmod(_preview_t + delta / _preview_span(), 1.0)
 		var space := _exterior()
@@ -139,9 +143,18 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_echo() or not event.is_pressed():
 		return
 	var handled: bool = true
-	if event.is_action_pressed("advance"):
-		skip()
-	elif event is InputEventKey and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER):
+	var paused: bool = get_tree().paused
+	var enter: bool = event is InputEventKey and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER)
+	if event.is_action_pressed("pause_game"):
+		toggle_pause()
+	elif event.is_action_pressed("advance"):
+		if paused:
+			set_paused(false)
+		else:
+			skip()
+	elif paused and (enter or event.is_action_pressed("choose_a") or event.is_action_pressed("choose_b")):
+		pass
+	elif enter:
 		if phase == PHASE_SCORECARD:
 			_reveal_scorecard(true)
 	elif event.is_action_pressed("choose_a"):
@@ -178,8 +191,26 @@ func set_debug_visible(value: bool) -> void:
 
 func restart_now() -> void:
 	_restart_armed_until_ms = 0
+	set_paused(false)
 	notice_requested.emit("", 0.0)
 	start_session()
+
+
+## P: stops everything where it is (cutscene, mission audio, clock, cards) so the presenter can
+## talk, and starts it again. Space also carries on.
+func toggle_pause() -> void:
+	set_paused(not get_tree().paused)
+
+
+func set_paused(on: bool) -> void:
+	if on == get_tree().paused:
+		return
+	if on:
+		var effects := _effects()
+		if effects != null:
+			effects.clear_blink()
+	get_tree().paused = on
+	notice_requested.emit(PAUSED_NOTICE if on else "", 0.0)
 
 
 ## Ids and labels for the debug panel, in play order.
@@ -220,7 +251,8 @@ func _show_intro_card() -> void:
 		str(intro.get("quote", "")), str(intro.get("quote_by", "")))
 
 
-## Space. Skips a card, finishes the choice highlight, pauses a timeskip, or skips reentry.
+## Space. Skips a card, finishes the choice highlight, pauses the game during a timeskip, or
+## skips the reentry. While paused, Space carries on instead (see _unhandled_input).
 func skip() -> void:
 	match phase:
 		PHASE_INTRO:
@@ -235,7 +267,7 @@ func skip() -> void:
 				return
 			if _clock_hold_s > 0.0:
 				return
-			_toggle_timeskip()
+			toggle_pause()
 		PHASE_REENTRY:
 			complete_clock()
 		PHASE_SCORECARD:
@@ -315,6 +347,7 @@ func complete_clock() -> void:
 
 
 func jump_to_state(state_id: String) -> void:
+	set_paused(false)
 	_clear_reentry_presentation()
 	Game.pause()
 	_hold_left_s = 0.0
@@ -529,16 +562,6 @@ func _arrive() -> void:
 		_begin_cutscene()
 	elif phase == PHASE_REENTRY:
 		_begin_recovery()
-
-
-func _toggle_timeskip() -> void:
-	if Game.running:
-		Game.pause()
-		notice_requested.emit(PAUSED_NOTICE, 0.0)
-	else:
-		notice_requested.emit("", 0.0)
-		Game.set_rate(_clock_rate())
-		Game.play(_clock_target)
 
 
 func _run_reentry(delta: float) -> void:
