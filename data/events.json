@@ -16,7 +16,6 @@
       "get": 55.9,
       "watch": "cabin_temp",
       "cutscene": {
-        "fact_check": "TODO(fact-check): subtitle timings once e1_problem.mp3 is trimmed. The words below are the 55:55:20 to 55:55:42 exchange.",
         "shots": [
           {"kind": "bang", "duration_s": 2.0, "caption": "A bang, then the master alarm."},
           {
@@ -30,13 +29,14 @@
           {
             "kind": "audio",
             "audio": "res://assets/audio/e1_problem.mp3",
-            "duration_s": 28.0,
-            "caption": "The crew calls Houston.",
+            "duration_s": 26.0,
+            "caption": "The crew calls Houston, GET 055:55:19.",
             "subtitles": [
-              {"at_s": 0.0, "hold_s": 8.0, "text": "Swigert: “Okay, Houston, we've had a problem here.”"},
-              {"at_s": 8.0, "hold_s": 7.0, "text": "Lousma: “This is Houston. Say again, please.”"},
-              {"at_s": 15.0, "hold_s": 7.0, "text": "Lovell: “Houston, we've had a problem. We've had a main B bus undervolt.”"},
-              {"at_s": 22.0, "hold_s": 6.0, "text": "Lousma: “Roger. Main B undervolt.”"}
+              {"at_s": 0.23, "hold_s": 2.58, "text": "Swigert: “Okay, Houston, we've had a problem here.”"},
+              {"at_s": 9.42, "hold_s": 2.44, "text": "Lousma: “This is Houston. Say again, please.”"},
+              {"at_s": 15.27, "hold_s": 2.49, "text": "Lovell: “Houston, we've had a problem.”"},
+              {"at_s": 20.13, "hold_s": 2.33, "text": "Lovell: “We've had a Main B Bus Undervolt.”"},
+              {"at_s": 23.22, "hold_s": 1.84, "text": "Lousma: “Roger. Main B Undervolt.”"}
             ]
           },
           {
@@ -72,6 +72,18 @@
       },
       "timeskip": {
         "captions": [
+          {
+            "get": 56.151944,
+            "text": "Lovell looks out and sees the ship venting.",
+            "audio": "res://assets/audio/e1_venting.mp3",
+            "subtitles": [
+              {"at_s": 0.17, "hold_s": 3.0, "text": "Lovell: “That's AC, okay. Yeah, that's - that's a - good with AC...”"},
+              {"at_s": 3.27, "hold_s": 4.68, "text": "Lovell: “...and it looks to me, looking out the hatch, that we are venting something.”"},
+              {"at_s": 10.76, "hold_s": 4.21, "text": "Lovell: “We are - we are venting something out into the - into space.”"},
+              {"at_s": 15.07, "hold_s": 2.28, "text": "Lousma: “Roger. We copy your venting.”"},
+              {"at_s": 21.45, "hold_s": 1.95, "text": "Lovell: “It's a gas of some sort.”"}
+            ]
+          },
           {"get": 61.495417, "text": "A 34-second burn puts them back on a path that loops around the Moon and home."},
           {"get": 77.133333, "text": "Behind the Moon, radio contact is lost for about 25 minutes.", "silence_s": 4},
           {"get": 77.133333, "text": "On the far-side pass, they are farther from Earth than any humans before them.\nA distance record that stood until Artemis II in 2026."}
@@ -103,14 +115,17 @@
           {"kind": "cabin", "duration_s": 4.0, "caption": "Radio contact with Houston is restored at about 77:33."},
           {
             "kind": "exterior",
-            "duration_s": 12.0,
+            "duration_s": 24.0,
             "move": "orbit",
             "body": "moon",
             "action": "burn",
             "audio": "res://assets/audio/e2_burn.mp3",
             "caption": "Aquarius's engine fires for the burn home, called PC+2, at GET 079:27:39.",
             "subtitles": [
-              {"at_s": 1.0, "hold_s": 6.0, "text": "Houston and the crew count through the burn."}
+              {"at_s": 0.18, "hold_s": 1.87, "text": "Lovell: “We're burning, 40 per cent.”"},
+              {"at_s": 2.78, "hold_s": 1.84, "text": "Brand: “Houston copies.”"},
+              {"at_s": 18.1, "hold_s": 2.8, "text": "Lovell: “One hundred per cent.”\nBrand: “Roger.”"},
+              {"at_s": 21.07, "hold_s": 2.53, "text": "Lovell: “Shutdown.”\nBrand: “Roger. Shutdown.”"}
             ]
           }
         ]
@@ -157,10 +172,13 @@
           {
             "kind": "audio",
             "audio": "res://assets/audio/e3_procedure.mp3",
-            "duration_s": 14.0,
-            "caption": "Two lithium hydroxide canisters, gray tape, bags from two cooling garments,\nan LM cue card, suit hoses and a sock.",
+            "duration_s": 27.5,
+            "caption": "At GET 090:22, Houston reads up how to build an adapter.",
             "subtitles": [
-              {"at_s": 1.0, "hold_s": 8.0, "text": "Kerwin begins reading the procedure at about 90:22."}
+              {"at_s": 0.22, "hold_s": 2.84, "text": "Kerwin: “Okay. I'm ready to start into the procedure.”"},
+              {"at_s": 3.16, "hold_s": 6.33, "text": "Kerwin: “When you answer me back, speak up - speak up into the microphone, because our downlink is pretty noisy.”"},
+              {"at_s": 9.59, "hold_s": 7.71, "text": "Kerwin: “The first thing we want you to do, and we'll do this on one canister, and then let you go ahead and repeat it on the second.”"},
+              {"at_s": 17.4, "hold_s": 9.8, "text": "Kerwin: “So take one of the LCGs [cooling garments] and cut off the outer bag by cutting along one of the heat seals.”"}
             ]
           },
           {
@@ -168,7 +186,7 @@
             "image": "res://assets/images/co2_adapter.jpg",
             "duration_s": 7.0,
             "focus": [0.5, 0.4],
-            "caption": "The finished adapter, nicknamed the mailbox."
+            "caption": "The finished adapter, nicknamed the mailbox: two lithium hydroxide canisters, gray tape,\nbags from two cooling garments, an LM cue card, suit hoses and a sock."
           }
         ]
       },
@@ -199,9 +217,14 @@
       "timeskip": {
         "captions": [
           {
-            "get": 91.5,
-            "text": "Haise: “Our do-it-yourself lithium hydroxide canister change is complete.”",
-            "audio": "res://assets/audio/e3_complete.mp3"
+            "get": 91.171528,
+            "text": "In 1970, the first adapter is finished at GET 091:10.",
+            "audio": "res://assets/audio/e3_complete.mp3",
+            "subtitles": [
+              {"at_s": 0.27, "hold_s": 1.9, "text": "Swigert: “Okay, Houston; Aquarius.”"},
+              {"at_s": 2.27, "hold_s": 2.08, "text": "Kerwin: “Aquarius, Houston. Go ahead.”"},
+              {"at_s": 8.17, "hold_s": 6.28, "text": "Swigert: “Okay. Our do-it-yourself lithium hydroxide canister change is complete.”"}
+            ]
           }
         ]
       }
@@ -296,16 +319,18 @@
       "shots": [
         {
           "kind": "exterior",
-          "duration_s": 16.0,
+          "duration_s": 26.0,
           "move": "orbit",
           "body": "earth",
           "action": "sm_jettison",
           "audio": "res://assets/audio/e5_sm.mp3",
           "caption": "The crew lets the Service Module go and sees the damage.",
           "subtitles": [
-            {"at_s": 0.5, "hold_s": 5.0, "text": "Lovell: “And there's one whole side of that spacecraft missing.”"},
-            {"at_s": 5.5, "hold_s": 5.5, "text": "Lovell: “Right by the high gain antenna, the whole panel is blown out,\nalmost from the base to the engine.”"},
-            {"at_s": 11.2, "hold_s": 4.5, "text": "Haise: “Man, that's unbelievable!”"}
+            {"at_s": 0.28, "hold_s": 3.58, "text": "Lovell: “And there's one whole side of that spacecraft missing.”"},
+            {"at_s": 5.09, "hold_s": 1.8, "text": "Kerwin: “Is that right?”"},
+            {"at_s": 12.03, "hold_s": 3.51, "text": "Lovell: “Right by the - Look out there, will you?”"},
+            {"at_s": 15.96, "hold_s": 6.66, "text": "Lovell: “Right by the high gain antenna, the whole panel is blown out,\nalmost from the base to the engine.”"},
+            {"at_s": 23.45, "hold_s": 1.8, "text": "Kerwin: “Copy that.”"}
           ]
         },
         {
@@ -325,6 +350,10 @@
         "get_from_splashdown": -1.41,
         "audio": "res://assets/audio/e5_farewell.mp3",
         "captions": ["Kerwin: “Farewell, Aquarius, and we thank you.”"],
+        "subtitles": [
+          {"at_s": 0.25, "hold_s": 1.91, "text": "Kerwin: “Okay, copy that.”"},
+          {"at_s": 3.53, "hold_s": 2.53, "text": "Kerwin: “Farewell, Aquarius, and we thank you.”"}
+        ],
         "photos": [
           {"image": "res://assets/images/aquarius_jettison.jpg", "caption": "Aquarius, photographed from Odyssey after it was let go."}
         ]
@@ -350,6 +379,15 @@
         "audio": "res://assets/audio/e5_splash.mp3",
         "action": "parachute",
         "captions": ["Three main parachutes open."],
+        "subtitles": [
+          {"at_s": 0.36, "hold_s": 3.07, "text": "Kerwin: “Odyssey, Houston standing by. Over.”"},
+          {"at_s": 5.31, "hold_s": 1.87, "text": "Swigert: “Okay, Joe.”"},
+          {"at_s": 8.62, "hold_s": 2.66, "text": "Kerwin: “Okay. We read you, Jack.”"},
+          {"at_s": 11.61, "hold_s": 2.07, "text": "Swigert: “We got two good drogues.”"},
+          {"at_s": 14.25, "hold_s": 1.88, "text": "Kerwin: “Roger that.”"},
+          {"at_s": 16.23, "hold_s": 4.7, "text": "Kerwin: “Odyssey, Houston. We show you on the mains, it really looks great.”"},
+          {"at_s": 21.03, "hold_s": 6.9, "text": "Photographic helicopter: “Photo 1's on station. Photo 1 observes splashdown at this time.”"}
+        ],
         "photos": [
           {"image": "res://assets/images/mission_control_parachutes.jpg", "caption": "Contact restored. In Houston, the parachutes appear on the main screen."}
         ]

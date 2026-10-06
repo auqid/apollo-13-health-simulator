@@ -27,6 +27,7 @@ const SESSION_TESTS: Array[String] = [
 	"test_every_option_combination_reaches_the_scorecard",
 	"test_reentry_plays_through_in_about_a_minute",
 	"test_a_vote_reveals_the_1970_call",
+	"test_subtitles_follow_the_mission_audio",
 ]
 ## Frame step for tests that play the session in real time.
 const FRAME_S: float = 1.0 / 60.0
@@ -441,8 +442,7 @@ func test_asset_paths_point_into_assets() -> void:
 	for path in paths:
 		_check(path.begins_with("res://assets/audio/") or path.begins_with("res://assets/images/"),
 			"asset path is under assets/: %s" % path)
-		if path.begins_with("res://assets/images/"):
-			_check(ResourceLoader.exists(path), "photo is in the project: %s" % path)
+		_check(ResourceLoader.exists(path), "asset is in the project: %s" % path)
 
 
 # --- Tuning and history tests ---
@@ -1142,6 +1142,51 @@ func test_a_vote_reveals_the_1970_call() -> void:
 	_check("Normal speed" in other["line"], "the other option names the 1970 call, got '%s'" % other["line"])
 	_check("rejected" in other["note"], "the fast return explains why it was rejected in 1970")
 	_check(other["watch"] == UiStyle.watch_line("splashdown"), "then it says what to watch")
+
+
+func test_subtitles_follow_the_mission_audio() -> void:
+	var session: Node = root.get_node_or_null("Director")
+	if session == null:
+		_check(false, "the Director autoload is loaded")
+		return
+	var cues: Array = [
+		{"at_s": 1.0, "hold_s": 2.0, "text": "First"},
+		{"at_s": 4.0, "hold_s": 2.0, "text": "Second"},
+		{"at_s": 20.0, "hold_s": 2.0, "text": "Third"},
+	]
+	var bridge: float = Tuning.CAPTION_BRIDGE_S
+	_check(session.call("active_line", cues, 0.5, "Base") == "Base", "the caption shows before the first line")
+	_check(session.call("active_line", cues, 2.0, "Base") == "First", "a line shows while it is spoken")
+	_check(session.call("active_line", cues, 3.5, "Base") == "First", "a short pause keeps the line up")
+	_check(session.call("active_line", cues, 4.5, "Base") == "Second", "the next line replaces it as soon as it starts")
+	_check(session.call("active_line", cues, 6.0 + bridge + 0.5, "Base") == "Base", "a long pause goes back to the caption")
+	_check(session.call("active_line", cues, 21.0, "Base") == "Third", "the last line shows")
+	# Every clip's lines are in order, inside the clip, and readable for at least 1.8 seconds.
+	var clips: Dictionary = {}
+	_collect_subtitled(_load_events(), clips)
+	_check(clips.size() >= 8, "found the subtitled clips (%d)" % clips.size())
+	for path: String in clips:
+		var stream: AudioStream = load(path) if ResourceLoader.exists(path) else null
+		var length_s: float = stream.get_length() if stream != null else INF
+		var previous: float = -1.0
+		for cue: Dictionary in clips[path]:
+			var at_s: float = float(cue["at_s"])
+			_check(at_s > previous and at_s + float(cue["hold_s"]) <= length_s + 0.5,
+				"%s line at %.2f s is in order and inside the clip" % [path.get_file(), at_s])
+			_check(float(cue["hold_s"]) >= 1.8, "%s line at %.2f s stays up long enough to read" % [path.get_file(), at_s])
+			previous = at_s
+
+
+## Clip path -> its subtitles, for every shot, timeskip caption or reentry step that has both.
+func _collect_subtitled(node: Variant, out: Dictionary) -> void:
+	if node is Dictionary:
+		if node.has("audio") and node.has("subtitles"):
+			out[str(node["audio"])] = node["subtitles"]
+		for key: String in node:
+			_collect_subtitled(node[key], out)
+	elif node is Array:
+		for item: Variant in node:
+			_collect_subtitled(item, out)
 
 
 ## Plays the reentry frame by frame, as the presenter would see it, with no key presses.

@@ -42,6 +42,7 @@ Each option carries an `effects` object in `events.json`. The option marked hist
   - **A. Save power** (historical). Good: more battery for the trip home. Cost: the cabin gets close to freezing. Cabin temperature heads toward 3 °C. Power margin is unchanged.
   - **B. Keep a heater on.** Good: a warmer crew that sleeps better. Cost: less battery for the trip home. Cabin temperature bottoms out around 10 °C, and the fatigue rate drops 25%. Power margin −30.
 - **Timeskip to GET 79.0.** Captions:
+  - At 56:09:07: Lovell's report that they are venting something into space (`e1_venting.mp3`). The clock stops while a timeskip clip plays, with its subtitles.
   - At 61:29:43.5: a 34-second burn puts them back on a path that loops around the Moon and home.
   - At about 77:08: behind the Moon, radio contact is lost for about 25 minutes. Play 4 seconds of silence.
   - On the far-side pass, with no GET in the caption: they are farther from Earth than any humans before them. A distance record that stood until Artemis II in 2026.
@@ -60,7 +61,7 @@ Each option carries an `effects` object in `events.json`. The option marked hist
   - **A. Wait for Houston** (historical). Good: a tested design that seals well. Cost: CO2 climbs higher while we wait. CO2 peaks at about 15 mmHg, then falls to about 1.5 within 2 hours. Do not show a GET for the CO2 peak on screen.
   - **B. Build it now.** Good: CO2 stops rising sooner. Cost: a tired crew and a leaky seal. CO2 peaks at about 10 mmHg, then settles at about 2.5 because the improvised seal leaks a little. Crew fatigue +0.15. Do not show a GET for the CO2 peak on screen.
 - **Optional mini-game** (only if ahead of schedule): the player drags the real parts onto the adapter (two lithium hydroxide canisters, gray tape, bags from two cooling garments, an LM cue card, suit hoses and a sock). CO2 keeps rising while they work.
-- **Timeskip to GET 96.0.** At about 91:30, Haise: "Our do-it-yourself lithium hydroxide canister change is complete." Do not show a GET for the CO2 peak.
+- **Timeskip to GET 96.0.** At 091:10:26, Swigert: "Okay. Our do-it-yourself lithium hydroxide canister change is complete." (the first adapter; the Flight Journal confirms Swigert, not Haise). The caption says this is what happened in 1970, so it holds on the "build it now" path too. Do not show a GET for the CO2 peak.
 
 ### E4: The cold coast (GET 96.0)
 - **Cutscene:** a dark cabin with breath fog and condensation. Caption: water isn't just for drinking; the LM needs it to cool its electronics.
@@ -72,7 +73,7 @@ Each option carries an `effects` object in `events.json`. The option marked hist
   - At about 112:12: *Aquarius* starts recharging *Odyssey*'s reentry batteries. Charging takes about 15 hours.
 
 ### E5: Wake up *Odyssey* (splashdown −5 h)
-- **Cutscene:** if the Service Module is still attached, jettison it now (about 138:02). Show the NASA photo of the damaged Service Module with the crew's audio. Lovell: "And there's one whole side of that spacecraft missing." Then: "Right by the high gain antenna, the whole panel is blown out, almost from the base to the engine." Optional, at 138:09:09, Haise: "Man, that's unbelievable!"
+- **Cutscene:** if the Service Module is still attached, jettison it now (about 138:02). Show the NASA photo of the damaged Service Module with the crew's audio. Lovell: "And there's one whole side of that spacecraft missing." Then: "Right by the high gain antenna, the whole panel is blown out, almost from the base to the engine." Haise's "Man, that's unbelievable!" is at 138:09:09, four minutes after the clip, so it is not used.
 - **Poll:** "The landing capsule is frozen and wet inside. When do we switch it on?"
   - **A. As late as possible** (historical). Good: more battery for landing. Cost: freezing, dripping final hours. The cabin stays cold, and the condensation overlay is on. Power margin is unchanged.
   - **B. Early, to warm up.** Good: a warmer, drier crew. Cost: less battery for landing. Cabin temperature +5 °C for the final hours and less condensation. Power margin −20.
@@ -254,7 +255,8 @@ Sources:
 | `audio/e1_problem.mp3` | The "we've had a problem" exchange, plus a few seconds of reports about venting |
 | `audio/e2_burn.mp3` | Around the PC+2 burn |
 | `audio/e3_procedure.mp3` | Joe Kerwin reading up the adapter procedure (from about 90:22) |
-| `audio/e3_complete.mp3` | Haise at about 91:30, reporting the canister change complete |
+| `audio/e1_venting.mp3` | Lovell at 056:09:07, seeing the ship venting |
+| `audio/e3_complete.mp3` | Swigert at 091:10:26, reporting the canister change complete |
 | `audio/e5_sm.mp3` | Lovell and Haise describing the Service Module damage (about 138:02) |
 | `audio/e5_farewell.mp3` | Joe Kerwin at 141:30:05: "Farewell, Aquarius, and we thank you." |
 | `audio/e5_splash.mp3` | Contact after blackout, parachutes, splashdown |

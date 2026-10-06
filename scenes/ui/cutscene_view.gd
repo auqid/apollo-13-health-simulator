@@ -9,8 +9,9 @@ const Tuning := preload("res://sim/tuning.gd")
 const SimState := preload("res://sim/sim_state.gd")
 
 const GROUP := "cutscene_view"
-## "Name: words" at the start of a subtitle. The name is drawn dimmer than the words.
-const SPEAKER_PATTERN := "^([A-Z][A-Za-z]+): "
+## "Name: words" at the start of a subtitle line, like "Lovell:" or "Photographic helicopter:".
+## The name is drawn dimmer than the words.
+const SPEAKER_PATTERN := "^([A-Z][A-Za-z]+(?: [a-z]+)*): "
 
 var _clip: Control
 var _backdrop: TextureRect
@@ -209,13 +210,17 @@ func _set_caption_text(text: String) -> void:
 	_caption.text = "[center]%s[/center]" % _bbcode(text)
 
 
+## Escapes the text and colours the speaker's name at the start of each line.
 func _bbcode(text: String) -> String:
-	var safe: String = text.replace("[", "[lb]")
-	var found: RegExMatch = _speaker.search(safe)
-	if found == null:
-		return safe
-	var speaker: String = found.get_string(1)
-	return "[color=#%s]%s:[/color] %s" % [UiStyle.CAPTION_SPEAKER.to_html(), speaker, safe.substr(found.get_end())]
+	var lines: PackedStringArray = []
+	for line: String in text.replace("[", "[lb]").split("\n"):
+		var found: RegExMatch = _speaker.search(line)
+		if found == null:
+			lines.append(line)
+			continue
+		lines.append("[color=#%s]%s:[/color] %s" % [UiStyle.CAPTION_SPEAKER.to_html(), found.get_string(1),
+			line.substr(found.get_end())])
+	return "\n".join(lines)
 
 
 func _build() -> void:

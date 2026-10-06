@@ -153,6 +153,14 @@ const SEEK_STEP_H: float = 0.05
 const RESTART_CONFIRM_S: float = 3.0
 ## Seconds a caption or notice stays on screen.
 const CAPTION_HOLD_S: float = 4.0
+## A subtitle of mission audio stays up this much longer than its line, unless the next line
+## starts first, so short pauses between speakers don't flicker back to the caption.
+const CAPTION_BRIDGE_S: float = 3.0
+## In the reentry, a new photo or the splash shows its own caption this long before the radio's
+## subtitles carry on.
+const CAPTION_BEAT_S: float = 2.5
+## A shot or a timeskip pause outlasts its mission audio by this much, so the last word isn't cut.
+const CLIP_TAIL_S: float = 0.4
 ## Clock speeds offered in the debug panel, in GET hours per real second.
 const DEBUG_RATES_H_PER_S: Array = [0.1, 0.5, 1.0, 2.0, 4.0, 8.0]
 ## How far a cutscene photo zooms during its pan.

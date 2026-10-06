@@ -61,8 +61,19 @@ var _shot_span_s: float = 1.0
 ## >= 0 while the picture dips to black before the next shot.
 var _cut_left_s: float = -1.0
 var _caption_index: int = 0
-var _silence_left_s: float = 0.0
-var _resume_after_silence: bool = false
+## A timeskip stops its clock for a silence or a clip: seconds left, and whether to run on after.
+var _clock_hold_s: float = 0.0
+var _resume_after_hold: bool = false
+## The caption the current beat wants, and the subtitles of the mission audio playing over it,
+## timed in seconds since that clip started. A subtitle shows while it is spoken; the beat's
+## caption shows between lines.
+var _caption_base: String = ""
+var _cues: Array = []
+var _cue_s: float = 0.0
+## A new photo or the splash keeps its own caption up this long before the subtitles carry on,
+## and only lines that start after it can show.
+var _base_hold_s: float = 0.0
+var _cue_floor_s: float = -INF
 ## Asset paths a cutscene asked for and did not find.
 var missing_assets: PackedStringArray = []
 var _reentry_fired: Dictionary = {}
@@ -214,7 +225,7 @@ func skip() -> void:
 			if _map_left_s > 0.0:
 				_finish_opening_map()
 				return
-			if _silence_left_s > 0.0:
+			if _clock_hold_s > 0.0:
 				return
 			_toggle_timeskip()
 		PHASE_REENTRY:
@@ -407,8 +418,8 @@ func _begin_timeskip() -> void:
 	_clock_target = _event_get(events[event_index + 1])
 	phase = PHASE_TIMESKIP
 	_caption_index = 0
-	_silence_left_s = 0.0
-	_resume_after_silence = false
+	_clock_hold_s = 0.0
+	_resume_after_hold = false
 	_hide_cutscene()
 	var card := _stage()
 	if card != null:
@@ -511,6 +522,7 @@ func _toggle_timeskip() -> void:
 
 
 func _run_reentry(delta: float) -> void:
+	_advance_cues(delta)
 	if _reentry_holding:
 		_reentry_hold_s -= delta
 		_tick_reentry_beat()
@@ -543,11 +555,12 @@ func _present_reentry_step(step: Dictionary) -> void:
 	var id: String = str(step.get("id", ""))
 	if id == "lm_jettison":
 		_hide_reentry_photo()
-		_show_caption(_step_caption(step))
+		_caption_base = _step_caption(step)
 		var clip_s: float = _play_clip(str(step.get("audio", "")))
+		_start_cues(step.get("subtitles", []) if clip_s > 0.0 else [])
 		_reentry_beat = "farewell"
 		_reentry_holding = true
-		_reentry_hold_s = maxf(clip_s, Tuning.REENTRY_FAREWELL_HOLD_S)
+		_reentry_hold_s = maxf(clip_s + Tuning.CLIP_TAIL_S, Tuning.REENTRY_FAREWELL_HOLD_S)
 		_reentry_beat_span = _reentry_hold_s
 		_fade_in_beat()
 		_present_exterior("pan", "earth", "lm_jettison")
@@ -556,14 +569,16 @@ func _present_reentry_step(step: Dictionary) -> void:
 		_start_radio_blackout(step)
 	elif id == "contact":
 		_end_radio_blackout()
-		_play_clip(str(step.get("audio", "")))
+		# The radio from contact to splashdown runs on under the photo, the descent and the splash.
+		var clip_s: float = _play_clip(str(step.get("audio", "")))
+		_start_cues(step.get("subtitles", []) if clip_s > 0.0 else [])
 		_start_photos(step.get("photos", []), "descent")
 
 
 ## The capsule under its parachutes, following the clock from contact to splashdown.
 func _start_descent() -> void:
 	_hide_reentry_photo()
-	_show_caption(_step_caption(_reentry_step("contact")))
+	_set_caption_base(_step_caption(_reentry_step("contact")))
 	_parachute_playing = true
 	_fade_in_beat()
 	_present_exterior("pan", "earth", "parachute")
@@ -601,7 +616,7 @@ func _next_photo() -> void:
 	_hide_space()
 	_fade_in_beat()
 	_show_photo_entry(photo, false)
-	_show_caption(str(photo.get("caption", "")))
+	_set_caption_base(str(photo.get("caption", "")), Tuning.CAPTION_BEAT_S)
 	Game.pause()
 
 
@@ -622,7 +637,8 @@ func _start_plasma() -> void:
 	_reentry_holding = true
 	_reentry_hold_s = Tuning.REENTRY_PLASMA_S
 	_hide_reentry_photo()
-	_show_caption(_step_caption(_reentry_step("entry")))
+	_cues = []
+	_set_caption_base(_step_caption(_reentry_step("entry")))
 	_fade_in_beat()
 	_present_exterior("bay", "earth", "plasma")
 	Game.pause()
@@ -644,7 +660,7 @@ func _start_splash() -> void:
 	_reentry_holding = true
 	_reentry_hold_s = Tuning.REENTRY_SPLASH_S
 	var step: Dictionary = _reentry_step("splashdown")
-	_show_caption(_step_caption(step))
+	_set_caption_base(_step_caption(step), Tuning.CAPTION_BEAT_S)
 	_present_exterior("pan", "earth", "splash")
 	Game.pause()
 
@@ -706,7 +722,8 @@ func _start_radio_blackout(step: Dictionary) -> void:
 		var extra: String = str(step.get("heat_shield_text", ""))
 		if not extra.is_empty():
 			line = extra if line.is_empty() else "%s\n%s" % [line, extra]
-	_show_caption(line)
+	_cues = []
+	_set_caption_base(line)
 	var bio := _bio()
 	if bio != null:
 		bio.stop_voice()
@@ -785,6 +802,8 @@ func _show_caption(text: String, hold_s: float = 0.0) -> void:
 
 
 func _clear_caption() -> void:
+	_caption_base = ""
+	_cues = []
 	_show_caption("")
 
 
@@ -937,6 +956,7 @@ func _run_cutscene(delta: float) -> void:
 	if _shot_index < 0 or _shot_index >= _shots.size():
 		return
 	_shot_elapsed_s += delta
+	_advance_cues(delta)
 	var shot: Dictionary = _shots[_shot_index]
 	_animate_shot(shot)
 	if _cut_left_s >= 0.0:
@@ -945,7 +965,6 @@ func _run_cutscene(delta: float) -> void:
 			_advance_shot()
 		return
 	_shot_left_s -= delta
-	_show_shot_line(shot)
 	if _shot_left_s <= 0.0:
 		_close_shot()
 
@@ -1010,8 +1029,8 @@ func _begin_shot(shot: Dictionary) -> void:
 		_present_exterior(str(shot.get("move", "orbit")), str(shot.get("body", "earth")), str(shot.get("action", "")))
 		if str(shot.get("audio", "")) != "":
 			var clip_s: float = _play_clip(str(shot.get("audio", "")))
-			if clip_s + 0.4 > _shot_left_s:
-				_shot_left_s = clip_s + 0.4
+			if clip_s > 0.0:
+				_shot_left_s = maxf(_shot_left_s, clip_s + Tuning.CLIP_TAIL_S)
 	elif kind == "map":
 		if view != null:
 			view.hide_photo()
@@ -1037,25 +1056,68 @@ func _begin_shot(shot: Dictionary) -> void:
 		if view != null:
 			view.hide_photo()
 		var clip_s: float = _play_clip(str(shot.get("audio", "")))
-		if clip_s > _shot_left_s:
-			_shot_left_s = clip_s + 0.4
+		if clip_s > 0.0:
+			_shot_left_s = maxf(_shot_left_s, clip_s + Tuning.CLIP_TAIL_S)
 	else:
 		if view != null:
 			view.hide_photo()
-	_show_shot_line(shot)
+	_caption_base = str(shot.get("caption", ""))
+	_start_cues(shot.get("subtitles", []))
 
 
-func _show_shot_line(shot: Dictionary) -> void:
-	var line: String = str(shot.get("caption", ""))
-	for cue: Variant in shot.get("subtitles", []):
+## Starts a clip's subtitles from its first moment. Each cue is {at_s, hold_s, text}.
+func _start_cues(cues: Array) -> void:
+	_cues = cues
+	_cue_s = 0.0
+	_base_hold_s = 0.0
+	_cue_floor_s = -INF
+	_refresh_caption()
+
+
+## The beat's own caption, shown between subtitles. With hold_s it shows first for that long,
+## even over a line being spoken.
+func _set_caption_base(text: String, hold_s: float = 0.0) -> void:
+	_caption_base = text
+	if hold_s > 0.0:
+		_base_hold_s = hold_s
+		_cue_floor_s = _cue_s
+	_refresh_caption()
+
+
+func _advance_cues(delta: float) -> void:
+	if _cues.is_empty():
+		return
+	_cue_s += delta
+	_base_hold_s = maxf(_base_hold_s - delta, 0.0)
+	_refresh_caption()
+
+
+func _refresh_caption() -> void:
+	if _base_hold_s > 0.0:
+		_show_caption(_caption_base)
+		return
+	_show_caption(active_line(_cues, _cue_s, _caption_base, _cue_floor_s))
+
+
+## The subtitle being spoken t seconds into a clip, or fallback between lines. A cue stays up a
+## little past its hold (CAPTION_BRIDGE_S) unless the next line starts, so short gaps don't flicker.
+## Lines that started before earliest_s are skipped.
+static func active_line(cues: Array, t: float, fallback: String, earliest_s: float = -INF) -> String:
+	for i in cues.size():
+		var cue: Variant = cues[i]
 		if cue is not Dictionary:
 			continue
 		var start_s: float = float(cue.get("at_s", 0.0))
-		var hold_s: float = float(cue.get("hold_s", 3.0))
-		if _shot_elapsed_s >= start_s and _shot_elapsed_s < start_s + hold_s:
-			line = str(cue.get("text", line))
-			break
-	_show_caption(line)
+		if start_s < earliest_s:
+			continue
+		var end_s: float = start_s + float(cue.get("hold_s", 3.0))
+		var next_s: float = INF
+		if i + 1 < cues.size() and cues[i + 1] is Dictionary:
+			next_s = float(cues[i + 1].get("at_s", INF))
+		end_s = maxf(end_s, minf(next_s, end_s + Tuning.CAPTION_BRIDGE_S))
+		if t >= start_s and t < end_s:
+			return str(cue.get("text", fallback))
+	return fallback
 
 
 func _end_cutscene() -> void:
@@ -1264,6 +1326,8 @@ func _cabin_node() -> Cabin:
 func _hide_cutscene() -> void:
 	_hide_space()
 	_set_cabin_dolly(0.0)
+	_caption_base = ""
+	_cues = []
 	var view := _cutscene()
 	if view != null:
 		view.hide_view()
@@ -1313,18 +1377,21 @@ func _asset_exists(path: String) -> bool:
 	return false
 
 
+## Timeskip captions fire as the clock passes their GET. One with "silence_s" stops the clock for
+## that long; one with "audio" stops it while the clip plays, with its subtitles.
 func _run_timeskip_captions(delta: float) -> void:
 	if phase != PHASE_TIMESKIP:
 		return
+	_advance_cues(delta)
 	if _map_left_s > 0.0:
 		_map_left_s -= delta
 		if _map_left_s <= 0.0:
 			_finish_opening_map()
 		return
-	if _silence_left_s > 0.0:
-		_silence_left_s -= delta
-		if _silence_left_s <= 0.0 and _resume_after_silence:
-			_resume_after_silence = false
+	if _clock_hold_s > 0.0:
+		_clock_hold_s -= delta
+		if _clock_hold_s <= 0.0 and _resume_after_hold:
+			_resume_after_hold = false
 			Game.set_rate(_clock_rate())
 			Game.play(_clock_target)
 		return
@@ -1335,12 +1402,15 @@ func _run_timeskip_captions(delta: float) -> void:
 	if Game.state.time.current_get + Timeline.EPSILON_H < float(caption.get("get", INF)):
 		return
 	_caption_index += 1
-	_show_caption(str(caption.get("text", "")))
-	_play_clip(str(caption.get("audio", "")))
-	var silence_s: float = float(caption.get("silence_s", 0.0))
-	if silence_s > 0.0:
-		_resume_after_silence = Game.running
-		_silence_left_s = silence_s
+	_caption_base = str(caption.get("text", ""))
+	var clip_s: float = _play_clip(str(caption.get("audio", "")))
+	_start_cues(caption.get("subtitles", []) if clip_s > 0.0 else [])
+	var hold_s: float = float(caption.get("silence_s", 0.0))
+	if clip_s > 0.0:
+		hold_s = maxf(hold_s, clip_s + Tuning.CLIP_TAIL_S)
+	if hold_s > 0.0:
+		_resume_after_hold = Game.running
+		_clock_hold_s = hold_s
 		Game.pause()
 
 

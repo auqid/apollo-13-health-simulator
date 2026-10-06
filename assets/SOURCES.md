@@ -17,3 +17,22 @@ Every photo and recording here is NASA work and in the public domain. Nothing co
 | `parachutes.jpg` | S70-35638 | The Command Module splashing down under its three main parachutes in the South Pacific. | https://images-assets.nasa.gov/image/S70-35638/S70-35638~orig.jpg |
 | `recovery.jpg` | S70-35651 | Jack Swigert lifted toward a recovery helicopter in a net while Jim Lovell waits in the life raft beside the Command Module, with Navy swimmers. 17 April 1970. | https://images-assets.nasa.gov/image/S70-35651/S70-35651~orig.jpg |
 | `crew_on_deck.jpg` | S70-35614 | Fred Haise, Jim Lovell and Jack Swigert (left to right) step out of the recovery helicopter onto USS Iwo Jima. Black and white. | https://images-assets.nasa.gov/image/S70-35614/S70-35614~orig.jpg |
+
+## Mission audio (`assets/audio/`)
+
+Mono MP3s, loudness-matched to -16 LUFS, with short fades. Subtitles in `data/events.json` use the
+Apollo 13 Flight Journal wording (https://www.apollojournals.org/afj/ap13fj/), timed to each clip and
+checked with speech-to-text. "Tape T9xx ch 15" is NASA's Mission Control 30-track recording, CAPCOM
+loop, as digitised by NASA JSC on the Internet Archive; GET comes from Apollo in Real Time's tape
+alignment and matches the Flight Journal to within 1-2 s.
+
+| File | GET | What is said | Source |
+|---|---|---|---|
+| `e1_problem.mp3` | 055:55:19 | Swigert: "Okay, Houston, we've had a problem here." Lousma, Lovell ("We've had a Main B Bus Undervolt."), Lousma. | Flight Journal clip https://www.apollojournals.org/afj/ap13fj/audio/a13_0555519.mp3 from 26.39 s (the file starts at about 055:54:52.6, not at its file-name GET) |
+| `e1_venting.mp3` | 056:09:07 | Lovell: "...we are venting something out into the - into space." Lousma: "Roger. We copy your venting." Lovell: "It's a gas of some sort." | Flight Journal clip https://www.apollojournals.org/afj/ap13fj/audio/a13_0560317.mp3 from 350.45 s |
+| `e2_burn.mp3` | 079:27:52 and 079:32:05 | The PC+2 burn: Lovell "We're burning, 40 per cent." ... "One hundred per cent." ... "Shutdown." CAPCOM Vance Brand answers. Two pieces joined. | Tape T926 ch 15, https://archive.org/download/A13_T926_HR1U_CH7.wav/A13_T926_HR1U_CH15.wav |
+| `e3_procedure.mp3` | 090:22:51 | Joe Kerwin starts reading up the CO2 adapter procedure. | Tape T924 ch 15, https://archive.org/download/A13_T924_HR1L_CH7.wav/A13_T924_HR1L_CH15.wav |
+| `e3_complete.mp3` | 091:10:17 | Swigert (not Haise): "Okay. Our do-it-yourself lithium hydroxide canister change is complete." at 091:10:26, the first adapter. | Tape T924 ch 15 (as above) |
+| `e5_sm.mp3` | 138:04:46 | Lovell: "And there's one whole side of that spacecraft missing." ... "Right by the high gain antenna, the whole panel is blown out, almost from the base to the engine." Kerwin answers. Haise's "Man, that's unbelievable!" is at 138:09:09, so it is not in this clip. | Tape T927 ch 15, https://archive.org/download/A13_T927_HR1U_CH7.wav/A13_T927_HR1U_CH15.wav |
+| `e5_farewell.mp3` | 141:30:06 | Kerwin: "Okay, copy that. Farewell, Aquarius, and we thank you." | Tape T927 ch 15 (as above) |
+| `e5_splash.mp3` | 142:46:04 to 142:54:48 | First contact after blackout (Kerwin "Odyssey, Houston standing by. Over." / Swigert "Okay, Joe."), "We got two good drogues.", "We show you on the mains, it really looks great.", and the recovery helicopter "Photo 1 observes splashdown at this time." Four pieces joined. | Tape T927 ch 15 (as above) |
