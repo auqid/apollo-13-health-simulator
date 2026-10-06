@@ -20,7 +20,7 @@ const UiStyle := preload("res://scenes/ui/ui_style.gd")
 
 const EFFECT_KEYS: Array[String] = ["flags", "power_margin", "fatigue"]
 const TEXT_KEYS: Array[String] = ["text", "question", "label", "hint", "note", "title", "closing", "history", "caption",
-	"heat_shield_text", "how_to", "photo_caption"]
+	"heat_shield_text", "how_to", "photo_caption", "quote", "quote_by"]
 const EVENT_IDS: Array[String] = ["e1", "e2", "e3", "e4", "e5"]
 ## These drive the autoloads, which are not in the tree yet during _init.
 const SESSION_TESTS: Array[String] = [

@@ -29,6 +29,7 @@ alignment and matches the Flight Journal to within 1-2 s.
 | File | GET | What is said | Source |
 |---|---|---|---|
 | `e1_problem.mp3` | 055:55:19 | Swigert: "Okay, Houston, we've had a problem here." Lousma, Lovell ("We've had a Main B Bus Undervolt."), Lousma. | Flight Journal clip https://www.apollojournals.org/afj/ap13fj/audio/a13_0555519.mp3 from 26.39 s (the file starts at about 055:54:52.6, not at its file-name GET) |
+| `houston_problem.mp3` | 055:55:35 | Lovell: "Houston, we've had a problem." The intro's cold open: the same line as in `e1_problem.mp3`, cut on its own (41.55-43.80 s of the source, 0.05 s fade in, 0.3 s fade out) and loudness-matched. | Flight Journal clip https://www.apollojournals.org/afj/ap13fj/audio/a13_0555519.mp3 |
 | `e1_venting.mp3` | 056:09:07 | Lovell: "...we are venting something out into the - into space." Lousma: "Roger. We copy your venting." Lovell: "It's a gas of some sort." | Flight Journal clip https://www.apollojournals.org/afj/ap13fj/audio/a13_0560317.mp3 from 350.45 s |
 | `e2_burn.mp3` | 079:27:52 and 079:32:05 | The PC+2 burn: Lovell "We're burning, 40 per cent." ... "One hundred per cent." ... "Shutdown." CAPCOM Vance Brand answers. Two pieces joined. | Tape T926 ch 15, https://archive.org/download/A13_T926_HR1U_CH7.wav/A13_T926_HR1U_CH15.wav |
 | `e3_procedure.mp3` | 090:22:51 | Joe Kerwin starts reading up the CO2 adapter procedure. | Tape T924 ch 15, https://archive.org/download/A13_T924_HR1L_CH7.wav/A13_T924_HR1L_CH15.wav |

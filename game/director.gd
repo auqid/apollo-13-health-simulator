@@ -46,6 +46,8 @@ var debug_visible: bool = false
 var phase: String = PHASE_INTRO
 var event_index: int = 0
 var _card_left_s: float = 0.0
+## Seconds until the intro's cold open plays ("Houston, we've had a problem."), or below 0 once done.
+var _intro_audio_s: float = -1.0
 var _hold_left_s: float = 0.0
 var _clock_target: float = INF
 var _restart_armed_until_ms: int = 0
@@ -109,6 +111,10 @@ func _process(delta: float) -> void:
 			space.set_progress(_preview_t)
 	if phase == PHASE_INTRO and _space_preview == "":
 		_card_left_s -= delta
+		if _intro_audio_s >= 0.0:
+			_intro_audio_s -= delta
+			if _intro_audio_s < 0.0:
+				_play_clip(str(Game.events["intro"].get("audio", "")))
 		if _card_left_s <= 0.0:
 			skip()
 	elif phase == PHASE_CUTSCENE:
@@ -198,6 +204,7 @@ func start_session() -> void:
 	event_index = 0
 	phase = PHASE_INTRO
 	_card_left_s = float(Game.events["intro"]["duration_s"])
+	_intro_audio_s = float(Game.events["intro"].get("audio_at_s", -1.0))
 	_apply_view("front_windows", "earth")
 	notice_requested.emit("", 0.0)
 	_show_intro_card()
@@ -209,7 +216,8 @@ func _show_intro_card() -> void:
 		return
 	var intro: Dictionary = Game.events["intro"]
 	var photo: Texture2D = _load_texture(str(intro.get("photo", "")))
-	card.show_intro(str(intro.get("text", "")), str(intro.get("how_to", "")), photo, str(intro.get("photo_caption", "")))
+	card.show_intro(str(intro.get("text", "")), str(intro.get("how_to", "")), photo, str(intro.get("photo_caption", "")),
+		str(intro.get("quote", "")), str(intro.get("quote_by", "")))
 
 
 ## Space. Skips a card, finishes the choice highlight, pauses a timeskip, or skips reentry.

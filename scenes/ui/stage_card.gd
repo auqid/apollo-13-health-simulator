@@ -6,6 +6,7 @@ const UiStyle := preload("res://scenes/ui/ui_style.gd")
 
 const GROUP := "stage_card"
 const CONTINUE_HINT := "Press Space to continue"
+const INTRO_KICKER := "Apollo 13"
 const POLL_HINT := "Vote A or B in the chat"
 const POLL_TIME := "Vote A or B in the chat: %d s left"
 const POLL_CLOSED := "Voting is closed. Presenter, press A or B"
@@ -22,6 +23,8 @@ var _fade: Tween
 var _dim: ColorRect
 var _column: VBoxContainer
 var _title: Label
+## A small line under the title, such as who said the quote on the intro card.
+var _title_note: Label
 var _body: Label
 var _intro_row: HBoxContainer
 var _intro_photo_box: VBoxContainer
@@ -63,8 +66,14 @@ func _ready() -> void:
 
 
 ## The opening card: the date and setting, how the audience plays, and the crew photo if there is one.
-func show_intro(text: String, how_to: String = "", photo: Texture2D = null, photo_caption: String = "") -> void:
-	_show_text("Apollo 13", "", CONTINUE_HINT)
+## With a quote, the quote is the headline, under "Apollo 13", with who said it beneath.
+func show_intro(text: String, how_to: String = "", photo: Texture2D = null, photo_caption: String = "",
+		quote: String = "", quote_by: String = "") -> void:
+	_show_text("Apollo 13" if quote.is_empty() else quote, "", CONTINUE_HINT)
+	_kicker.text = INTRO_KICKER
+	_kicker.visible = not quote.is_empty()
+	_title_note.text = quote_by
+	_title_note.visible = not quote.is_empty() and not quote_by.is_empty()
 	_body.visible = false
 	_intro_row.visible = true
 	_intro_text.text = text
@@ -84,6 +93,7 @@ func show_poll(question: String, options: Array, kicker: String = "", countdown_
 	_clear_score()
 	_intro_row.visible = false
 	_set_column_width(POLL_COLUMN_WIDTH)
+	_title_note.visible = false
 	_kicker.text = kicker
 	_kicker.visible = not kicker.is_empty()
 	_title.add_theme_font_size_override("font_size", UiStyle.SIZE_QUESTION)
@@ -266,6 +276,9 @@ func _build() -> void:
 	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_title.custom_minimum_size.x = UiStyle.CARD_COLUMN_WIDTH
 	_column.add_child(_title)
+	_title_note = UiStyle.label("", UiStyle.FONT_HUD_LIGHT, UiStyle.SIZE_NAME, UiStyle.TEXT_DIM)
+	_title_note.visible = false
+	_column.add_child(_title_note)
 	_body = UiStyle.label("", UiStyle.FONT_CAPTION, UiStyle.SIZE_QUESTION)
 	_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_body.custom_minimum_size.x = UiStyle.CARD_COLUMN_WIDTH
@@ -331,6 +344,7 @@ func _build_countdown() -> void:
 
 func _reset_poll_parts() -> void:
 	_kicker.visible = false
+	_title_note.visible = false
 	_reveal.visible = false
 	_countdown.visible = false
 	_poll_left_s = -1.0

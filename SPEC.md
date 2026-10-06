@@ -27,8 +27,8 @@ Each event follows the same pattern:
 - **Spotlight:** during each timeskip the HUD shows the value that event's decision changes (`watch` in `events.json`: cabin temperature, time to splashdown, CO2 or water left) under the clock, rising or falling, and lights up its row.
 - **Quindar tones** (2525 Hz to open, 2475 Hz to close, 250 ms each, the beeps that bracketed Mission Control's transmissions) play when a poll opens and when a vote locks in.
 
-### Intro card (10 s)
-"April 13, 1970. Apollo 13 is about 330,000 km from Earth, two days into a smooth flight to the Moon." The mission clock starts at GET 55:52 with calm vitals.
+### Intro card (14 s)
+A cold open: the headline is Lovell's "Houston, we've had a problem." and his voice plays it one second in (`houston_problem.mp3`). Below it, the crew photo and "April 13, 1970. Apollo 13 is about 330,000 km from Earth, two days into a smooth flight to the Moon.", then how to vote. The mission clock starts at GET 55:52 with calm vitals. The full exchange plays in context in E1. (The film's "Houston, we have a problem" is a misquote and film audio is not allowed.)
 
 ---
 
@@ -252,6 +252,7 @@ Sources:
 
 | File | Content |
 |---|---|
+| `audio/houston_problem.mp3` | Lovell's "Houston, we've had a problem." on its own, for the intro's cold open |
 | `audio/e1_problem.mp3` | The "we've had a problem" exchange, plus a few seconds of reports about venting |
 | `audio/e2_burn.mp3` | Around the PC+2 burn |
 | `audio/e3_procedure.mp3` | Joe Kerwin reading up the adapter procedure (from about 90:22) |

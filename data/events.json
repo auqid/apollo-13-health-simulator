@@ -4,6 +4,10 @@
     "duration_s": 14,
     "photo": "res://assets/images/crew_portrait.jpg",
     "photo_caption": "Jim Lovell, Jack Swigert and Fred Haise",
+    "quote": "“Houston, we've had a problem.”",
+    "quote_by": "Jim Lovell to Mission Control, 42 seconds after the explosion",
+    "audio": "res://assets/audio/houston_problem.mp3",
+    "audio_at_s": 1.0,
     "text": "April 13, 1970. Apollo 13 is about 330,000 km from Earth, two days into a smooth flight to the Moon.",
     "how_to": "You make five of the big calls. When asked, vote A or B in the chat."
   },
