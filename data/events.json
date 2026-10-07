@@ -79,6 +79,7 @@
           {
             "get": 56.151944,
             "text": "Lovell looks out and sees the ship venting.",
+            "read_s": 3.0,
             "audio": "res://assets/audio/e1_venting.mp3",
             "subtitles": [
               {"at_s": 0.17, "hold_s": 3.0, "text": "Lovell: “That's AC, okay. Yeah, that's - that's a - good with AC...”"},
@@ -88,9 +89,27 @@
               {"at_s": 21.45, "hold_s": 1.95, "text": "Lovell: “It's a gas of some sort.”"}
             ]
           },
-          {"get": 61.495417, "text": "A 34-second burn puts them back on a path that loops around the Moon and home."},
+          {"get": 61.495417, "text": "A 34-second burn puts them back on a path that loops around the Moon and home.", "read_s": 2.5},
+          {
+            "get": 68.059167,
+            "text": "Lovell: “Well, I'm afraid this is going to be the last lunar mission for a long time.”",
+            "read_s": 4.5,
+            "audio": "res://assets/audio/quote_068_lovell.mp3",
+            "subtitles": [
+              {"at_s": 0.15, "hold_s": 2.22, "text": "Lovell: “Well, I'm afraid this is going to be the last lunar mission for a long time.”"}
+            ]
+          },
+          {
+            "get": 71.109444,
+            "text": "Haise: “We have the first space station.”",
+            "read_s": 1.5,
+            "audio": "res://assets/audio/quote_071_haise.mp3",
+            "subtitles": [
+              {"at_s": 0.27, "hold_s": 1.92, "text": "Haise: “We have the first space station.”"}
+            ]
+          },
           {"get": 77.133333, "text": "Behind the Moon, radio contact is lost for about 25 minutes.", "silence_s": 4},
-          {"get": 77.133333, "text": "On the far-side pass, they are farther from Earth than any humans before them.\nA distance record that stood until Artemis II in 2026."}
+          {"get": 77.133333, "text": "On the far-side pass, they are farther from Earth than any humans before them.\nA distance record that stood until Artemis II in 2026.", "read_s": 7.5}
         ]
       }
     },
@@ -159,7 +178,17 @@
       },
       "timeskip": {
         "captions": [
-          {"get": 82.0, "text": "CO2 is climbing. The LM's scrubbers were sized for two people."}
+          {"get": 82.0, "text": "CO2 is climbing. The LM's scrubbers were sized for two people.", "read_s": 2.0},
+          {
+            "get": 85.855833,
+            "text": "Lousma: “Gee whiz. You got up kind of early, didn't you?”\nLovell: “It's cold back there in the Command Module.”",
+            "read_s": 6.0,
+            "audio": "res://assets/audio/quote_085_lousma_lovell.mp3",
+            "subtitles": [
+              {"at_s": 0.14, "hold_s": 1.8, "text": "Lousma: “Gee whiz. You got up kind of early, didn't you?”"},
+              {"at_s": 3.14, "hold_s": 1.88, "text": "Lovell: “It's cold back there in the Command Module.”"}
+            ]
+          }
         ]
       }
     },
@@ -223,11 +252,21 @@
           {
             "get": 91.171528,
             "text": "In 1970, the first adapter is finished at GET 091:10.",
+            "read_s": 3.5,
             "audio": "res://assets/audio/e3_complete.mp3",
             "subtitles": [
               {"at_s": 0.27, "hold_s": 1.9, "text": "Swigert: “Okay, Houston; Aquarius.”"},
               {"at_s": 2.27, "hold_s": 2.08, "text": "Kerwin: “Aquarius, Houston. Go ahead.”"},
               {"at_s": 8.17, "hold_s": 6.28, "text": "Swigert: “Okay. Our do-it-yourself lithium hydroxide canister change is complete.”"}
+            ]
+          },
+          {
+            "get": 92.003333,
+            "text": "Swigert: “Oh, that's right. Oh, I knew that. I'm not thinking too well.”",
+            "read_s": 2.5,
+            "audio": "res://assets/audio/quote_092_swigert.mp3",
+            "subtitles": [
+              {"at_s": 0.12, "hold_s": 5.92, "text": "Swigert: “Oh, that's right. Oh, I knew that. I'm not thinking too well.”"}
             ]
           }
         ]
@@ -276,10 +315,47 @@
       },
       "timeskip": {
         "captions": [
-          {"get": 105.307778, "text": "A 14-second course correction at 105:18:28,\nsteered by keeping Earth's day/night line steady in the window."},
+          {"get": 105.307778, "text": "A 14-second course correction at 105:18:28,\nsteered by keeping Earth's day/night line steady in the window.", "read_s": 3.5},
           {
             "get": 112.2,
-            "text": "At about 112:12, Aquarius starts recharging Odyssey's reentry batteries.\nIt takes about 15 hours."
+            "text": "At about 112:12, Aquarius starts recharging Odyssey's reentry batteries.\nIt takes about 15 hours.",
+            "read_s": 5.0
+          },
+          {
+            "get": 112.204444,
+            "text": "Haise: “They came ... both came down here rubbing their hands, shivering. It's pretty cool upstairs.”",
+            "read_s": 4.5,
+            "audio": "res://assets/audio/quote_112_haise.mp3",
+            "subtitles": [
+              {"at_s": 0.12, "hold_s": 5.47, "text": "Haise: “They came ... both came down here rubbing their hands, shivering. It's pretty cool upstairs.”"}
+            ]
+          },
+          {
+            "get": 117.856667,
+            "text": "Lovell: “Joe, you might pass to our friends in Crew Systems that lunar boots make great footwarmers.”",
+            "read_s": 3.5,
+            "audio": "res://assets/audio/quote_117_lovell.mp3",
+            "subtitles": [
+              {"at_s": 0.12, "hold_s": 5.28, "text": "Lovell: “Joe, you might pass to our friends in Crew Systems that lunar boots make great footwarmers.”"}
+            ]
+          },
+          {
+            "get": 132.633056,
+            "text": "Swigert: “All of us have that same problem. It's just too cold to sleep.”",
+            "read_s": 3.5,
+            "audio": "res://assets/audio/quote_132_swigert.mp3",
+            "subtitles": [
+              {"at_s": 0.14, "hold_s": 5.11, "text": "Swigert: “All of us have that same problem. It's just too cold to sleep.”"}
+            ]
+          },
+          {
+            "get": 135.781111,
+            "text": "Lovell: “I'm looking out the window now, Jack, and that Earth is whistling in like a high-speed freight train.”",
+            "read_s": 5.5,
+            "audio": "res://assets/audio/quote_135_lovell.mp3",
+            "subtitles": [
+              {"at_s": 0.12, "hold_s": 3.98, "text": "Lovell: “I'm looking out the window now, Jack, and that Earth is whistling in like a high-speed freight train.”"}
+            ]
           }
         ]
       }
@@ -411,6 +487,14 @@
   },
   "captions": {
     "fever": "Haise is running a fever."
+  },
+  "people": {
+    "Lovell": {"face": "res://assets/images/face_lovell.jpg", "role": "Commander"},
+    "Swigert": {"face": "res://assets/images/face_swigert.jpg", "role": "Command Module pilot"},
+    "Haise": {"face": "res://assets/images/face_haise.jpg", "role": "Lunar Module pilot"},
+    "Lousma": {"face": "res://assets/images/face_lousma.jpg", "role": "CAPCOM in Mission Control"},
+    "Kerwin": {"face": "res://assets/images/face_kerwin.jpg", "role": "CAPCOM in Mission Control"},
+    "Brand": {"face": "res://assets/images/face_brand.jpg", "role": "CAPCOM in Mission Control"}
   },
   "scorecard": {
     "title": "Every path brings them home. How much margin did you leave them?",

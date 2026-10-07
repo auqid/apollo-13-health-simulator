@@ -7,6 +7,9 @@ extends RefCounted
 const EXPLOSION_GET: float = 55.9
 const STANDARD_SPLASHDOWN_GET: float = 142.9
 const FAST_SPLASHDOWN_GET: float = 119.0
+## Aquarius's landing gear went "down and locked" here (Haise, 061:00:10, Flight Journal), so the
+## exterior shots show it folded before and deployed after.
+const LM_GEAR_DOWN_GET: float = 61.002778
 const SPLASHDOWN_GET_BY_RETURN: Dictionary = {
 	"standard": STANDARD_SPLASHDOWN_GET,
 	"fast": FAST_SPLASHDOWN_GET,
@@ -153,6 +156,11 @@ const SEEK_STEP_H: float = 0.05
 const RESTART_CONFIRM_S: float = 3.0
 ## Seconds a caption or notice stays on screen.
 const CAPTION_HOLD_S: float = 4.0
+## Every timeskip caption and crew quote stays up long enough for the room to read it, at this
+## many words a second and never less than READ_MIN_S. A caption's "read_s" in events.json stops
+## the clock to make the time.
+const READ_WORDS_PER_S: float = 3.0
+const READ_MIN_S: float = 3.0
 ## A subtitle of mission audio stays up this much longer than its line, unless the next line
 ## starts first, so short pauses between speakers don't flicker back to the caption.
 const CAPTION_BRIDGE_S: float = 3.0
@@ -201,6 +209,23 @@ const TIMESKIP_SLOW_H_PER_S: float = 0.012
 
 # --- Display scales ---
 const HUD_CO2_BAR_MAX_MMHG: float = 20.0
+
+# --- The crew on screen (scenes/ui/crew_look.gd): status words and how their photos react ---
+## "Cold" below this cabin temperature; "shivering" below FX_SHAKE_BELOW_C.
+const CREW_COLD_BELOW_C: float = 12.0
+const CREW_TIRED_FATIGUE: float = 0.6
+const CREW_EXHAUSTED_FATIGUE: float = 0.8
+const CREW_THIRSTY_HYDRATION: float = 0.7
+## With nothing else wrong, "heart racing" from this rate (just after the explosion).
+const CREW_HEART_RACING_BPM: float = 95.0
+## The status line names at most this many things, most serious first.
+const CREW_STATUS_WORDS: int = 2
+## The fever flush starts at this body temperature and is full at FEVER_PEAK_C.
+const CREW_FLUSH_FROM_C: float = 37.2
+## Photos start to look worn out from this fatigue and are fully drained at 1.
+const CREW_TIRED_FROM: float = 0.45
+## Each photo swells very slightly with every breath, at that crew member's breathing rate.
+const CREW_BREATH_SCALE: float = 0.02
 
 # --- Cabin light level (SPEC.md section 4): floor + span x (power margin / 100) ---
 const LIGHT_LEVEL_FLOOR: float = 0.35

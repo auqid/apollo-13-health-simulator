@@ -68,9 +68,16 @@ const CARD_COLUMN_WIDTH := 1080
 ## The intro card: the crew photo (4:5) beside the text.
 const INTRO_PHOTO_SIZE := Vector2(360, 450)
 const INTRO_TEXT_WIDTH := 640
-const HUD_PANEL_WIDTH := 552
-const NAME_COLUMN_WIDTH := 96
-const VITAL_COLUMN_WIDTH := 96
+## Fits a crew row: photo, gap, name, then four vitals, plus the row and panel padding.
+const HUD_PANEL_WIDTH := 640
+const VITAL_COLUMN_WIDTH := 84
+## Each crew member's photo in the sensor panel (4:5), and the narrowest their name can be.
+## Their status goes on a line of its own under the name and vitals.
+const FACE_SIZE := Vector2(64, 80)
+const CREW_NAME_WIDTH := 150
+## The beating heart in front of each heart rate.
+const HEART_ICON_SIZE := 18
+const HEART_ICON_GAP := 6
 const CO2_BAR_HEIGHT := 10
 const CO2_MARKER_OVERHANG := 5
 const CO2_MARKER_WIDTH := 2
@@ -99,6 +106,9 @@ const CAPTION_PADDING_V := 10
 const CAPTION_BOX := Color(0.0, 0.0, 0.0, 0.62)
 ## The speaker's name at the start of a subtitle is drawn in this colour.
 const CAPTION_SPEAKER := Color(PLACARD_WHITE, 0.6)
+## The speaker's photo beside a subtitle (4:5). With the padding it fits inside the cinematic bar.
+const CAPTION_FACE_SIZE := Vector2(72, 90)
+const CAPTION_FACE_GAP := 16
 ## Distance from the bottom of the screen to the caption box, inside the bar or as a lower third.
 const CAPTION_BOTTOM_IN_BAR := 18
 const CAPTION_BOTTOM_LOWER_THIRD := 64

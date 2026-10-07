@@ -25,6 +25,9 @@ Each event follows the same pattern:
 - **Cinematic bars** frame cutscenes, the mission map and the reentry. They show the chapter ("2 of 5 · The return burn") and the mission clock (plus the focused crew member's heart rate during the reentry), and the HUD fades out meanwhile. Shots dip to black between each other.
 - **Poll card:** says which decision it is and waits for the presenter, with no countdown, so there is time to read the chat. (`POLL_COUNTDOWN_S` in `sim/tuning.gd` can show one; it never picks.) After the vote it says whether the call matches 1970 (the 1970 option gets a badge), shows the option's note if it has one, and says what to watch next.
 - **Spotlight:** during each timeskip the HUD shows the value that event's decision changes (`watch` in `events.json`: cabin temperature, time to splashdown, CO2 or water left) under the clock, rising or falling, and lights up its row.
+- **Reading time:** every timeskip caption and crew quote stays up long enough to read, at 3 words a second and never less than 3 s (`READ_WORDS_PER_S`, `READ_MIN_S`). A caption's `read_s` stops the clock for that many seconds; on a caption with a clip, the caption shows on its own first and the clip plays after. The tests play each timeskip and check this.
+- **Crew quotes:** during the timeskips, the crew's own words come up with their photos and their real voices, cut from NASA's Mission Control tapes: the words verbatim from the Apollo 13 Flight Journal transcript at its GET, the clip playing at once, and the clock stopped while it plays and the room reads it. A line cut short is marked "...". They are listed under each event below, and the recordings in `assets/SOURCES.md`.
+- **Raised captions:** a caption the game raises on its own ("Haise is running a fever.") holds the screen for its 4 seconds even over subtitles, and a clip's subtitles stop once its last line is over.
 - **Quindar tones** (2525 Hz to open, 2475 Hz to close, 250 ms each, the beeps that bracketed Mission Control's transmissions) play when a poll opens and when a vote locks in.
 
 ### Intro card (14 s)
@@ -44,6 +47,8 @@ Each option carries an `effects` object in `events.json`. The option marked hist
 - **Timeskip to GET 79.0.** Captions:
   - At 56:09:07: Lovell's report that they are venting something into space (`e1_venting.mp3`). The clock stops while a timeskip clip plays, with its subtitles.
   - At 61:29:43.5: a 34-second burn puts them back on a path that loops around the Moon and home.
+  - At 068:03:33, Lovell to his crewmates, picked up on the open radio loop: "Well, I'm afraid this is going to be the last lunar mission for a long time."
+  - At 071:06:34, Haise to CAPCOM Joe Kerwin, with the docked spacecraft as their home: "We have the first space station."
   - At about 77:08: behind the Moon, radio contact is lost for about 25 minutes. Play 4 seconds of silence.
   - On the far-side pass, with no GET in the caption: they are farther from Earth than any humans before them. A distance record that stood until Artemis II in 2026.
   - Contact returns at about 77:33. That line is in the E2 cutscene, where there is time to read it.
@@ -53,7 +58,9 @@ Each option carries an `effects` object in `events.json`. The option marked hist
 - **Poll:** "We've come around the Moon. How fast do we go home?"
   - **A. Normal speed** (historical). Good: the heat shield stays protected. Cost: a longer trip in the cold lifeboat. Splashdown at GET 142.9.
   - **B. Fastest way home.** Good: home about a day sooner. Cost: we drop the damaged back half of the ship, leaving the heat shield exposed. Splashdown about 24 hours earlier (GET 119). This option was considered in 1970 and rejected, because the Service Module protected the heat shield from the cold of space. Set `heatShieldRisk = true`: reentry stress +20 bpm on top of the normal spike, and the scorecard shows the heat shield exposure. The Service Module photo reveal moves to this point.
-- **Timeskip to GET 88.0.** Caption: "CO2 is climbing. The LM's scrubbers were sized for two people."
+- **Timeskip to GET 88.0.** Captions:
+  - At 82.0: "CO2 is climbing. The LM's scrubbers were sized for two people."
+  - At 085:51:21, CAPCOM Jack Lousma: "Gee whiz. You got up kind of early, didn't you?" Lovell, at 085:51:28: "It's cold back there in the Command Module."
 
 ### E3: The CO2 crisis (GET 88.0, CO2 at about 8 mmHg, alarm on)
 - **Cutscene:** the CO2 caution light, Joe Kerwin reading up the adapter procedure from about 90:22, and the NASA photo of the finished adapter. Parts: two lithium hydroxide canisters, gray tape, bags from two cooling garments, an LM cue card, suit hoses and a sock.
@@ -62,6 +69,7 @@ Each option carries an `effects` object in `events.json`. The option marked hist
   - **B. Build it now.** Good: CO2 stops rising sooner. Cost: a tired crew and a leaky seal. CO2 peaks at about 10 mmHg, then settles at about 2.5 because the improvised seal leaks a little. Crew fatigue +0.15. Do not show a GET for the CO2 peak on screen.
 - **Optional mini-game** (only if ahead of schedule): the player drags the real parts onto the adapter (two lithium hydroxide canisters, gray tape, bags from two cooling garments, an LM cue card, suit hoses and a sock). CO2 keeps rising while they work.
 - **Timeskip to GET 96.0.** At 091:10:26, Swigert: "Okay. Our do-it-yourself lithium hydroxide canister change is complete." (the first adapter; the Flight Journal confirms Swigert, not Haise). The caption says this is what happened in 1970, so it holds on the "build it now" path too. Do not show a GET for the CO2 peak.
+  - At 092:00:12, Swigert, copying a long switch list from Joe Kerwin: "Oh, that's right. Oh, I knew that. I'm not thinking too well."
 
 ### E4: The cold coast (GET 96.0)
 - **Cutscene:** a dark cabin with breath fog and condensation. Caption: water isn't just for drinking; the LM needs it to cool its electronics.
@@ -71,6 +79,11 @@ Each option carries an `effects` object in `events.json`. The option marked hist
 - **Timeskip to splashdown −5 h** (GET 137.9 historical, or 114 with E2-B). Captions:
   - At 105:18:28: a 14-second manual course correction, steered by keeping Earth's day/night line steady in the window.
   - At about 112:12: *Aquarius* starts recharging *Odyssey*'s reentry batteries. Charging takes about 15 hours.
+  - At 112:12:16, Haise to Lousma: "They came ... both came down here rubbing their hands, shivering. It's pretty cool upstairs." (The "..." is in the transcript.)
+  - At 117:51:24, Lovell: "Joe, you might pass to our friends in Crew Systems that lunar boots make great footwarmers."
+  - At 132:37:59, Swigert to Lousma: "All of us have that same problem. It's just too cold to sleep."
+  - At 135:46:52, Lovell: "I'm looking out the window now, Jack, and that Earth is whistling in like a high-speed freight train."
+  - With E2-B the coast ends at GET 114, so only the lines before it come up: going home a day sooner leaves fewer cold hours to complain about.
 
 ### E5: Wake up *Odyssey* (splashdown −5 h)
 - **Cutscene:** if the Service Module is still attached, jettison it now (about 138:02). Show the NASA photo of the damaged Service Module with the crew's audio. Lovell: "And there's one whole side of that spacecraft missing." Then: "Right by the high gain antenna, the whole panel is blown out, almost from the base to the engine." Haise's "Man, that's unbelievable!" is at 138:09:09, four minutes after the clip, so it is not used.
@@ -166,7 +179,10 @@ Burns, ignition GET and duration:
 Keep the 3D view as the main thing on screen. The HUD is a compact side panel.
 
 - **Top left:** mission clock (GET hhh:mm:ss) and time since the explosion.
-- **Right panel:** three crew rows (name, HR, SpO2, breathing rate, body temperature). The focused crew member is highlighted, and the heartbeat follows them.
+- **Right panel:** three crew rows (photo, name, HR, SpO2, breathing rate, body temperature). The focused crew member is highlighted, and the heartbeat follows them.
+- **Crew photos:** each row shows that astronaut's face, from NASA photos of them in their pressure suits (see `assets/SOURCES.md`), so the room watches people as well as numbers. Each photo reacts to the state, slowly, without shaking or flashing: colour drains toward blue as the cabin cools, Haise's face flushes as his fever rises, and it greys and dims as fatigue builds. It swells very slightly with each breath, at that astronaut's breathing rate, and a small heart beside the heart rate beats at that rate.
+- **Crew status:** a line under each name gives up to two plain words, most serious first: fever, breathing hard (CO2 over the safe limit), shivering or cold, exhausted or tired, thirsty; otherwise heart racing or steady. Fever and breathing hard are shown in amber. The numbers stay in the columns, so the words stay short.
+- **Speakers' photos:** a subtitle or quote that starts with a speaker's name ("Lovell: …") shows their photo beside the line, from `people` in `data/events.json`. In a two-person exchange, the first speaker is on the left and the second on the right. A crew member's photo shows how they are at that moment; Mission Control's photos stay as they are.
 - **Bottom of panel:** cabin temperature, CO2 (a bar with the 7.6 mmHg safe-limit marker), cabin pressure, water %, power margin.
 - **Panel label:** "Modern sensors on a 1970 crew." SpO2 monitoring didn't exist on Apollo, so this nods to what our team builds.
 
@@ -233,7 +249,13 @@ The cabin is 1970 hardware; the HUD is today's sensors looking at it. The contra
 - **Palette:** panel grey `#5E6560`, instrument black `#1A1D1C`, placard white `#ECE9E1`, caution amber `#E2A33B`, warning red `#C4372C`, sensor teal `#8CCFC1` (HUD only), cold tint `#9DB8D9`.
 - **Type:** Barlow Condensed for title cards, captions and in-cabin placards. Barlow with tabular numbers for the HUD. Download both from Google Fonts (open license) into `assets/fonts/`.
 
+### Exterior build notes
+- Low-poly spacecraft at about real size, finished as in the 1970 photos: a polished aluminium Service Module with white radiator bands, its reaction control quads and the four-dish high-gain antenna; the silver Command Module with its windows, hatch and thruster ports, browned and streaked after reentry; Aquarius's ascent stage mostly aluminized with dark panels, on its gold descent stage.
+- Aquarius's landing gear is folded until GET 061:00:10, when Haise reported it "down and locked" during the lifeboat power-up, so the explosion and lifeboat shots show it folded and every later shot shows it deployed, with the ladder on the front leg and contact probes under the other three.
+- At splashdown the crew releases the three mains: they go slack, drift downwind and lie flat on the sea behind the capsule, as in the recovery photos.
+
 ### Cabin build notes
+- Once the CO2 adapter is built (the CO2 peak of the chosen option, GET 91.5 on the 1970 path), the "mail box" hangs on the right wall beside the CO2 panel, in view of E3's camera: an Odyssey canister with its perforated face, gray tape across it, a plastic bag and the suit hose, as in NASA photo AS13-62-8929.
 - Use low-poly geometry: boxes and extrusions for the front panel, side panels and overhead.
 - Draw panel details as simple textures (gauge faces, rows of toggle switches) instead of modelling them.
 - Place a textured sphere outside the windows for Earth or the Moon.
@@ -261,8 +283,9 @@ Sources:
 | `audio/e3_complete.mp3` | Swigert at 091:10:26, reporting the canister change complete |
 | `audio/e5_sm.mp3` | Lovell and Haise describing the Service Module damage (about 138:02) |
 | `audio/e5_farewell.mp3` | Joe Kerwin at 141:30:05: "Farewell, Aquarius, and we thank you." |
+| `audio/quote_*.mp3` | The eight crew quotes in the timeskips (see `assets/SOURCES.md`) |
 | `audio/e5_splash.mp3` | Contact after blackout, parachutes, splashdown |
-| `images/` | The crew, the Moon's far side, the CO2 adapter, Lovell in Aquarius, the damaged Service Module, Aquarius after jettison, Mission Control at splashdown, the splashdown, recovery, the crew on USS Iwo Jima. Each file's NASA ID, source and caption facts are in `assets/SOURCES.md`. |
+| `images/` | The crew and each crew member's face, the CAPCOMs' faces (Lousma, Kerwin, Brand), the Moon's far side, the CO2 adapter, Lovell in Aquarius, the damaged Service Module, Aquarius after jettison, Mission Control at splashdown, the splashdown, recovery, the crew on USS Iwo Jima. Each file's NASA ID, source and caption facts are in `assets/SOURCES.md`. |
 
 Trim clips to 10–30 s and normalize the volume (Audacity is fine).
 

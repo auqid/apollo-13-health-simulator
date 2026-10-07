@@ -63,14 +63,20 @@ var _shot_span_s: float = 1.0
 ## >= 0 while the picture dips to black before the next shot.
 var _cut_left_s: float = -1.0
 var _caption_index: int = 0
-## A timeskip stops its clock for a silence or a clip: seconds left, and whether to run on after.
+## A timeskip stops its clock for a silence, a caption being read or a clip: seconds left, and
+## whether to run on after.
 var _clock_hold_s: float = 0.0
 var _resume_after_hold: bool = false
+## A caption with "read_s" and a clip shows on its own first; its clip waits here until then.
+var _held_clip: Dictionary = {}
 ## The caption the current beat wants, and the subtitles of the mission audio playing over it,
 ## timed in seconds since that clip started. A subtitle shows while it is spoken; the beat's
 ## caption shows between lines.
 var _caption_base: String = ""
 var _cues: Array = []
+## A caption the game raises on its own (Haise's fever) keeps the screen this much longer,
+## whatever subtitles are playing.
+var _priority_left_s: float = 0.0
 var _cue_s: float = 0.0
 ## A new photo or the splash keeps its own caption up this long before the subtitles carry on,
 ## and only lines that start after it can show.
@@ -108,6 +114,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if get_tree().paused:
 		return
+	_priority_left_s = maxf(_priority_left_s - delta, 0.0)
 	if _space_preview != "" and _space_preview != "map" and phase != PHASE_CUTSCENE:
 		_preview_t = fposmod(_preview_t + delta / _preview_span(), 1.0)
 		var space := _exterior()
@@ -473,6 +480,7 @@ func _begin_timeskip() -> void:
 	_caption_index = 0
 	_clock_hold_s = 0.0
 	_resume_after_hold = false
+	_held_clip = {}
 	_hide_cutscene()
 	var card := _stage()
 	if card != null:
@@ -847,6 +855,7 @@ func _show_caption(text: String, hold_s: float = 0.0) -> void:
 func _clear_caption() -> void:
 	_caption_base = ""
 	_cues = []
+	_priority_left_s = 0.0
 	_show_caption("")
 
 
@@ -1132,10 +1141,19 @@ func _advance_cues(delta: float) -> void:
 		return
 	_cue_s += delta
 	_base_hold_s = maxf(_base_hold_s - delta, 0.0)
+	# Once the clip has had its say, the beat's caption stays as it is, so a caption raised
+	# meanwhile is not covered again by lines that are over.
+	var spoken_s: float = 0.0
+	for cue: Dictionary in _cues:
+		spoken_s = maxf(spoken_s, float(cue["at_s"]) + float(cue["hold_s"]) + Tuning.CAPTION_BRIDGE_S)
+	if _base_hold_s <= 0.0 and _cue_s > spoken_s:
+		_cues = []
 	_refresh_caption()
 
 
 func _refresh_caption() -> void:
+	if _priority_left_s > 0.0:
+		return
 	if _base_hold_s > 0.0:
 		_show_caption(_caption_base)
 		return
@@ -1312,9 +1330,13 @@ func _present_exterior(move: String, body: String, action: String = "") -> void:
 	var cabin := _cabin_node()
 	if cabin != null:
 		cabin.set_presented(false)
+	# Aquarius's legs go down at GET 061:00; a debug preview shows them as its shot would.
+	var gear_down: bool = Game.state.time.current_get >= Tuning.LM_GEAR_DOWN_GET
+	if _space_preview != "":
+		gear_down = action not in ["explosion", "lifeboat"]
 	var space := _exterior()
 	if space != null:
-		space.show_exterior(move, body, action)
+		space.show_exterior(move, body, action, gear_down)
 
 
 func _present_map(get_h: float, splashdown_h: float, next_get_h: float = -1.0, next_label: String = "") -> void:
@@ -1420,8 +1442,10 @@ func _asset_exists(path: String) -> bool:
 	return false
 
 
-## Timeskip captions fire as the clock passes their GET. One with "silence_s" stops the clock for
-## that long; one with "audio" stops it while the clip plays, with its subtitles.
+## Timeskip captions fire as the clock passes their GET. One with "silence_s" or "read_s" stops the
+## clock for that long; one with "audio" stops it while the clip plays, with its subtitles. With
+## both, the caption is read first, on its own, and then the clip plays, unless the caption is
+## just the words the clip speaks (a crew quote): then the clip plays at once.
 func _run_timeskip_captions(delta: float) -> void:
 	if phase != PHASE_TIMESKIP:
 		return
@@ -1433,6 +1457,10 @@ func _run_timeskip_captions(delta: float) -> void:
 		return
 	if _clock_hold_s > 0.0:
 		_clock_hold_s -= delta
+		if _clock_hold_s <= 0.0 and not _held_clip.is_empty():
+			var held: Dictionary = _held_clip
+			_held_clip = {}
+			_clock_hold_s = _start_timeskip_clip(held)
 		if _clock_hold_s <= 0.0 and _resume_after_hold:
 			_resume_after_hold = false
 			Game.set_rate(_clock_rate())
@@ -1446,15 +1474,35 @@ func _run_timeskip_captions(delta: float) -> void:
 		return
 	_caption_index += 1
 	_caption_base = str(caption.get("text", ""))
-	var clip_s: float = _play_clip(str(caption.get("audio", "")))
-	_start_cues(caption.get("subtitles", []) if clip_s > 0.0 else [])
-	var hold_s: float = float(caption.get("silence_s", 0.0))
-	if clip_s > 0.0:
-		hold_s = maxf(hold_s, clip_s + Tuning.CLIP_TAIL_S)
+	_start_cues([])
+	var hold_s: float = maxf(float(caption.get("silence_s", 0.0)), float(caption.get("read_s", 0.0)))
+	if hold_s > 0.0 and not str(caption.get("audio", "")).is_empty() and not is_spoken(caption):
+		_held_clip = caption
+	else:
+		hold_s = maxf(hold_s, _start_timeskip_clip(caption))
 	if hold_s > 0.0:
 		_resume_after_hold = Game.running
 		_clock_hold_s = hold_s
 		Game.pause()
+
+
+## Whether a caption's text is exactly what its clip says, line by line, as a crew quote's is.
+static func is_spoken(caption: Dictionary) -> bool:
+	var lines: PackedStringArray = []
+	for cue: Variant in caption.get("subtitles", []):
+		if cue is Dictionary:
+			lines.append(str(cue.get("text", "")))
+	return not lines.is_empty() and "\n".join(lines) == str(caption.get("text", ""))
+
+
+## Plays a timeskip caption's clip with its subtitles. Returns how long to stop the clock for it,
+## or 0 if it has no clip or the file is missing.
+func _start_timeskip_clip(caption: Dictionary) -> float:
+	var clip_s: float = _play_clip(str(caption.get("audio", "")))
+	if clip_s <= 0.0:
+		return 0.0
+	_start_cues(caption.get("subtitles", []))
+	return clip_s + Tuning.CLIP_TAIL_S
 
 
 func _cutscene() -> CutsceneView:
@@ -1540,6 +1588,7 @@ func _toggle_fullscreen() -> void:
 
 
 func _on_caption_requested(text: String) -> void:
+	_priority_left_s = Tuning.CAPTION_HOLD_S
 	_show_caption(text, Tuning.CAPTION_HOLD_S)
 
 

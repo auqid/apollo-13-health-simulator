@@ -16,12 +16,17 @@ const Cabin := preload("res://scenes/cabin/cabin.gd")
 const AudioMix := preload("res://audio/audio_mix.gd")
 const MapPath := preload("res://scenes/space/map_path.gd")
 const Exterior := preload("res://scenes/space/exterior.gd")
+const Spacecraft := preload("res://scenes/space/spacecraft.gd")
 const UiStyle := preload("res://scenes/ui/ui_style.gd")
+const CrewLook := preload("res://scenes/ui/crew_look.gd")
+const CutsceneView := preload("res://scenes/ui/cutscene_view.gd")
 
 const EFFECT_KEYS: Array[String] = ["flags", "power_margin", "fatigue"]
 const TEXT_KEYS: Array[String] = ["text", "question", "label", "hint", "note", "title", "closing", "history", "caption",
 	"heat_shield_text", "how_to", "photo_caption", "quote", "quote_by"]
 const EVENT_IDS: Array[String] = ["e1", "e2", "e3", "e4", "e5"]
+## Voices with no photo beside their lines.
+const NO_PHOTO_SPEAKERS: Array[String] = ["Photographic helicopter"]
 ## These drive the autoloads, which are not in the tree yet during _init.
 const SESSION_TESTS: Array[String] = [
 	"test_every_option_combination_reaches_the_scorecard",
@@ -29,6 +34,8 @@ const SESSION_TESTS: Array[String] = [
 	"test_a_vote_reveals_the_1970_call",
 	"test_subtitles_follow_the_mission_audio",
 	"test_pause_holds_everything_until_resumed",
+	"test_subtitles_show_the_speakers_photos",
+	"test_timeskip_captions_stay_up_long_enough_to_read",
 ]
 ## Frame step for tests that play the session in real time.
 const FRAME_S: float = 1.0 / 60.0
@@ -184,7 +191,7 @@ func _collect_asset_paths(node: Variant, out: Array[String]) -> void:
 	if node is Dictionary:
 		for key: String in node:
 			var value: Variant = node[key]
-			if (key == "audio" or key == "image" or key == "photo") and value is String and not value.is_empty():
+			if key in ["audio", "image", "photo", "face"] and value is String and not value.is_empty():
 				out.append(value)
 			elif key == "images" and value is Array:
 				for path: Variant in value:
@@ -280,16 +287,22 @@ func test_reveal_references_exist() -> void:
 			_check(key in EFFECT_KEYS, "reveal %s uses a known effect key" % reveal_id)
 
 
+## The fastest way home (E2-B) ends the cold coast early, so a caption after that end never comes
+## up on that path. Every caption still falls inside its timeskip on the normal-speed path.
 func test_timeskip_captions_fall_inside_their_timeskip() -> void:
 	var events: Array = _load_events().get("events", [])
+	var longest: float = Tuning.SPLASHDOWN_GET_BY_RETURN.values().max()
 	for splashdown: float in Tuning.SPLASHDOWN_GET_BY_RETURN.values():
 		for i in range(events.size() - 1):
 			var start: float = _event_get(events[i], splashdown)
 			var end: float = _event_get(events[i + 1], splashdown)
+			var previous: float = start
 			for caption: Dictionary in events[i].get("timeskip", {}).get("captions", []):
 				var caption_get: float = caption["get"]
-				_check(caption_get > start and caption_get < end,
+				_check(caption_get > start and (caption_get < end or splashdown < longest),
 					"%s caption at GET %.1f falls between %.1f and %.1f" % [events[i]["id"], caption_get, start, end])
+				_check(caption_get >= previous, "%s captions are in GET order (%.3f)" % [events[i]["id"], caption_get])
+				previous = caption_get
 
 
 func test_cutscenes_have_editable_shots() -> void:
@@ -334,6 +347,25 @@ func test_cutscenes_have_editable_shots() -> void:
 		if "Artemis II in 2026" in caption["text"]:
 			far_side = true
 	_check(far_side, "the far-side caption names the distance record")
+
+
+## Aquarius flew with its legs folded until Haise reported them "down and locked" at 061:00:10,
+## after the explosion and before the far side, so the explosion shots fold them and later shots don't.
+func test_aquarius_legs_go_down_at_061() -> void:
+	var events: Array = Timeline.event_list(_load_events())
+	_check(Tuning.LM_GEAR_DOWN_GET > Tuning.EXPLOSION_GET and Tuning.LM_GEAR_DOWN_GET < float(events[1]["get"]),
+		"the gear goes down after the explosion and before the return burn")
+	var holder := Node3D.new()
+	var craft := Spacecraft.new(holder)
+	var legs: Array = craft.get("_legs")
+	_check(legs.size() == 4, "Aquarius has four legs")
+	craft.set_landing_gear(false)
+	var stowed_foot: Vector3 = legs[0].transform * Vector3(Spacecraft.LEG_FOOT.x, Spacecraft.LEG_FOOT.y, 0.0)
+	craft.set_landing_gear(true)
+	var deployed_foot: Vector3 = legs[0].transform * Vector3(Spacecraft.LEG_FOOT.x, Spacecraft.LEG_FOOT.y, 0.0)
+	_check(stowed_foot.x < deployed_foot.x - 1.0, "folded, the footpad hangs in close to the descent stage")
+	_check(stowed_foot.y < deployed_foot.y, "folded, the leg hangs straight down")
+	holder.free()
 
 
 func test_map_and_exterior_camera_follow_the_mission() -> void:
@@ -444,6 +476,90 @@ func test_asset_paths_point_into_assets() -> void:
 		_check(path.begins_with("res://assets/audio/") or path.begins_with("res://assets/images/"),
 			"asset path is under assets/: %s" % path)
 		_check(ResourceLoader.exists(path), "asset is in the project: %s" % path)
+
+
+func test_everyone_on_screen_has_a_photo() -> void:
+	var people: Dictionary = _load_events().get("people", {})
+	for crew_id in SimState.CREW_IDS:
+		_check(people.has(SimState.CREW_NAMES[crew_id]), "%s is in people" % SimState.CREW_NAMES[crew_id])
+	for person: String in people:
+		var path: String = str(people[person].get("face", ""))
+		_check(ResourceLoader.exists(path), "%s's photo is in the project: %s" % [person, path])
+		_check(not str(people[person].get("role", "")).is_empty(), "%s has a role" % person)
+	# Speakers are found at the start of each subtitle line, each once, in order.
+	_check(CutsceneView.speakers("Lovell: “One hundred per cent.”\nBrand: “Roger.”") == PackedStringArray(["Lovell", "Brand"]),
+		"both speakers of an exchange, in order")
+	_check(CutsceneView.speakers("Lovell: “One.”\nLovell: “Two.”") == PackedStringArray(["Lovell"]), "a speaker shows once")
+	_check(CutsceneView.speakers("Haise is running a fever.").is_empty(), "a story caption has no speaker")
+	# Everyone who speaks, in a subtitle or a timeskip quote, has a photo to show beside the line.
+	var lines: Array[String] = []
+	var clips: Dictionary = {}
+	_collect_subtitled(_load_events(), clips)
+	for path: String in clips:
+		for cue: Dictionary in clips[path]:
+			lines.append(str(cue["text"]))
+	for event: Dictionary in Timeline.event_list(_load_events()):
+		for caption: Dictionary in event.get("timeskip", {}).get("captions", []):
+			lines.append(str(caption["text"]))
+	var speakers: Dictionary = {}
+	for line in lines:
+		for person: String in CutsceneView.speakers(line):
+			speakers[person] = true
+	_check(speakers.size() >= 6, "found the speakers (%s)" % ", ".join(speakers.keys()))
+	for person: String in speakers:
+		_check(people.has(person) or person in NO_PHOTO_SPEAKERS, "%s has a photo to show when speaking" % person)
+
+
+# --- Crew look tests ---
+
+func test_crew_status_reads_plainly() -> void:
+	var env := SimState.Env.new()
+	var member := SimState.CrewMember.new()
+	member.hr = Tuning.CREW_HEART_RACING_BPM - 10.0
+	_check(CrewLook.status(member, env) == "Steady", "a calm crew member is steady")
+	_check(not CrewLook.is_warning(member, env), "steady is not a warning")
+	member.hr = Tuning.CREW_HEART_RACING_BPM
+	_check(CrewLook.status(member, env) == "Heart racing", "a fast heart shows when nothing else does")
+	env.cabin_temp_c = Tuning.CREW_COLD_BELOW_C - 0.5
+	_check(CrewLook.status(member, env) == "Cold", "a cool cabin makes them cold")
+	env.cabin_temp_c = Tuning.FX_SHAKE_BELOW_C - 0.5
+	_check(CrewLook.status(member, env) == "Shivering", "below the shivering line they shiver")
+	member.fatigue = Tuning.CREW_TIRED_FATIGUE
+	_check(CrewLook.status(member, env) == "Shivering, tired", "two words, most serious first")
+	member.fatigue = Tuning.CREW_EXHAUSTED_FATIGUE
+	_check(CrewLook.status(member, env) == "Shivering, exhausted", "worn out further is exhausted")
+	_check(not CrewLook.is_warning(member, env), "cold and tired are shown, but not as warnings")
+	member.body_temp_c = Tuning.FEVER_CAPTION_C
+	_check(CrewLook.status(member, env) == "Fever, shivering", "a fever comes first")
+	_check(CrewLook.is_warning(member, env), "a fever is a warning")
+	env.co2_mmhg = Tuning.CO2_ALARM_MMHG + 1.0
+	_check(CrewLook.status(member, env) == "Fever, breathing hard", "high CO2 comes before the cold")
+	member.body_temp_c = Tuning.BODY_TEMP_C
+	_check(CrewLook.is_warning(member, env), "high CO2 is a warning")
+	member.hydration = Tuning.CREW_THIRSTY_HYDRATION - 0.1
+	env.co2_mmhg = Tuning.CO2_START_MMHG
+	env.cabin_temp_c = Tuning.CABIN_START_C
+	member.fatigue = Tuning.FATIGUE_START
+	_check(CrewLook.status(member, env) == "Thirsty", "short of water they are thirsty")
+	_check(Tuning.CREW_STATUS_WORDS >= 1, "the status shows at least one word")
+
+
+func test_crew_photos_show_cold_fever_and_tiredness() -> void:
+	var env := SimState.Env.new()
+	var member := SimState.CrewMember.new()
+	_check(CrewLook.cold(env) == 0.0, "a warm cabin leaves the photo as it is")
+	_check(CrewLook.flush(member) == 0.0, "a normal temperature shows no flush")
+	_check(CrewLook.tired(member) == 0.0, "a rested crew member does not look worn out")
+	var last_cold: float = 0.0
+	for cabin_c: float in [15.0, 10.0, 6.0, Tuning.FX_TINT_FULL_C]:
+		env.cabin_temp_c = cabin_c
+		_check(CrewLook.cold(env) >= last_cold, "colder looks colder (%.1f °C)" % cabin_c)
+		last_cold = CrewLook.cold(env)
+	_near(CrewLook.cold(env), 1.0, 0.001, "full cold tint at the coldest")
+	member.body_temp_c = Tuning.FEVER_PEAK_C
+	_near(CrewLook.flush(member), 1.0, 0.001, "full flush at the peak of the fever")
+	member.fatigue = 1.0
+	_near(CrewLook.tired(member), 1.0, 0.001, "fully worn out at the most fatigue")
 
 
 # --- Tuning and history tests ---
@@ -949,6 +1065,18 @@ func test_cold_effects_follow_the_spec() -> void:
 	_check(FxMapping.tint(6.0) > FxMapping.tint(9.0), "tint grows as the cabin cools")
 
 
+## The CO2 mail box hangs in the cabin from when the chosen adapter starts working.
+func test_mailbox_appears_when_the_adapter_works() -> void:
+	for adapter: String in Tuning.CO2_CURVE_BY_ADAPTER:
+		var working: float = Tuning.CO2_CURVE_BY_ADAPTER[adapter]["peak_get"]
+		_check(not FxMapping.mailbox_up(adapter, working - 0.05), "%s: no mail box before it is built" % adapter)
+		_check(FxMapping.mailbox_up(adapter, working), "%s: the mail box hangs there once it works" % adapter)
+	_check(FxMapping.mailbox_up("now", Tuning.CO2_CURVE_BY_ADAPTER["now"]["peak_get"])
+		and not FxMapping.mailbox_up("wait", Tuning.CO2_CURVE_BY_ADAPTER["now"]["peak_get"]),
+		"building it now puts it up before waiting for Houston would")
+	_check(not FxMapping.mailbox_up("wait", Tuning.EXPLOSION_GET), "none at the explosion")
+
+
 func test_condensation_follows_the_spec() -> void:
 	_near(FxMapping.condensation(7.0, 119.0, "late", false), 0.0, 1e-9, "not before GET 120")
 	_near(FxMapping.condensation(7.0, 121.0, "late", false), 1.0, 1e-9, "on below 8 °C after GET 120")
@@ -1207,6 +1335,101 @@ func test_pause_holds_everything_until_resumed() -> void:
 	session.call("set_paused", true)
 	session.call("restart_now")
 	_check(not paused and session.get("phase") == "intro", "restarting while paused starts the intro running")
+
+
+## The photos beside a subtitle follow its speakers, from people in events.json.
+func test_subtitles_show_the_speakers_photos() -> void:
+	var played: Node = root.get_node_or_null("Game")
+	if played == null:
+		_check(false, "the Game autoload is loaded")
+		return
+	var view: CanvasLayer = CutsceneView.new()
+	root.add_child(view)
+	var shown: Dictionary = {
+		"Lovell: “Houston, we've had a problem.”": 1,
+		"Lovell: “Okay.”\nSwigert: “Roger.”": 2,
+		"Lovell: “One hundred per cent.”\nBrand: “Roger.”": 2,
+		"Kerwin: “Farewell, Aquarius, and we thank you.”": 1,
+		"Haise is running a fever.": 0,
+		"Photographic helicopter: “Splashdown.”": 0,
+	}
+	for text: String in shown:
+		view.call("show_caption", text)
+		var fade: Tween = view.get("_caption_tween")
+		fade.custom_step(UiStyle.CAPTION_FADE_S * 4.0)
+		_check(view.call("speaker_faces_shown") == shown[text], "%d photos beside '%s'" % [shown[text], text])
+	root.remove_child(view)
+	view.free()
+
+
+## Every timeskip caption and crew quote stays on screen long enough to read: on the 1970 path,
+## and in the cold coast when the fastest way home (E2-B) ends it at GET 114.
+func test_timeskip_captions_stay_up_long_enough_to_read() -> void:
+	var session: Node = root.get_node_or_null("Director")
+	var played: Node = root.get_node_or_null("Game")
+	if session == null or played == null:
+		_check(false, "the Game and Director autoloads are loaded")
+		return
+	var view: CanvasLayer = CutsceneView.new()
+	root.add_child(view)
+	var quotes: int = 0
+	for event: Dictionary in Timeline.event_list(_load_events()):
+		var captions: Array = event.get("timeskip", {}).get("captions", [])
+		for caption: Dictionary in captions:
+			if not CutsceneView.speakers(str(caption["text"])).is_empty():
+				quotes += 1
+		if captions.is_empty():
+			continue
+		session.call("jump_to_state", "%s_timeskip" % event["id"])
+		_check_reading_time(session, captions, _play_timeskip(session, played, view), "%s on the 1970 path" % event["id"], INF)
+		if event["id"] != "e4":
+			continue
+		session.call("jump_to_state", "e4_timeskip")
+		played.get("plan")["e2"] = "b"
+		played.call("replay_to", float(event["get"]))
+		session.call("_begin_timeskip")
+		var ends_get: float = session.get("_clock_target")
+		_near(ends_get, 114.0, 0.01, "the fast way home ends the cold coast at GET 114")
+		_check_reading_time(session, captions, _play_timeskip(session, played, view), "e4 with the fast way home", ends_get)
+	_check(quotes >= 8, "the crew's own words come up in the timeskips (%d quotes)" % quotes)
+	root.remove_child(view)
+	view.free()
+	session.call("jump_to_state", "intro")
+
+
+## Plays the current timeskip frame by frame. Returns caption text -> the longest it stayed on screen.
+func _play_timeskip(session: Node, played: Node, view: Node) -> Dictionary:
+	var longest: Dictionary = {}
+	var shown: String = view.call("caption_text")
+	var since_s: float = 0.0
+	var t: float = 0.0
+	while session.get("phase") == "timeskip" and t < 600.0:
+		played.call("_physics_process", FRAME_S)
+		session.call("_process", FRAME_S)
+		t += FRAME_S
+		var text: String = view.call("caption_text")
+		if text != shown:
+			shown = text
+			since_s = t
+		longest[shown] = maxf(float(longest.get(shown, 0.0)), t - since_s)
+	return longest
+
+
+## A caption needs READ_WORDS_PER_S, and at least READ_MIN_S. One with a clip is read on its own
+## for read_s before the clip, so that alone must be enough, unless the clip speaks its words.
+## (No audio plays in the tests, so a quote's read_s stands in for its clip.)
+func _check_reading_time(session: Node, captions: Array, longest: Dictionary, label: String, until_get: float) -> void:
+	for caption: Dictionary in captions:
+		if float(caption["get"]) >= until_get:
+			continue
+		var text: String = str(caption["text"])
+		var words: int = text.replace("\n", " ").split(" ", false).size()
+		var needed: float = maxf(Tuning.READ_MIN_S, words / Tuning.READ_WORDS_PER_S)
+		var stood: float = float(longest.get(text, 0.0))
+		if caption.has("audio") and not session.call("is_spoken", caption):
+			stood = float(caption.get("read_s", 0.0))
+		_check(stood >= needed - FRAME_S, "%s: '%s…' stays up %.1f s; reading it takes %.1f s" % [
+			label, text.left(40), stood, needed])
 
 
 ## Clip path -> its subtitles, for every shot, timeskip caption or reentry step that has both.
